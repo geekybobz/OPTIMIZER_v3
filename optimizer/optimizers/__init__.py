@@ -23,7 +23,21 @@ Reviewer invariants
 """
 
 from optimizer.optimizers.adam import adam
+from optimizer.optimizers.adaptive import adagrad, rmsprop
+from optimizer.optimizers.cma_es import cma_es
+from optimizer.optimizers.lbfgs import lbfgs
 from optimizer.optimizers.line_search import line_search
 from optimizer.optimizers.momentum import momentum
+from optimizer.optimizers.nonlinear_cg import ncg, nonlinear_cg
 
-__all__ = ["adam", "line_search", "momentum"]
+__all__ = [
+    "adagrad",
+    "adam",
+    "cma_es",
+    "lbfgs",
+    "line_search",
+    "momentum",
+    "ncg",
+    "nonlinear_cg",
+    "rmsprop",
+]

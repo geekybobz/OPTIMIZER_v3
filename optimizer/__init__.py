@@ -153,6 +153,30 @@ def line_search(*args: Any, **kwargs: Any) -> OptimizerResult:
     return library.line_search(*args, **kwargs)
 
 
+def adagrad(*args: Any, **kwargs: Any) -> OptimizerResult:
+    return library.adagrad(*args, **kwargs)
+
+
+def rmsprop(*args: Any, **kwargs: Any) -> OptimizerResult:
+    return library.rmsprop(*args, **kwargs)
+
+
+def lbfgs(*args: Any, **kwargs: Any) -> OptimizerResult:
+    return library.lbfgs(*args, **kwargs)
+
+
+def nonlinear_cg(*args: Any, **kwargs: Any) -> OptimizerResult:
+    return library.nonlinear_cg(*args, **kwargs)
+
+
+def ncg(*args: Any, **kwargs: Any) -> OptimizerResult:
+    return library.ncg(*args, **kwargs)
+
+
+def cma_es(*args: Any, **kwargs: Any) -> OptimizerResult:
+    return library.cma_es(*args, **kwargs)
+
+
 def metric_report(system: Any, controls: Controls) -> dict[str, Any]:
     return library.metric_report(system, controls)
 
@@ -209,8 +233,60 @@ def adaptive_step_schedule(**kwargs: Any) -> AdaptiveStepSchedule:
     return library.adaptive_step_schedule(**kwargs)
 
 
+def zero_guess(*args: Any, **kwargs: Any) -> Controls:
+    return library.zero_guess(*args, **kwargs)
+
+
+def constant_guess(*args: Any, **kwargs: Any) -> Controls:
+    return library.constant_guess(*args, **kwargs)
+
+
+def ramp_guess(*args: Any, **kwargs: Any) -> Controls:
+    return library.ramp_guess(*args, **kwargs)
+
+
+def sine_guess(*args: Any, **kwargs: Any) -> Controls:
+    return library.sine_guess(*args, **kwargs)
+
+
+def cosine_guess(*args: Any, **kwargs: Any) -> Controls:
+    return library.cosine_guess(*args, **kwargs)
+
+
+def gaussian_guess(*args: Any, **kwargs: Any) -> Controls:
+    return library.gaussian_guess(*args, **kwargs)
+
+
+def sinc_guess(*args: Any, **kwargs: Any) -> Controls:
+    return library.sinc_guess(*args, **kwargs)
+
+
 def fourier_guess(*args: Any, **kwargs: Any) -> Controls:
     return library.fourier_guess(*args, **kwargs)
+
+
+def random_guess(*args: Any, **kwargs: Any) -> Controls:
+    return library.random_guess(*args, **kwargs)
+
+
+def random_smooth_guess(*args: Any, **kwargs: Any) -> Controls:
+    return library.random_smooth_guess(*args, **kwargs)
+
+
+def random_fourier_guess(*args: Any, **kwargs: Any) -> Controls:
+    return library.random_fourier_guess(*args, **kwargs)
+
+
+def scale_guess(*args: Any, **kwargs: Any) -> Controls:
+    return library.scale_guess(*args, **kwargs)
+
+
+def mix_guess(*args: Any, **kwargs: Any) -> Controls:
+    return library.mix_guess(*args, **kwargs)
+
+
+def perturb_guess(*args: Any, **kwargs: Any) -> Controls:
+    return library.perturb_guess(*args, **kwargs)
 
 
 def geometry_probe(*args: Any, **kwargs: Any) -> dict[str, Any]:
@@ -241,39 +317,57 @@ __all__ = [
     "SystemProbe",
     "Trace",
     "WarmStartState",
+    "adagrad",
     "adam",
     "adaptive_step_schedule",
     "bind",
+    "cma_es",
     "constant",
+    "constant_guess",
     "constant_schedule",
     "context",
     "control_spec",
     "control_spectrum",
     "controls",
+    "cosine_guess",
     "diagnostic_report",
     "evaluate",
     "evaluate_system",
     "finite_difference_gradient",
     "finite_difference_jacobian",
     "fourier_guess",
+    "gaussian_guess",
     "geometry_probe",
     "gradient",
     "gradient_system",
     "library",
+    "lbfgs",
     "line_search",
     "metric_guard",
     "metric_report",
     "methods",
+    "mix_guess",
     "momentum",
+    "ncg",
+    "nonlinear_cg",
     "nullspace_basis",
     "optional_jacobian",
     "optional_residuals",
     "parallel_map",
+    "perturb_guess",
     "project_gradient",
     "probe_system",
+    "ramp_guess",
+    "random_fourier_guess",
+    "random_guess",
+    "random_smooth_guess",
     "repair_newton",
     "require_system",
+    "rmsprop",
     "run_chunk",
+    "scale_guess",
+    "sinc_guess",
+    "sine_guess",
     "smoothness_report",
     "trace",
     "validate_controls_for_system",
@@ -281,5 +375,6 @@ __all__ = [
     "verify_gradient",
     "verify_jacobian",
     "warmstart",
+    "zero_guess",
     "zeros",
 ]

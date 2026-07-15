@@ -46,11 +46,33 @@ from optimizer.controls import ControlSpec, Controls
 from optimizer.core.engine import StepFunction, run_chunk
 from optimizer.core.evaluate import SystemEvaluator
 from optimizer.core.guards import metric_guard as _metric_guard
+from optimizer.guesses import (
+    constant_guess as _constant_guess,
+    cosine_guess as _cosine_guess,
+    fourier_guess as _fourier_guess,
+    gaussian_guess as _gaussian_guess,
+    mix_guess as _mix_guess,
+    perturb_guess as _perturb_guess,
+    ramp_guess as _ramp_guess,
+    random_fourier_guess as _random_fourier_guess,
+    random_guess as _random_guess,
+    random_smooth_guess as _random_smooth_guess,
+    scale_guess as _scale_guess,
+    sinc_guess as _sinc_guess,
+    sine_guess as _sine_guess,
+    zero_guess as _zero_guess,
+)
 from optimizer.core.parallel import ParallelConfig, parallel_map
 from optimizer.logs.trace import Trace
+from optimizer.optimizers import adagrad as _adagrad
 from optimizer.optimizers import adam as _adam
+from optimizer.optimizers import cma_es as _cma_es
+from optimizer.optimizers import lbfgs as _lbfgs
 from optimizer.optimizers import line_search as _line_search
 from optimizer.optimizers import momentum as _momentum
+from optimizer.optimizers import ncg as _ncg
+from optimizer.optimizers import nonlinear_cg as _nonlinear_cg
+from optimizer.optimizers import rmsprop as _rmsprop
 from optimizer.result import Evaluation, OptimizerResult
 from optimizer.schedules import AdaptiveStepSchedule, ConstantSchedule
 from optimizer.state import RunState, WarmStartState
@@ -235,6 +257,24 @@ class OptimizerContext:
     def line_search(self, controls: Any = None, *args: Any, **kwargs: Any) -> OptimizerResult:
         return self.library.line_search(self.system, controls, *args, **kwargs)
 
+    def adagrad(self, controls: Any = None, *args: Any, **kwargs: Any) -> OptimizerResult:
+        return self.library.adagrad(self.system, controls, *args, **kwargs)
+
+    def rmsprop(self, controls: Any = None, *args: Any, **kwargs: Any) -> OptimizerResult:
+        return self.library.rmsprop(self.system, controls, *args, **kwargs)
+
+    def lbfgs(self, controls: Any = None, *args: Any, **kwargs: Any) -> OptimizerResult:
+        return self.library.lbfgs(self.system, controls, *args, **kwargs)
+
+    def nonlinear_cg(self, controls: Any = None, *args: Any, **kwargs: Any) -> OptimizerResult:
+        return self.library.nonlinear_cg(self.system, controls, *args, **kwargs)
+
+    def ncg(self, controls: Any = None, *args: Any, **kwargs: Any) -> OptimizerResult:
+        return self.library.ncg(self.system, controls, *args, **kwargs)
+
+    def cma_es(self, controls: Any = None, *args: Any, **kwargs: Any) -> OptimizerResult:
+        return self.library.cma_es(self.system, controls, *args, **kwargs)
+
     # ------------------------------------------------------------------
     # Bound diagnostics, repair, and training aids
     # ------------------------------------------------------------------
@@ -274,9 +314,79 @@ class OptimizerContext:
 
         return self.library.project_gradient(self.system, controls, gradient, *args, **kwargs)
 
+    # ------------------------------------------------------------------
+    # Bound guess generators
+    # ------------------------------------------------------------------
+
+    def zero_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create a zero guess for the bound system."""
+
+        return self.library.zero_guess(self.system, *args, **kwargs)
+
+    def constant_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create a constant guess for the bound system."""
+
+        return self.library.constant_guess(self.system, *args, **kwargs)
+
+    def ramp_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create a ramp guess for the bound system."""
+
+        return self.library.ramp_guess(self.system, *args, **kwargs)
+
+    def sine_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create a sine guess for the bound system."""
+
+        return self.library.sine_guess(self.system, *args, **kwargs)
+
+    def cosine_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create a cosine guess for the bound system."""
+
+        return self.library.cosine_guess(self.system, *args, **kwargs)
+
+    def gaussian_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create a Gaussian guess for the bound system."""
+
+        return self.library.gaussian_guess(self.system, *args, **kwargs)
+
+    def sinc_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create a sinc guess for the bound system."""
+
+        return self.library.sinc_guess(self.system, *args, **kwargs)
+
     def fourier_guess(self, *args: Any, **kwargs: Any) -> Controls:
-        del args, kwargs
-        raise _not_implemented("fourier_guess", "Phase 9", "optimizer/guesses/fourier.py", prefix="ctx")
+        """Create a Fourier-series guess for the bound system."""
+
+        return self.library.fourier_guess(self.system, *args, **kwargs)
+
+    def random_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create a random guess for the bound system."""
+
+        return self.library.random_guess(self.system, *args, **kwargs)
+
+    def random_smooth_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create a smoothed random guess for the bound system."""
+
+        return self.library.random_smooth_guess(self.system, *args, **kwargs)
+
+    def random_fourier_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create a random Fourier guess for the bound system."""
+
+        return self.library.random_fourier_guess(self.system, *args, **kwargs)
+
+    def scale_guess(self, controls: Controls, *args: Any, **kwargs: Any) -> Controls:
+        """Rescale existing controls."""
+
+        return self.library.scale_guess(controls, *args, **kwargs)
+
+    def mix_guess(self, guesses: Any, *args: Any, **kwargs: Any) -> Controls:
+        """Mix compatible controls."""
+
+        return self.library.mix_guess(guesses, *args, **kwargs)
+
+    def perturb_guess(self, controls: Controls, *args: Any, **kwargs: Any) -> Controls:
+        """Perturb existing controls for local restarts."""
+
+        return self.library.perturb_guess(controls, *args, **kwargs)
 
 
 class OptimizerLibrary:
@@ -404,6 +514,36 @@ class OptimizerLibrary:
 
         return _line_search(*args, **kwargs)
 
+    def adagrad(self, *args: Any, **kwargs: Any) -> OptimizerResult:
+        """Run AdaGrad with cumulative squared-gradient scaling."""
+
+        return _adagrad(*args, **kwargs)
+
+    def rmsprop(self, *args: Any, **kwargs: Any) -> OptimizerResult:
+        """Run RMSProp with moving-average squared-gradient scaling."""
+
+        return _rmsprop(*args, **kwargs)
+
+    def lbfgs(self, *args: Any, **kwargs: Any) -> OptimizerResult:
+        """Run limited-memory BFGS."""
+
+        return _lbfgs(*args, **kwargs)
+
+    def nonlinear_cg(self, *args: Any, **kwargs: Any) -> OptimizerResult:
+        """Run nonlinear conjugate gradient."""
+
+        return _nonlinear_cg(*args, **kwargs)
+
+    def ncg(self, *args: Any, **kwargs: Any) -> OptimizerResult:
+        """Run nonlinear conjugate gradient through the short alias."""
+
+        return _ncg(*args, **kwargs)
+
+    def cma_es(self, *args: Any, **kwargs: Any) -> OptimizerResult:
+        """Run compact CMA-ES style population search."""
+
+        return _cma_es(*args, **kwargs)
+
     # ------------------------------------------------------------------
     # Diagnostics, repair, and training aids
     # ------------------------------------------------------------------
@@ -483,21 +623,79 @@ class OptimizerLibrary:
 
         return AdaptiveStepSchedule(**kwargs)
 
+    # ------------------------------------------------------------------
+    # Guess generators
+    # ------------------------------------------------------------------
+
+    def zero_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create all-zero initial controls."""
+
+        return _zero_guess(*args, **kwargs)
+
+    def constant_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create constant initial controls."""
+
+        return _constant_guess(*args, **kwargs)
+
+    def ramp_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create ramp-shaped initial controls."""
+
+        return _ramp_guess(*args, **kwargs)
+
+    def sine_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create sine-wave initial controls."""
+
+        return _sine_guess(*args, **kwargs)
+
+    def cosine_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create cosine-wave initial controls."""
+
+        return _cosine_guess(*args, **kwargs)
+
+    def gaussian_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create localized Gaussian initial controls."""
+
+        return _gaussian_guess(*args, **kwargs)
+
+    def sinc_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create sinc-shaped initial controls."""
+
+        return _sinc_guess(*args, **kwargs)
+
     def fourier_guess(self, *args: Any, **kwargs: Any) -> Controls:
-        """Reserved direct Fourier guess call; implementation starts in Phase 9."""
+        """Create Fourier-series initial controls."""
 
-        del args, kwargs
-        raise _not_implemented("fourier_guess", "Phase 9", "optimizer/guesses/fourier.py")
+        return _fourier_guess(*args, **kwargs)
 
-    def repair_newton(self, *args: Any, **kwargs: Any) -> Controls:
-        """Repair residual violations using Newton/LM updates."""
+    def random_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create raw random initial controls."""
 
-        return _repair_newton(*args, **kwargs)
+        return _random_guess(*args, **kwargs)
 
-    def geometry_probe(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        """Return local residual/Jacobian geometry diagnostics."""
+    def random_smooth_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create smoothed random initial controls."""
 
-        return _geometry_probe(*args, **kwargs)
+        return _random_smooth_guess(*args, **kwargs)
+
+    def random_fourier_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Create random low-frequency Fourier initial controls."""
+
+        return _random_fourier_guess(*args, **kwargs)
+
+    def scale_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Rescale existing controls as a new guess."""
+
+        return _scale_guess(*args, **kwargs)
+
+    def mix_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Mix compatible control guesses."""
+
+        return _mix_guess(*args, **kwargs)
+
+    def perturb_guess(self, *args: Any, **kwargs: Any) -> Controls:
+        """Perturb existing controls for local restarts."""
+
+        return _perturb_guess(*args, **kwargs)
 
     # ------------------------------------------------------------------
     # Facade metadata
@@ -523,10 +721,74 @@ class OptimizerLibrary:
                 "optimizer/optimizers/line_search.py",
                 "Phase 7",
             ),
+            "adagrad": MethodInfo("adagrad", "implemented", "optimizer/optimizers/adaptive.py", "Phase 7"),
+            "rmsprop": MethodInfo("rmsprop", "implemented", "optimizer/optimizers/adaptive.py", "Phase 7"),
+            "lbfgs": MethodInfo("lbfgs", "implemented", "optimizer/optimizers/lbfgs.py", "Phase 7"),
+            "nonlinear_cg": MethodInfo(
+                "nonlinear_cg",
+                "implemented",
+                "optimizer/optimizers/nonlinear_cg.py",
+                "Phase 7",
+            ),
+            "ncg": MethodInfo("ncg", "implemented", "optimizer/optimizers/nonlinear_cg.py", "Phase 7"),
+            "cma_es": MethodInfo("cma_es", "implemented", "optimizer/optimizers/cma_es.py", "Phase 7"),
             "fourier_guess": MethodInfo(
                 "fourier_guess",
-                "reserved",
-                "optimizer/guesses/fourier.py",
+                "implemented",
+                "optimizer/guesses/harmonic.py",
+                "Phase 9",
+            ),
+            "zero_guess": MethodInfo("zero_guess", "implemented", "optimizer/guesses/simple.py", "Phase 9"),
+            "constant_guess": MethodInfo(
+                "constant_guess",
+                "implemented",
+                "optimizer/guesses/simple.py",
+                "Phase 9",
+            ),
+            "ramp_guess": MethodInfo("ramp_guess", "implemented", "optimizer/guesses/simple.py", "Phase 9"),
+            "sine_guess": MethodInfo("sine_guess", "implemented", "optimizer/guesses/harmonic.py", "Phase 9"),
+            "cosine_guess": MethodInfo(
+                "cosine_guess",
+                "implemented",
+                "optimizer/guesses/harmonic.py",
+                "Phase 9",
+            ),
+            "gaussian_guess": MethodInfo(
+                "gaussian_guess",
+                "implemented",
+                "optimizer/guesses/harmonic.py",
+                "Phase 9",
+            ),
+            "sinc_guess": MethodInfo("sinc_guess", "implemented", "optimizer/guesses/harmonic.py", "Phase 9"),
+            "random_guess": MethodInfo("random_guess", "implemented", "optimizer/guesses/random.py", "Phase 9"),
+            "random_smooth_guess": MethodInfo(
+                "random_smooth_guess",
+                "implemented",
+                "optimizer/guesses/random.py",
+                "Phase 9",
+            ),
+            "random_fourier_guess": MethodInfo(
+                "random_fourier_guess",
+                "implemented",
+                "optimizer/guesses/random.py",
+                "Phase 9",
+            ),
+            "scale_guess": MethodInfo(
+                "scale_guess",
+                "implemented",
+                "optimizer/guesses/composite.py",
+                "Phase 9",
+            ),
+            "mix_guess": MethodInfo(
+                "mix_guess",
+                "implemented",
+                "optimizer/guesses/composite.py",
+                "Phase 9",
+            ),
+            "perturb_guess": MethodInfo(
+                "perturb_guess",
+                "implemented",
+                "optimizer/guesses/composite.py",
                 "Phase 9",
             ),
             "repair_newton": MethodInfo(

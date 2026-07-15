@@ -107,8 +107,9 @@ class PublicApiTests(unittest.TestCase):
 
         self.assertEqual(result.optimizer, "adam")
         self.assertLess(result.J, ctx.evaluate(controls).J)
-        with self.assertRaisesRegex(NotImplementedError, "Phase 9"):
-            ctx.fourier_guess(n_terms=3)
+        guess = ctx.fourier_guess(modes=3, amplitude=0.1)
+        self.assertEqual(guess.shape, controls.shape)
+        self.assertLessEqual(guess.max_abs(), 0.1 + 1.0e-12)
 
     def test_system_owned_params_and_vectorized_direction_simulation(self):
         system = TemporaryUniversalFourthOrderSystem(N=17, energy_weight=0.0)
@@ -128,8 +129,8 @@ class PublicApiTests(unittest.TestCase):
     def test_future_tool_methods_still_fail_clearly_until_implemented(self):
         system = TemporaryUniversalFourthOrderSystem(N=9)
 
-        with self.assertRaisesRegex(NotImplementedError, "Phase 9"):
-            opt.fourier_guess(system.control_spec())
+        guess = opt.fourier_guess(system.control_spec(), amplitude=0.1)
+        self.assertEqual(guess.shape, system.control_spec().shape)
 
     def test_public_diagnostic_and_repair_methods_are_implemented(self):
         system = TemporaryUniversalFourthOrderSystem(N=9)
