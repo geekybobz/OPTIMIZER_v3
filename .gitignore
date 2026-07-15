@@ -41,9 +41,8 @@ dist/
 *.h5
 *.hdf5
 
-# Small canonical comparison artifacts deliberately kept with local systems
-!systems/universal_robust_4th/reference/
-!systems/universal_robust_4th/reference/*.npz
+# Private/local reference artifacts
+systems/universal_robust_4th/reference/
 
 # Streaming/generated logs
 *.jsonl

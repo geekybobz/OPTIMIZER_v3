@@ -26,6 +26,3 @@ dev = [
 
 [tool.setuptools.packages.find]
 include = ["optimizer*", "systems*"]
-
-[tool.setuptools.package-data]
-"systems.universal_robust_4th" = ["reference/*.npz", "reference/*.json"]

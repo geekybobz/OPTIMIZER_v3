@@ -11,11 +11,14 @@ analytical gradients, and provide residual Jacobians for repair/projected tools.
 import unittest
 
 import optimizer as opt
-from systems.universal_robust_4th import system
+from systems.universal_robust_4th import FOURTH_ORDER_BEST_CONTROLS, system
 
 
 class UniversalRobustFourthSystemTests(unittest.TestCase):
     def test_reference_best_control_evaluates_to_fourth_order_metrics(self):
+        if not FOURTH_ORDER_BEST_CONTROLS.exists():
+            self.skipTest("private fourth-order reference control is not tracked in git")
+
         qsys = system({"N": 1001, "tau": 1.0})
         controls = qsys.reference_controls()
 
