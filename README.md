@@ -1,7 +1,7 @@
 # OPTIMIZER v3 — Design & Implementation (self-contained)
 
-Status: **Phase 6 complete for review** — public facade implemented; Phase 7 first
-optimizers are next only after approval.
+Status: **namespace API cleanup complete for review** — optimizer, utility, guess,
+and schedule namespaces are explicit public API; direct shortcuts remain supported.
 Last updated: 2026-07-15
 
 > Start with the top-level docs in this README's reading order. The [`plan/`](plan/README.md)
@@ -21,13 +21,14 @@ can be relocated as a standalone project without breaking any links.
 
 ## 0) What v3 is (one paragraph)
 
-v3 restructures the optimizer library into a direct-call toolbox. A project
+v3 restructures the optimizer library into a namespace-first optimization toolbox. A project
 `system.py` owns the physics, control layout, objective components, cost prefactors,
 analytical gradient, residuals, Jacobians, and higher derivative hooks. The library
 supplies vectorized controls, a shared engine, optimizers, schedules, guesses,
 constraints, diagnostics, repairs, trace logs, checkpoints, and later modes. The
-public style should stay direct: `opt.adam(...)`, `opt.line_search(...)`,
-`opt.fourier_guess(...)`, `opt.repair_newton(...)`. Full rationale + backbone:
+preferred review style groups tools by role: `opt.optimizers.adam(...)`,
+`opt.guesses.fourier_guess(...)`, `opt.utils.repair_newton(...)`. Short aliases such
+as `opt.adam(...)` remain available for compact notebooks. Full rationale + backbone:
 [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ---
@@ -39,7 +40,7 @@ public style should stay direct: `opt.adam(...)`, `opt.line_search(...)`,
 | 1 | **`README.md`** (this file) | context, status, process, rules, resume checklist |
 | 2 | [`CONTEXT.md`](CONTEXT.md) | durable implementation context and rules |
 | 3 | [`BUILD_PLAN.md`](BUILD_PLAN.md) | phase-by-phase build plan and acceptance checks |
-| 4 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | current architecture, system-owned objective, direct API, build order |
+| 4 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | current architecture, system-owned objective, namespace API, build order |
 | 5 | [`OPTIMIZERS.md`](OPTIMIZERS.md) | optimizers that move controls |
 | 6 | [`AUXILIARY.md`](AUXILIARY.md) | guesses, schedules, constraints, diagnostics, repairs, logs/checkpoints |
 | 7 | [`plan/`](plan/README.md) | detailed layer and class/module notes |
@@ -66,12 +67,15 @@ public style should stay direct: `opt.adam(...)`, `opt.line_search(...)`,
 | **3** | result and run/warmstart state | complete |
 | **4** | trace records and in-memory checkpoints | complete |
 | **5** | shared core engine | complete |
-| **6** | public facade (`optimizer/__init__.py`, `library.py`) | complete for review |
-| **7** | first optimizers (`adam`, `momentum`, `line_search`) | next after approval |
-| **8+** | schedules, guesses, constraints, diagnostics/repairs, advanced methods, modes | pending |
+| **6** | public facade (`optimizer/__init__.py`, `library.py`) | complete |
+| **7** | optimizer families (`adam`, `momentum`, `line_search`, adaptive, L-BFGS, NCG, CMA-ES) | complete for initial testing |
+| **8** | diagnostics/repairs and derivative tools | complete for initial testing |
+| **9** | guess generators | complete for initial testing |
+| **10+** | real fourth-order adapter, persistent reports, projected loops, modes | pending |
 
-**Immediate next action:** review Phase 6. After approval, commit Phase 6 and move to
-Phase 7 first optimizer planning/implementation.
+**Immediate next action:** review the namespace API cleanup. After approval, the next
+implementation phase should be the real fourth-order adapter and persistent run-report
+export, so the toolbox can be tested against the actual downstream scenario.
 
 ---
 
@@ -94,14 +98,14 @@ info  →  plan  →  review  →  fix     (repeat until the user approves the l
 
 ## 4) Vocabulary
 
-Use role names internally, but keep public calls direct.
+Use role names in public namespaces. Keep direct shortcuts only as convenience aliases.
 
 | Role | Meaning | Public style |
 |---|---|---|
-| optimizer | moves controls to reduce current system `J` | `opt.adam(...)` |
-| guess | creates initial controls from `system.control_spec()` | `opt.fourier_guess(...)` |
-| diagnostic | measures and reports; does not move controls | `opt.geometry_probe(...)` |
-| repair | moves controls to restore feasibility | `opt.repair_newton(...)` |
+| optimizer | moves controls to reduce current system `J` | `opt.optimizers.adam(...)` |
+| guess | creates initial controls from `system.control_spec()` | `opt.guesses.fourier_guess(...)` |
+| diagnostic | measures and reports; does not move controls | `opt.utils.geometry_probe(...)` |
+| repair | moves controls to restore feasibility | `opt.utils.repair_newton(...)` |
 | schedule | step-size, line-search, trust, or damping policy | config/helper |
 | trace/checkpoint | logs and rollback/resume state | `opt.Trace(...)` |
 
@@ -130,7 +134,8 @@ optimizer registry.
 ## 6) Key decisions: locked vs open
 
 **Locked (this design pass):**
-- Direct public API: `opt.method(...)`.
+- Namespace-first public API: `opt.optimizers.method(...)`, `opt.utils.method(...)`,
+  `opt.guesses.method(...)`; direct `opt.method(...)` shortcuts remain supported.
 - System-owned multi-objective cost prefactors.
 - One engine loop shared by optimizers.
 - Vectorized `Controls` and `ControlSpec` as a foundation.
@@ -157,7 +162,8 @@ Keep v3 history here so it travels with the folder.
   diagnostics, enhancers) drafted with namespaced ids.
 - **2026-07-08** — Layer 0: backbone architecture drafted.
 - **2026-07-15** — Added [`plan/`](plan/README.md) as the current review plan:
-  direct `opt.method(...)` API, system-owned multi-objective cost params,
+  namespace-first API with direct `opt.method(...)` shortcuts, system-owned
+  multi-objective cost params,
   short-chunk curriculum, trace/checkpoint rollback, warmstart, guesses, and
   class-by-class module notes.
 - **2026-07-15** — Folded the new plan direction into top-level `ARCHITECTURE.md`,
@@ -178,8 +184,11 @@ Keep v3 history here so it travels with the folder.
   engine tests.
 - **2026-07-15** — Phase 6 complete for review: added `import optimizer as opt`
   facade, default `OptimizerLibrary`, bound `OptimizerContext` via `opt.context(system)`,
-  reserved direct method names, and public API tests using a temporary
+  direct shortcut method names, and public API tests using a temporary
   universal-robust-4th-style fixture.
+- **2026-07-15** — Namespace API cleanup: made `opt.optimizers`, `opt.utils`,
+  `opt.util`, `opt.guesses`, and `opt.schedules` explicit public names while keeping
+  direct shortcut functions for compact notebook use.
 
 ---
 

@@ -1,6 +1,8 @@
 # OPTIMIZER v3 Build Plan
 
-Status: Phase 6 complete for review.
+Status: namespace API cleanup complete for review; controls, system, state, logs,
+core engine, facade, optimizers, diagnostics/repairs, and guesses are implemented for
+initial testing.
 Last updated: 2026-07-15.
 
 This file defines the phase-by-phase build process. Each phase should be completed,
@@ -233,7 +235,7 @@ engine tests.
 
 ## Phase 6: Public Facade
 
-Goal: expose the direct API.
+Goal: expose the namespace-first public API and direct shortcut aliases.
 
 Files:
 
@@ -246,30 +248,32 @@ tests/test_public_api.py
 Build public calls:
 
 ```python
-opt.adam(...)
-opt.momentum(...)
-opt.line_search(...)
-opt.fourier_guess(...)
-opt.repair_newton(...)
-opt.geometry_probe(...)
+opt.optimizers.adam(...)
+opt.optimizers.momentum(...)
+opt.optimizers.line_search(...)
+opt.guesses.fourier_guess(...)
+opt.utils.repair_newton(...)
+opt.utils.geometry_probe(...)
 ```
 
 Acceptance:
 
 ```text
 import optimizer as opt works
-explicit style opt.adam(system, controls) is the reference
+explicit style opt.optimizers.adam(system, controls) is the reference
+direct shortcuts such as opt.adam(system, controls) remain available
 bound-system context style opt.context(system) works for curriculum convenience
 focused tests pass
 ```
 
-Implementation status (2026-07-15): complete for review. Added package facade,
-default ``OptimizerLibrary``, package-level direct helpers, reserved direct names for
-later optimizer/guess/repair phases, and public API tests using a temporary
-universal-robust-4th-style system fixture. Updated after review to add
-``OptimizerContext`` via ``opt.context(system)`` / ``opt.bind(system)`` so staged
-curriculum can change system weights with ``ctx.with_params(...)`` without relying on
-a mutable global system.
+Implementation status (2026-07-15): complete. Added package facade, default
+``OptimizerLibrary``, role namespaces, package-level direct shortcut helpers, and
+public API tests using a temporary universal-robust-4th-style system fixture. Updated
+after review to add ``OptimizerContext`` via ``opt.context(system)`` /
+``opt.bind(system)`` so staged curriculum can change system weights with
+``ctx.with_params(...)`` without relying on a mutable global system. Namespace cleanup
+made ``opt.optimizers``, ``opt.utils``, ``opt.util``, ``opt.guesses``, and
+``opt.schedules`` explicit public API.
 
 ## Phase 7: First Optimizers
 
@@ -303,6 +307,10 @@ trace/checkpoint works during optimization
 focused tests pass
 ```
 
+Implementation status (2026-07-15): complete for initial testing. Implemented Adam,
+momentum, line search, AdaGrad, RMSProp, L-BFGS, nonlinear CG, and compact CMA-ES
+against the shared engine.
+
 ## Phase 8: Guesses
 
 Goal: generate initial controls from the system control spec.
@@ -323,7 +331,7 @@ sine_guess
 sinc_guess
 fourier_guess
 random_guess
-mix_controls
+mix_guess
 ```
 
 Acceptance:
@@ -334,6 +342,10 @@ amplitude and seed options work
 1, 2, 3, and 6 channel specs pass
 focused tests pass
 ```
+
+Implementation status (2026-07-15): complete for initial testing. Implemented zero,
+constant, ramp, sine, cosine, gaussian, sinc, Fourier, random, smooth-random,
+random-Fourier, scale, mix, and perturb guess generators.
 
 ## Phase 9: Diagnostics
 
@@ -351,12 +363,13 @@ tests/test_diagnostics.py
 Build:
 
 ```text
-verify_derivatives
+verify_gradient
+verify_jacobian
 finite_difference_gradient
 finite_difference_jacobian
 geometry_probe
 control_spectrum
-stationarity_check
+smoothness_report
 ```
 
 Acceptance:
@@ -367,6 +380,11 @@ geometry probe works when residuals/jacobian exist
 diagnostics do not mutate controls
 focused tests pass
 ```
+
+Implementation status (2026-07-15): complete for initial testing. Implemented metric
+reports, diagnostic reports, finite-difference gradient/Jacobian checks, local
+geometry probes, nullspace/projection helpers, Newton repair, spectrum diagnostics,
+and smoothness reports.
 
 ## Phase 10: Repairs And Projected Tools
 

@@ -1,18 +1,24 @@
-"""Direct public API for OPTIMIZER v3.
+"""Public API for OPTIMIZER v3.
 
 Why this file exists
 --------------------
-The intended user experience is ``import optimizer as opt`` followed by direct calls.
+The intended user experience is ``import optimizer as opt`` followed by a clear,
+reviewable call.  The preferred long-form style groups tools by role, for example
+``opt.optimizers.adam(...)``, ``opt.utils.verify_gradient(...)``, and
+``opt.guesses.fourier_guess(...)``.  Direct shortcuts such as ``opt.adam(...)`` remain
+available for compact notebooks and scripts.
+
 This package initializer is therefore part of the design, not just import plumbing.
-It exposes the current stable objects and forwards public functions through the
-``OptimizerLibrary`` facade in ``library.py``.
+It exposes stable namespace modules, stable data objects, and the direct convenience
+functions forwarded through the ``OptimizerLibrary`` facade in ``library.py``.
 
 How it fits the architecture
 ----------------------------
 - research notebooks import this module as ``opt``.
-- ``library.py`` owns public method dispatch and reserved names.
+- namespace modules own role-specific calls: optimizers, utils, guesses, schedules.
+- ``library.py`` owns direct shortcut dispatch and bound-system contexts.
 - implementation modules remain separately reviewable and testable.
-- later phases can attach real optimizer implementations without changing imports.
+- later phases can attach new methods without changing the import root.
 
 What this file deliberately does not do
 ---------------------------------------
@@ -21,8 +27,8 @@ calls to the default facade object.
 
 Reviewer invariants
 -------------------
-- ``import optimizer as opt`` is enough for the public Phase 6 surface.
-- method names planned for later phases are present but fail clearly.
+- ``import optimizer as opt`` is enough for the current public surface.
+- namespace calls and direct shortcuts point at the same implementation families.
 - explicit ``system, controls`` style remains the reference usage.
 """
 
@@ -30,6 +36,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, Iterable
 
+from optimizer import guesses, optimizers, schedules, utils
 from optimizer.controls import ControlSpec, Controls
 from optimizer.core.engine import AcceptanceDecision, StepContext, StepProposal
 from optimizer.core.guards import MetricGuard
@@ -57,10 +64,11 @@ from optimizer.utils.repairs import RepairResult
 
 
 library = DEFAULT_LIBRARY
+util = utils
 
 
 # ----------------------------------------------------------------------
-# Phase 1-5 direct helpers
+# Direct core helpers
 # ----------------------------------------------------------------------
 
 
@@ -137,7 +145,7 @@ def methods() -> dict[str, MethodInfo]:
 
 
 # ----------------------------------------------------------------------
-# Reserved direct-call method names
+# Direct optimizer shortcuts
 # ----------------------------------------------------------------------
 
 
@@ -340,6 +348,7 @@ __all__ = [
     "geometry_probe",
     "gradient",
     "gradient_system",
+    "guesses",
     "library",
     "lbfgs",
     "line_search",
@@ -351,6 +360,7 @@ __all__ = [
     "ncg",
     "nonlinear_cg",
     "nullspace_basis",
+    "optimizers",
     "optional_jacobian",
     "optional_residuals",
     "parallel_map",
@@ -365,11 +375,14 @@ __all__ = [
     "require_system",
     "rmsprop",
     "run_chunk",
+    "schedules",
     "scale_guess",
     "sinc_guess",
     "sine_guess",
     "smoothness_report",
     "trace",
+    "util",
+    "utils",
     "validate_controls_for_system",
     "validate_metrics",
     "verify_gradient",

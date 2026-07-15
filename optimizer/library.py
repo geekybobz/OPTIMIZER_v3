@@ -2,10 +2,10 @@
 
 Why this file exists
 --------------------
-The user-facing library should feel direct: ``import optimizer as opt`` followed by
-calls such as ``opt.adam(system, controls, ...)`` or ``opt.run_chunk(...)``.  Internal
-modules can stay organized by responsibility, but users should not need to know where
-the engine, trace, state, controls, or later optimizers live.
+The user-facing library should support both the explicit role namespaces and compact
+direct shortcuts.  Typical calls are ``opt.optimizers.adam(system, controls, ...)`` or
+``opt.adam(system, controls, ...)``.  Internal modules stay organized by
+responsibility, and this facade keeps the notebook/script entry point consistent.
 
 This module builds that facade around ``OptimizerLibrary`` and ``OptimizerContext``.
 The library object supports explicit calls such as ``opt.run_chunk(system, controls)``.
@@ -15,23 +15,22 @@ the same core implementation.
 
 How it fits the architecture
 ----------------------------
-- ``__init__.py`` re-exports a default ``OptimizerLibrary`` instance and its methods.
+- ``__init__.py`` re-exports role namespaces plus a default ``OptimizerLibrary``.
 - low-level modules keep owning implementation details.
-- future optimizer modules can be attached here without changing user import style.
+- optimizer/tool modules can be attached here without changing user import style.
 - curriculum workflows can keep one bound context and advance weights through
   ``ctx.with_params(...)``.
 - tests can exercise the public API through the same path notebooks will use.
 
 What this file deliberately does not do
 ---------------------------------------
-It does not implement Adam, line search, guesses, repairs, diagnostics, or modes.
-Those belong to later phases.  This file only defines the public doorway and delegates
-to implemented components.
+It does not contain algorithm math.  Adam, line search, guesses, repairs, and
+diagnostics live in their role-specific modules.  This file defines the public doorway
+and delegates to those implemented components.
 
 Reviewer invariants
 -------------------
 - explicit ``system, controls`` calls remain the reference style.
-- unfinished public methods fail loudly and name the phase/module that should add them.
 - direct helpers return the same core objects as internal imports.
 - bound-system convenience is explicit context state, not a mutable package global.
 """
@@ -93,21 +92,6 @@ from optimizer.utils import (
 )
 
 
-def _not_implemented(
-    method: str,
-    phase: str,
-    module: str,
-    *,
-    prefix: str = "opt",
-) -> NotImplementedError:
-    """Build a clear error for public methods reserved for later phases."""
-
-    return NotImplementedError(
-        f"{prefix}.{method}(...) is reserved for {phase} and is not implemented yet. "
-        f"Expected implementation module: {module}."
-    )
-
-
 def _system_params(system: Any) -> dict[str, Any]:
     """Return best-effort system params for display/logging convenience."""
 
@@ -125,7 +109,7 @@ def _system_params(system: Any) -> dict[str, Any]:
 
 @dataclass(frozen=True)
 class MethodInfo:
-    """Small public status record for a direct-call method."""
+    """Small public status record for a public method."""
 
     name: str
     status: str
@@ -245,7 +229,7 @@ class OptimizerContext:
         return self.library.warmstart(result_or_state, target_optimizer=target_optimizer)
 
     # ------------------------------------------------------------------
-    # Reserved optimizer/tool methods for later phases
+    # Bound optimizer methods
     # ------------------------------------------------------------------
 
     def adam(self, controls: Any = None, *args: Any, **kwargs: Any) -> OptimizerResult:
@@ -390,10 +374,10 @@ class OptimizerContext:
 
 
 class OptimizerLibrary:
-    """Public direct-call facade for optimizer users."""
+    """Public direct-shortcut facade for optimizer users."""
 
     # ------------------------------------------------------------------
-    # Implemented Phase 1-5 helpers
+    # Implemented core helpers
     # ------------------------------------------------------------------
 
     def control_spec(self, keys: Iterable[str], control_dim: int, **kwargs: Any) -> ControlSpec:
@@ -496,7 +480,7 @@ class OptimizerLibrary:
         return self.context(system, trace=trace, **defaults)
 
     # ------------------------------------------------------------------
-    # Reserved direct-call method names for later phases
+    # Direct optimizer shortcuts
     # ------------------------------------------------------------------
 
     def adam(self, *args: Any, **kwargs: Any) -> OptimizerResult:

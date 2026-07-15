@@ -9,24 +9,24 @@ in [`plan/classes/`](plan/classes/README.md).
 
 ## One-Paragraph Summary
 
-OPTIMIZER v3 is a direct-call optimization toolbox. A project `system.py` owns the
+OPTIMIZER v3 is a namespace-first optimization toolbox. A project `system.py` owns the
 physics, control layout, objective components, cost prefactors, analytical gradient,
 residuals, Jacobians, and higher derivative hooks. The optimizer library supplies the
 shared engineering around that system: vectorized controls, optimizer loops,
 step schedules, guesses, constraints, diagnostics, repairs, logs, checkpoints, and
-later modes. The common user-facing style should be direct:
+later modes. The common user-facing style should group tools by role:
 
 ```python
 import optimizer as opt
 
 sys = system(params)
-controls = opt.fourier_guess(sys, n_terms=6, amplitude=0.03)
+controls = opt.guesses.fourier_guess(sys, modes=6, amplitude=0.03)
 
-r1 = opt.adam(sys, controls, maxiter=50)
-r2 = opt.line_search(sys, r1, maxiter=10, warmstart=True)
+r1 = opt.optimizers.adam(sys, controls, maxiter=50)
+r2 = opt.optimizers.line_search(sys, r1.controls, maxiter=10, warmstart=r1.warmstart())
 
-fixed = opt.repair_newton(sys, r2.controls, residuals="hard")
-diag = opt.geometry_probe(sys, fixed.controls)
+fixed = opt.utils.repair_newton(sys, r2.controls, residuals="hard")
+diag = opt.utils.geometry_probe(sys, fixed.controls)
 ```
 
 ## Design Rules
@@ -34,8 +34,9 @@ diag = opt.geometry_probe(sys, fixed.controls)
 1. The system owns the objective. The optimizer does not assemble `J` from outside.
 2. Gradients are expected to be analytical for normal use. Numerical derivatives are
    diagnostics or explicit fallbacks, not the main design path.
-3. Public calls should be direct: `opt.adam(...)`, `opt.line_search(...)`,
-   `opt.fourier_guess(...)`, `opt.repair_newton(...)`.
+3. Public calls should be role-clear: `opt.optimizers.adam(...)`,
+   `opt.guesses.fourier_guess(...)`, `opt.utils.repair_newton(...)`. Direct shortcuts
+   like `opt.adam(...)` remain supported for compact notebooks.
 4. Controls are vectorized and channel-aware from the start.
 5. The engine owns the iteration loop. Individual optimizers do not duplicate driver
    logic, logging, checkpointing, or stopping.

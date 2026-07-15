@@ -5,13 +5,17 @@ Last updated: 2026-07-15.
 
 ## Main Principle
 
-The public API should be direct:
+The preferred public API should be namespace-first:
 
 ```python
-opt.method_name(...)
+opt.optimizers.method_name(...)
+opt.utils.method_name(...)
+opt.guesses.method_name(...)
 ```
 
-Avoid forcing users through nested wrappers for common work.
+This keeps the call readable when the library grows: an optimizer moves controls, a
+utility diagnoses or repairs, and a guess function creates initial controls. Direct
+shortcuts such as ``opt.adam(...)`` stay available for compact notebooks.
 
 ## Preferred Explicit Style
 
@@ -19,13 +23,13 @@ Avoid forcing users through nested wrappers for common work.
 import optimizer as opt
 
 sys = system(params)
-controls = opt.fourier_guess(sys, n_terms=8, amplitude=0.03)
+controls = opt.guesses.fourier_guess(sys, modes=8, amplitude=0.03)
 
-result = opt.adam(sys, controls, maxiter=1000)
-result = opt.line_search(sys, result, maxiter=10, warmstart=True)
+result = opt.optimizers.adam(sys, controls, maxiter=1000)
+result = opt.optimizers.line_search(sys, result.controls, maxiter=10, warmstart=result.warmstart())
 
-fixed = opt.repair_newton(sys, result.controls)
-diag = opt.geometry_probe(sys, fixed.controls)
+fixed = opt.utils.repair_newton(sys, result.controls)
+diag = opt.utils.geometry_probe(sys, fixed.controls)
 ```
 
 This is safest for scripts and multiprocessing because the system is explicit.
@@ -49,38 +53,55 @@ This is convenient, but it should not be the only supported style. Avoid a mutab
 global like `opt.system = system`; it is weaker for multiprocessing, multiple systems,
 and reproducibility.
 
-## Direct Functions
+## Namespaced Functions
 
 Optimizers:
 
 ```python
-opt.adam(...)
-opt.momentum(...)
-opt.line_search(...)
-opt.lbfgs(...)
-opt.projected_descent(...)
-opt.levenberg_marquardt(...)
+opt.optimizers.adam(...)
+opt.optimizers.momentum(...)
+opt.optimizers.line_search(...)
+opt.optimizers.adagrad(...)
+opt.optimizers.rmsprop(...)
+opt.optimizers.lbfgs(...)
+opt.optimizers.nonlinear_cg(...)
+opt.optimizers.cma_es(...)
 ```
 
 Guesses:
 
 ```python
-opt.zero_guess(system)
-opt.constant_guess(system, amplitude=0.1)
-opt.sine_guess(system, amplitude=0.05)
-opt.sinc_guess(system, amplitude=0.05)
-opt.fourier_guess(system, n_terms=8, amplitude=0.03)
-opt.random_guess(system, amplitude=0.01)
-opt.mix_controls(system, a, b, ratio=0.2)
+opt.guesses.zero_guess(system)
+opt.guesses.constant_guess(system, value=0.1)
+opt.guesses.sine_guess(system, amplitude=0.05)
+opt.guesses.sinc_guess(system, amplitude=0.05)
+opt.guesses.fourier_guess(system, modes=8, amplitude=0.03)
+opt.guesses.random_guess(system, amplitude=0.01)
+opt.guesses.mix_guess([a, b], weights=[0.8, 0.2])
 ```
 
 Repairs and diagnostics:
 
 ```python
-opt.repair_newton(system, controls)
-opt.geometry_probe(system, controls)
-opt.verify_derivatives(system, controls)
-opt.control_spectrum(system, controls)
+opt.utils.repair_newton(system, controls)
+opt.utils.geometry_probe(system, controls)
+opt.utils.verify_gradient(system, controls)
+opt.utils.verify_jacobian(system, controls)
+opt.utils.control_spectrum(controls)
+```
+
+The singular alias ``opt.util`` points to the same namespace as ``opt.utils`` for
+notebook convenience.
+
+## Direct Shortcuts
+
+These remain supported and delegate to the same implementations:
+
+```python
+opt.adam(...)
+opt.fourier_guess(...)
+opt.repair_newton(...)
+opt.geometry_probe(...)
 ```
 
 Trace and checkpoints:
