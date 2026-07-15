@@ -1,8 +1,43 @@
-"""Vectorized control specifications and containers.
+"""Vectorized control specifications and control values.
 
-This module is the Phase 1 foundation for OPTIMIZER v3.  It deliberately knows
-nothing about any physical system or optimizer.  It only defines a stable,
-channel-aware representation for controls.
+Why this file exists
+--------------------
+This is the Phase 1 foundation of OPTIMIZER v3.  Every optimizer ultimately changes
+the same object: a set of time-discretized control channels.  In the downstream
+research systems those channels may be named ``omega_A``, ``ux/uy/uz``, ``uA/uB``,
+or six physical qubit axes.  Without a common container, each optimizer, guess
+generator, system, checkpoint, and diagnostic would need separate shape and naming
+logic.
+
+This module solves that problem by standardizing controls as a dense matrix:
+
+    (n_controls, control_dim)
+
+The row order is defined once by ``ControlSpec.keys``.  The values live in
+``Controls.u``.  All later layers should be able to manipulate controls without
+knowing whether the physical system has 1, 2, 3, 6, or more channels.
+
+How it fits the architecture
+----------------------------
+- ``system.py`` returns a ``ControlSpec`` to describe what it expects.
+- guess functions create ``Controls`` from that spec.
+- optimizers perform vectorized arithmetic on ``Controls``.
+- logs and checkpoints serialize controls consistently.
+- diagnostics and repairs can flatten/unflatten controls without losing channel names.
+
+What this file deliberately does not do
+---------------------------------------
+It does not know physics, objectives, gradients, optimizer state, schedules, or
+checkpoint formats.  It only owns layout, validation, channel access, and safe numeric
+operations.
+
+Reviewer invariants
+-------------------
+- The canonical shape is always ``(n_controls, control_dim)``.
+- Channel order is always exactly ``ControlSpec.keys``.
+- Constructed controls reject wrong shapes and non-finite values.
+- Arithmetic returns new ``Controls`` objects and keeps the same spec.
+- Copying is explicit so optimizers do not accidentally mutate previous states.
 """
 
 from __future__ import annotations
@@ -28,6 +63,8 @@ class ControlSpec:
     meta: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        # Normalize layout metadata once.  The rest of the library can rely on
+        # immutable keys, a positive dimension, and a NumPy dtype.
         keys = tuple(str(key) for key in self.keys)
         if not keys:
             raise ValueError("ControlSpec requires at least one control key.")
@@ -72,6 +109,8 @@ class ControlSpec:
             raise KeyError(f"Unknown control key {key!r}; valid keys are {self.keys!r}.") from exc
 
     def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-friendly description for logs and checkpoints."""
+
         return {
             "keys": list(self.keys),
             "control_dim": int(self.control_dim),
@@ -85,6 +124,10 @@ class ControlSpec:
 
 class Controls:
     """Named control values backed by a dense NumPy matrix."""
+
+    # ------------------------------------------------------------------
+    # Construction and validation
+    # ------------------------------------------------------------------
 
     def __init__(
         self,
@@ -110,6 +153,8 @@ class Controls:
         *,
         copy: bool,
     ) -> np.ndarray:
+        """Convert user input into the canonical matrix shape."""
+
         arr = np.asarray(values)
         if arr.shape != spec.shape:
             raise ValueError(f"Controls matrix must have shape {spec.shape}, got {arr.shape}.")
@@ -194,6 +239,10 @@ class Controls:
             raise ValueError(f"Flat controls must have shape ({spec.size},), got {arr.shape}.")
         return cls(spec, arr.reshape(spec.shape), name=name, meta=meta, copy=copy)
 
+    # ------------------------------------------------------------------
+    # Channel and representation access
+    # ------------------------------------------------------------------
+
     @property
     def keys(self) -> tuple[str, ...]:
         return self.spec.keys
@@ -203,11 +252,19 @@ class Controls:
         return self.spec.shape
 
     def channel(self, key: str, *, copy: bool = False) -> np.ndarray:
+        """Return one named channel as a 1D array.
+
+        By default this returns a view so optimizers and systems can avoid needless
+        copies.  Call with ``copy=True`` when the caller needs isolation.
+        """
+
         row = self.spec.channel_index(key)
         out = self.u[row]
         return out.copy() if copy else out
 
     def set_channel(self, key: str, values: Sequence[float] | np.ndarray) -> None:
+        """Replace one named channel after validating length and finiteness."""
+
         row = self.spec.channel_index(key)
         arr = np.asarray(values, dtype=self.spec.dtype)
         if arr.shape != (self.spec.control_dim,):
@@ -233,7 +290,9 @@ class Controls:
         *,
         name: str | None = None,
         meta: Mapping[str, Any] | None = None,
-    ) -> "Controls":
+        ) -> "Controls":
+        """Return an independent copy with optional updated name/metadata."""
+
         return Controls(
             self.spec,
             self.u,
@@ -251,7 +310,13 @@ class Controls:
     def max_abs(self) -> float:
         return float(np.max(np.abs(self.u)))
 
+    # ------------------------------------------------------------------
+    # Vectorized arithmetic
+    # ------------------------------------------------------------------
+
     def _compatible_matrix(self, other: Any) -> np.ndarray:
+        """Return a scalar or matrix operand compatible with this control layout."""
+
         if isinstance(other, Controls):
             if other.spec.keys != self.spec.keys or other.spec.control_dim != self.spec.control_dim:
                 raise ValueError("Controls must have matching keys and control_dim.")
@@ -295,4 +360,3 @@ class Controls:
     def __repr__(self) -> str:
         label = "" if self.name is None else f", name={self.name!r}"
         return f"Controls(keys={self.spec.keys!r}, shape={self.spec.shape!r}{label})"
-

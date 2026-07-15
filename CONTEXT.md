@@ -104,6 +104,23 @@ do not add auto modes before low-level tools are stable
 do not treat generated optimizer outputs as source
 ```
 
+## Python File Documentation Rule
+
+Every implementation `.py` file should start with a detailed module introduction that
+explains:
+
+```text
+what the file contains
+why it exists in the architecture
+which later modules depend on it
+what it deliberately does not do
+the key invariants or contracts a reviewer should check
+```
+
+Implementation files should also use structured section comments for readability.
+Comments should explain design relevance and non-obvious choices, not restate trivial
+assignments.
+
 ## Tracking Policy
 
 Track:
@@ -128,4 +145,3 @@ runtime outputs
 large generated arrays
 logs/checkpoints produced by runs
 ```
-

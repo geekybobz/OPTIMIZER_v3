@@ -163,6 +163,8 @@ Keep v3 history here so it travels with the folder.
   `.gitignore` for tracked implementation work.
 - **2026-07-15** — Phase 1 complete for review: added `ControlSpec`, `Controls`, and
   focused control-container tests.
+- **2026-07-15** — Phase 2 complete for review: added system contract helpers,
+  minimal system template, and focused system-contract tests.
 
 ---
 
