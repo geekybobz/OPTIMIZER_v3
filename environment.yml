@@ -1,0 +1,13 @@
+name: optimizer_v3
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - wheel
+  - numpy
+  - scipy
+  - matplotlib
+  - ipykernel
+  - pytest

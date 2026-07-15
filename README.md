@@ -57,6 +57,56 @@ as `opt.adam(...)` remain available for compact notebooks. Full rationale + back
 
 ---
 
+## Install
+
+Create or update the standard conda environment and install this repo as an editable
+library:
+
+```bash
+./install.sh
+conda activate optimizer_v3
+```
+
+After activation, `import optimizer as opt` works from any working directory. Editable
+install means source edits in this folder are visible to the environment after
+restarting Python.
+
+The installer records the live locations in:
+
+```text
+~/.optimizer_v3/install.json
+```
+
+That file stores the repo root, conda environment name/path, Python executable,
+environment file, package name, and git commit. `uninstall.sh` reads it so removal
+does not depend on the current working directory or remembered paths.
+
+Check for a newer Git revision without changing files:
+
+```bash
+./update.sh --check
+```
+
+Fast-forward to the latest remote revision and reinstall editable:
+
+```bash
+./update.sh
+```
+
+Remove only the package from the environment:
+
+```bash
+./uninstall.sh
+```
+
+Remove the whole environment only when wanted:
+
+```bash
+./uninstall.sh --remove-env
+```
+
+---
+
 ## 2) Status by phase
 
 | Phase | Deliverable | Status |

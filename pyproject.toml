@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "optimizer-v3"
+version = "0.1.0"
+description = "Vectorized optimization toolbox for system-defined control problems."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.23",
+]
+authors = [
+    {name = "OPTIMIZER v3 contributors"},
+]
+
+[project.optional-dependencies]
+scientific = [
+    "scipy>=1.10",
+    "matplotlib>=3.7",
+]
+dev = [
+    "pytest>=7",
+]
+
+[tool.setuptools.packages.find]
+include = ["optimizer*", "systems*"]
+
+[tool.setuptools.package-data]
+"systems.universal_robust_4th" = ["reference/*.npz", "reference/*.json"]
