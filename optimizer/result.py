@@ -121,6 +121,7 @@ class OptimizerResult:
     iterations: int
     optimizer: str
     state: RunState | None = None
+    trace: Any | None = None
     system_params: dict[str, Any] = field(default_factory=dict)
     trace_id: str | None = None
     checkpoint_ids: dict[str, str] = field(default_factory=dict)
@@ -132,6 +133,7 @@ class OptimizerResult:
         *,
         stop_reason: str,
         optimizer: str | None = None,
+        trace: Any | None = None,
     ) -> "OptimizerResult":
         """Create a public result from a final run state."""
 
@@ -142,6 +144,7 @@ class OptimizerResult:
             iterations=int(state.iteration),
             optimizer=optimizer or state.optimizer_name or "unknown",
             state=state,
+            trace=trace,
             system_params=dict(state.system_params),
             trace_id=state.trace_id,
             checkpoint_ids=dict(state.checkpoint_ids),
@@ -156,7 +159,12 @@ class OptimizerResult:
 
         return WarmStartState.from_result(self, target_optimizer=target_optimizer)
 
-    def to_dict(self, *, include_state: bool = False) -> dict[str, Any]:
+    def to_dict(
+        self,
+        *,
+        include_state: bool = False,
+        include_trace: bool = False,
+    ) -> dict[str, Any]:
         """Return a JSON-friendly result payload.
 
         ``include_state`` intentionally keeps optimizer-private state shallow.  Full
@@ -183,5 +191,7 @@ class OptimizerResult:
                 "stop_reason": self.state.stop_reason,
                 "best_metrics": _json_safe(self.state.best_metrics),
             }
+        if include_trace and self.trace is not None:
+            to_dict = getattr(self.trace, "to_dict", None)
+            payload["trace"] = _json_safe(to_dict() if callable(to_dict) else self.trace)
         return payload
-

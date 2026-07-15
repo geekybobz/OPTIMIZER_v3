@@ -1,6 +1,7 @@
-# OPTIMIZER v3 — Design & Planning (self-contained)
+# OPTIMIZER v3 — Design & Implementation (self-contained)
 
-Status: **living plan** — architecture/catalog rewrite integrated; class-level review next.
+Status: **Phase 5 complete for review** — shared core engine implemented; Phase 6
+public facade is next only after approval.
 Last updated: 2026-07-15
 
 > Start with the top-level docs in this README's reading order. The [`plan/`](plan/README.md)
@@ -55,19 +56,21 @@ public style should stay direct: `opt.adam(...)`, `opt.line_search(...)`,
 
 ---
 
-## 2) Status by layer
+## 2) Status by phase
 
-| Layer | Deliverable | Status |
+| Phase | Deliverable | Status |
 |---|---|---|
-| **0** | `ARCHITECTURE.md` — backbone design | current review draft |
-| **1** | `OPTIMIZERS.md` — optimizer catalog | current review draft |
-| **1b** | `AUXILIARY.md` — tooling catalog | current review draft |
-| **2** | class/module contracts, especially `system.py`, `controls.py`, result/state, trace/checkpoint | next |
-| **3** | package skeleton: directories + stub modules with signatures/docstrings, no logic | pending |
-| **4+** | implementation waves: controls -> system -> result/state -> logs/checkpoints -> engine -> adam/momentum/line_search -> guesses -> diagnostics/repairs -> advanced methods -> modes | pending |
+| **0** | project setup and build context | complete |
+| **1** | vectorized control container | complete |
+| **2** | optimizer-facing system contract | complete |
+| **3** | result and run/warmstart state | complete |
+| **4** | trace records and in-memory checkpoints | complete |
+| **5** | shared core engine | complete for review |
+| **6** | public facade (`optimizer/__init__.py`, `library.py`) | next after approval |
+| **7+** | schedules, optimizers, guesses, constraints, diagnostics/repairs, advanced methods, modes | pending |
 
-**Immediate next action:** review and lock the class/module details under
-[`plan/classes/`](plan/classes/README.md), then create the skeleton only after approval.
+**Immediate next action:** review Phase 5. After approval, commit Phase 5 and move to
+Phase 6 public facade planning/implementation.
 
 ---
 
@@ -169,6 +172,9 @@ Keep v3 history here so it travels with the folder.
   run/warmstart state containers, and focused result/state tests.
 - **2026-07-15** — Phase 4 complete for review: added trace records, in-memory
   checkpoints, label-based restore, and focused trace/checkpoint tests.
+- **2026-07-15** — Phase 5 complete for review: added the shared chunk engine,
+  evaluation/cache helpers, stopping rules, local parallel-map helpers, and focused
+  engine tests.
 
 ---
 
@@ -177,7 +183,7 @@ Keep v3 history here so it travels with the folder.
 1. Read this README fully, then `CONTEXT.md`, `BUILD_PLAN.md`, `ARCHITECTURE.md`,
    then `OPTIMIZERS.md` + `AUXILIARY.md`.
 2. Skim `reference/` for the advanced-method source and the v2 legacy snapshot.
-3. Find the current layer in §2 and continue **that** layer's `info→plan→review→fix`
-   loop — do not skip ahead.
+3. Find the current phase in §2 and `BUILD_PLAN.md`; continue that phase's
+   `info→plan→review→fix` loop — do not skip ahead.
 4. Propose in chat before writing to files; keep naming user-led.
 5. On any change: update §2 (status) and §7 (change log) here; remind the user to commit.

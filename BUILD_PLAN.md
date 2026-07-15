@@ -1,6 +1,6 @@
 # OPTIMIZER v3 Build Plan
 
-Status: Phase 4 complete for review.
+Status: Phase 5 complete for review.
 Last updated: 2026-07-15.
 
 This file defines the phase-by-phase build process. Each phase should be completed,
@@ -226,6 +226,10 @@ maxiter, nonfinite, target, and stall stops work
 trace/checkpoint hooks are called
 focused tests pass
 ```
+
+Implementation status (2026-07-15): complete for review. Added the shared engine,
+evaluation/cache helpers, stopping helpers, local parallel-map helpers, and focused
+engine tests.
 
 ## Phase 6: Public Facade
 
