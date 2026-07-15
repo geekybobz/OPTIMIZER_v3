@@ -165,6 +165,8 @@ Keep v3 history here so it travels with the folder.
   focused control-container tests.
 - **2026-07-15** — Phase 2 complete for review: added system contract helpers,
   minimal system template, and focused system-contract tests.
+- **2026-07-15** — Phase 3 complete for review: added evaluation/result containers,
+  run/warmstart state containers, and focused result/state tests.
 
 ---
 
