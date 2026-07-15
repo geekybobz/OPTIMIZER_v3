@@ -33,7 +33,9 @@ class PublicApiTests(unittest.TestCase):
         methods = opt.methods()
         self.assertEqual(methods["run_chunk"].status, "implemented")
         self.assertEqual(methods["context"].status, "implemented")
-        self.assertEqual(methods["adam"].status, "reserved")
+        self.assertEqual(methods["adam"].status, "implemented")
+        self.assertEqual(methods["momentum"].status, "implemented")
+        self.assertEqual(methods["line_search"].status, "implemented")
 
     def test_public_evaluate_gradient_and_run_chunk_with_fourth_order_fixture(self):
         system = TemporaryUniversalFourthOrderSystem(N=17, lambda2=0.25, lambda4=0.05)
@@ -97,12 +99,14 @@ class PublicApiTests(unittest.TestCase):
         self.assertLess(second.J, ctx_second.evaluate(first.controls).J)
         self.assertEqual(len(ctx.trace.chunk_records), 2)
 
-    def test_bind_alias_and_context_reserved_methods_fail_clearly(self):
+    def test_bind_alias_and_context_optimizer_methods_run(self):
         ctx = opt.bind(TemporaryUniversalFourthOrderSystem(N=9))
         controls = ctx.constant(0.0, name="zero")
 
-        with self.assertRaisesRegex(NotImplementedError, "ctx\\.adam"):
-            ctx.adam(controls, maxiter=10)
+        result = ctx.adam(controls, maxiter=2, step_size=0.05)
+
+        self.assertEqual(result.optimizer, "adam")
+        self.assertLess(result.J, ctx.evaluate(controls).J)
         with self.assertRaisesRegex(NotImplementedError, "Phase 9"):
             ctx.fourier_guess(n_terms=3)
 
@@ -121,16 +125,20 @@ class PublicApiTests(unittest.TestCase):
         self.assertEqual(robust["robust_fidelity_per_direction"].shape, (3,))
         self.assertIn("terminal_overlap", robust)
 
-    def test_reserved_methods_fail_clearly_until_implemented(self):
+    def test_future_tool_methods_still_fail_clearly_until_implemented(self):
         system = TemporaryUniversalFourthOrderSystem(N=9)
-        controls = system.reference_controls(amplitude=0.0)
 
-        with self.assertRaisesRegex(NotImplementedError, "Phase 7"):
-            opt.adam(system, controls, maxiter=10)
-        with self.assertRaisesRegex(NotImplementedError, "Phase 7"):
-            opt.line_search(system, controls, maxiter=10)
         with self.assertRaisesRegex(NotImplementedError, "Phase 9"):
             opt.fourier_guess(system.control_spec())
+
+    def test_public_diagnostic_and_repair_methods_are_implemented(self):
+        system = TemporaryUniversalFourthOrderSystem(N=9)
+        controls = system.reference_controls(amplitude=0.8)
+
+        self.assertEqual(opt.methods()["repair_newton"].status, "implemented")
+        self.assertEqual(opt.methods()["geometry_probe"].status, "implemented")
+        self.assertIn("metrics", opt.diagnostic_report(system, controls))
+        self.assertIn("rank", opt.geometry_probe(system, controls, eps=1.0e-6))
 
     def test_parallel_map_is_available_from_public_facade(self):
         self.assertEqual(opt.parallel_map(square, [1, 2, 3]), [1, 4, 9])

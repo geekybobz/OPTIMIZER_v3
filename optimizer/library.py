@@ -45,11 +45,30 @@ from uuid import uuid4
 from optimizer.controls import ControlSpec, Controls
 from optimizer.core.engine import StepFunction, run_chunk
 from optimizer.core.evaluate import SystemEvaluator
+from optimizer.core.guards import metric_guard as _metric_guard
 from optimizer.core.parallel import ParallelConfig, parallel_map
 from optimizer.logs.trace import Trace
+from optimizer.optimizers import adam as _adam
+from optimizer.optimizers import line_search as _line_search
+from optimizer.optimizers import momentum as _momentum
 from optimizer.result import Evaluation, OptimizerResult
+from optimizer.schedules import AdaptiveStepSchedule, ConstantSchedule
 from optimizer.state import RunState, WarmStartState
 from optimizer.system import require_system
+from optimizer.utils import (
+    control_spectrum as _control_spectrum,
+    diagnostic_report as _diagnostic_report,
+    finite_difference_gradient as _finite_difference_gradient,
+    finite_difference_jacobian as _finite_difference_jacobian,
+    geometry_probe as _geometry_probe,
+    metric_report as _metric_report,
+    nullspace_basis as _nullspace_basis,
+    project_gradient as _project_gradient,
+    repair_newton as _repair_newton,
+    smoothness_report as _smoothness_report,
+    verify_gradient as _verify_gradient,
+    verify_jacobian as _verify_jacobian,
+)
 
 
 def _not_implemented(
@@ -208,33 +227,56 @@ class OptimizerContext:
     # ------------------------------------------------------------------
 
     def adam(self, controls: Any = None, *args: Any, **kwargs: Any) -> OptimizerResult:
-        del controls, args, kwargs
-        raise _not_implemented("adam", "Phase 7", "optimizer/optimizers/adam.py", prefix="ctx")
+        return self.library.adam(self.system, controls, *args, **kwargs)
 
     def momentum(self, controls: Any = None, *args: Any, **kwargs: Any) -> OptimizerResult:
-        del controls, args, kwargs
-        raise _not_implemented("momentum", "Phase 7", "optimizer/optimizers/momentum.py", prefix="ctx")
+        return self.library.momentum(self.system, controls, *args, **kwargs)
 
     def line_search(self, controls: Any = None, *args: Any, **kwargs: Any) -> OptimizerResult:
-        del controls, args, kwargs
-        raise _not_implemented(
-            "line_search",
-            "Phase 7",
-            "optimizer/optimizers/line_search.py",
-            prefix="ctx",
-        )
+        return self.library.line_search(self.system, controls, *args, **kwargs)
+
+    # ------------------------------------------------------------------
+    # Bound diagnostics, repair, and training aids
+    # ------------------------------------------------------------------
+
+    def metric_report(self, controls: Controls) -> dict[str, Any]:
+        """Return current metrics for the bound system."""
+
+        return self.library.metric_report(self.system, controls)
+
+    def diagnostic_report(self, controls: Controls, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        """Return technical diagnostics for the bound system."""
+
+        return self.library.diagnostic_report(self.system, controls, *args, **kwargs)
+
+    def geometry_probe(self, controls: Controls, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        """Return local residual/Jacobian geometry for the bound system."""
+
+        return self.library.geometry_probe(self.system, controls, *args, **kwargs)
+
+    def verify_gradient(self, controls: Controls, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        """Check the bound system's analytical gradient."""
+
+        return self.library.verify_gradient(self.system, controls, *args, **kwargs)
+
+    def verify_jacobian(self, controls: Controls, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        """Check the bound system's analytical residual Jacobian."""
+
+        return self.library.verify_jacobian(self.system, controls, *args, **kwargs)
+
+    def repair_newton(self, controls: Controls, *args: Any, **kwargs: Any) -> Any:
+        """Repair bound-system residuals using Newton/LM updates."""
+
+        return self.library.repair_newton(self.system, controls, *args, **kwargs)
+
+    def project_gradient(self, controls: Controls, gradient: Controls, *args: Any, **kwargs: Any) -> Any:
+        """Project a gradient against the bound system's hard residual geometry."""
+
+        return self.library.project_gradient(self.system, controls, gradient, *args, **kwargs)
 
     def fourier_guess(self, *args: Any, **kwargs: Any) -> Controls:
         del args, kwargs
         raise _not_implemented("fourier_guess", "Phase 9", "optimizer/guesses/fourier.py", prefix="ctx")
-
-    def repair_newton(self, controls: Any = None, *args: Any, **kwargs: Any) -> Controls:
-        del controls, args, kwargs
-        raise _not_implemented("repair_newton", "Phase 11", "optimizer/utils/repairs.py", prefix="ctx")
-
-    def geometry_probe(self, controls: Any = None, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        del controls, args, kwargs
-        raise _not_implemented("geometry_probe", "Phase 11", "optimizer/utils/diagnostics.py", prefix="ctx")
 
 
 class OptimizerLibrary:
@@ -348,22 +390,98 @@ class OptimizerLibrary:
     # ------------------------------------------------------------------
 
     def adam(self, *args: Any, **kwargs: Any) -> OptimizerResult:
-        """Reserved direct Adam call; implementation starts in Phase 7."""
+        """Run Adam or one of its implemented variants."""
 
-        del args, kwargs
-        raise _not_implemented("adam", "Phase 7", "optimizer/optimizers/adam.py")
+        return _adam(*args, **kwargs)
 
     def momentum(self, *args: Any, **kwargs: Any) -> OptimizerResult:
-        """Reserved direct momentum call; implementation starts in Phase 7."""
+        """Run the momentum optimizer family."""
 
-        del args, kwargs
-        raise _not_implemented("momentum", "Phase 7", "optimizer/optimizers/momentum.py")
+        return _momentum(*args, **kwargs)
 
     def line_search(self, *args: Any, **kwargs: Any) -> OptimizerResult:
-        """Reserved direct line-search call; implementation starts in Phase 7."""
+        """Run gradient descent with line-search variants."""
 
-        del args, kwargs
-        raise _not_implemented("line_search", "Phase 7", "optimizer/optimizers/line_search.py")
+        return _line_search(*args, **kwargs)
+
+    # ------------------------------------------------------------------
+    # Diagnostics, repair, and training aids
+    # ------------------------------------------------------------------
+
+    def metric_report(self, system: Any, controls: Controls) -> dict[str, Any]:
+        """Return current system metrics in a review-friendly payload."""
+
+        return _metric_report(system, controls)
+
+    def diagnostic_report(self, system: Any, controls: Controls, **kwargs: Any) -> dict[str, Any]:
+        """Return metric/control/residual/gradient diagnostics."""
+
+        return _diagnostic_report(system, controls, **kwargs)
+
+    def geometry_probe(self, system: Any, controls: Controls, **kwargs: Any) -> dict[str, Any]:
+        """Return local residual/Jacobian geometry diagnostics."""
+
+        return _geometry_probe(system, controls, **kwargs)
+
+    def finite_difference_gradient(self, system: Any, controls: Controls, **kwargs: Any) -> Controls:
+        """Return finite-difference gradient for a scalar metric."""
+
+        return _finite_difference_gradient(system, controls, **kwargs)
+
+    def verify_gradient(self, system: Any, controls: Controls, **kwargs: Any) -> dict[str, Any]:
+        """Compare analytical gradient with finite-difference directions."""
+
+        return _verify_gradient(system, controls, **kwargs)
+
+    def finite_difference_jacobian(self, system: Any, controls: Controls, **kwargs: Any) -> Any:
+        """Return finite-difference residual Jacobian."""
+
+        return _finite_difference_jacobian(system, controls, **kwargs)
+
+    def verify_jacobian(self, system: Any, controls: Controls, **kwargs: Any) -> dict[str, Any]:
+        """Compare analytical residual Jacobian with finite-difference directions."""
+
+        return _verify_jacobian(system, controls, **kwargs)
+
+    def repair_newton(self, system: Any, controls: Controls, **kwargs: Any) -> Any:
+        """Repair residual violations using Newton/LM updates."""
+
+        return _repair_newton(system, controls, **kwargs)
+
+    def project_gradient(self, system: Any, controls: Controls, gradient: Controls, **kwargs: Any) -> Any:
+        """Project a gradient into the local residual nullspace."""
+
+        return _project_gradient(system, controls, gradient, **kwargs)
+
+    def nullspace_basis(self, system: Any, controls: Controls, **kwargs: Any) -> Any:
+        """Return local residual nullspace basis columns."""
+
+        return _nullspace_basis(system, controls, **kwargs)
+
+    def metric_guard(self, **kwargs: Any) -> Any:
+        """Build a reusable multi-metric accept function."""
+
+        return _metric_guard(**kwargs)
+
+    def control_spectrum(self, controls: Controls, **kwargs: Any) -> dict[str, Any]:
+        """Return FFT-based control spectrum diagnostics."""
+
+        return _control_spectrum(controls, **kwargs)
+
+    def smoothness_report(self, controls: Controls) -> dict[str, Any]:
+        """Return finite-difference smoothness diagnostics."""
+
+        return _smoothness_report(controls)
+
+    def constant_schedule(self, value: float) -> ConstantSchedule:
+        """Create a constant step-size schedule."""
+
+        return ConstantSchedule(value)
+
+    def adaptive_step_schedule(self, **kwargs: Any) -> AdaptiveStepSchedule:
+        """Create a shrink/grow adaptive step-size schedule."""
+
+        return AdaptiveStepSchedule(**kwargs)
 
     def fourier_guess(self, *args: Any, **kwargs: Any) -> Controls:
         """Reserved direct Fourier guess call; implementation starts in Phase 9."""
@@ -372,16 +490,14 @@ class OptimizerLibrary:
         raise _not_implemented("fourier_guess", "Phase 9", "optimizer/guesses/fourier.py")
 
     def repair_newton(self, *args: Any, **kwargs: Any) -> Controls:
-        """Reserved direct Newton repair call; implementation starts in Phase 11."""
+        """Repair residual violations using Newton/LM updates."""
 
-        del args, kwargs
-        raise _not_implemented("repair_newton", "Phase 11", "optimizer/utils/repairs.py")
+        return _repair_newton(*args, **kwargs)
 
     def geometry_probe(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        """Reserved direct geometry diagnostic call; implementation starts in Phase 11."""
+        """Return local residual/Jacobian geometry diagnostics."""
 
-        del args, kwargs
-        raise _not_implemented("geometry_probe", "Phase 11", "optimizer/utils/diagnostics.py")
+        return _geometry_probe(*args, **kwargs)
 
     # ------------------------------------------------------------------
     # Facade metadata
@@ -399,11 +515,11 @@ class OptimizerLibrary:
             "parallel_map": MethodInfo("parallel_map", "implemented", "optimizer/core/parallel.py", "Phase 5"),
             "context": MethodInfo("context", "implemented", "optimizer/library.py", "Phase 6"),
             "bind": MethodInfo("bind", "implemented", "optimizer/library.py", "Phase 6"),
-            "adam": MethodInfo("adam", "reserved", "optimizer/optimizers/adam.py", "Phase 7"),
-            "momentum": MethodInfo("momentum", "reserved", "optimizer/optimizers/momentum.py", "Phase 7"),
+            "adam": MethodInfo("adam", "implemented", "optimizer/optimizers/adam.py", "Phase 7"),
+            "momentum": MethodInfo("momentum", "implemented", "optimizer/optimizers/momentum.py", "Phase 7"),
             "line_search": MethodInfo(
                 "line_search",
-                "reserved",
+                "implemented",
                 "optimizer/optimizers/line_search.py",
                 "Phase 7",
             ),
@@ -415,14 +531,44 @@ class OptimizerLibrary:
             ),
             "repair_newton": MethodInfo(
                 "repair_newton",
-                "reserved",
+                "implemented",
                 "optimizer/utils/repairs.py",
                 "Phase 11",
             ),
             "geometry_probe": MethodInfo(
                 "geometry_probe",
-                "reserved",
+                "implemented",
                 "optimizer/utils/diagnostics.py",
+                "Phase 11",
+            ),
+            "diagnostic_report": MethodInfo(
+                "diagnostic_report",
+                "implemented",
+                "optimizer/utils/diagnostics.py",
+                "Phase 11",
+            ),
+            "verify_gradient": MethodInfo(
+                "verify_gradient",
+                "implemented",
+                "optimizer/utils/derivatives.py",
+                "Phase 11",
+            ),
+            "verify_jacobian": MethodInfo(
+                "verify_jacobian",
+                "implemented",
+                "optimizer/utils/derivatives.py",
+                "Phase 11",
+            ),
+            "project_gradient": MethodInfo(
+                "project_gradient",
+                "implemented",
+                "optimizer/utils/geometry.py",
+                "Phase 11",
+            ),
+            "metric_guard": MethodInfo(
+                "metric_guard",
+                "implemented",
+                "optimizer/core/guards.py",
                 "Phase 11",
             ),
         }

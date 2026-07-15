@@ -71,6 +71,10 @@ class StepProposal:
     controls: Controls
     step_size: float | None = None
     optimizer_state: Mapping[str, Any] | None = None
+    optimizer_state_on_accept: Mapping[str, Any] | None = None
+    optimizer_state_on_reject: Mapping[str, Any] | None = None
+    step_size_on_accept: float | None = None
+    step_size_on_reject: float | None = None
     technical: Mapping[str, Any] = field(default_factory=dict)
     reason: str | None = None
 
@@ -160,6 +164,41 @@ def _normalize_acceptance(decision: AcceptanceDecision | bool) -> AcceptanceDeci
             technical={},
         )
     raise TypeError("accept function must return AcceptanceDecision or bool.")
+
+
+def _proposal_state_update(proposal: StepProposal, *, accepted: bool) -> dict[str, Any]:
+    """Return the optimizer-private state update for the decision branch.
+
+    ``optimizer_state`` is the Phase 5 legacy field and still means "apply this
+    update after the proposal is processed."  Real optimizers need finer control:
+    Adam moments, momentum velocity, and future L-BFGS histories should usually
+    advance only after an accepted control move.  The branch-specific fields let a
+    method express that without forcing the engine to understand the algorithm.
+    """
+
+    branch_state = (
+        proposal.optimizer_state_on_accept
+        if accepted
+        else proposal.optimizer_state_on_reject
+    )
+    if branch_state is not None:
+        return dict(branch_state)
+    return dict(proposal.optimizer_state or {})
+
+
+def _proposal_step_size(proposal: StepProposal, *, accepted: bool) -> float | None:
+    """Return the step-size value to retain for the decision branch."""
+
+    branch_step_size = (
+        proposal.step_size_on_accept
+        if accepted
+        else proposal.step_size_on_reject
+    )
+    if branch_step_size is not None:
+        return float(branch_step_size)
+    if proposal.step_size is not None:
+        return float(proposal.step_size)
+    return None
 
 
 # ----------------------------------------------------------------------
@@ -507,9 +546,10 @@ def run_chunk(
         if not trial_outcome.ok or trial_outcome.evaluation is None:
             run_state.iteration += 1
             run_state.global_iteration += 1
-            run_state.optimizer_state.update(dict(proposal.optimizer_state or {}))
-            if proposal.step_size is not None:
-                run_state.step_size = float(proposal.step_size)
+            run_state.optimizer_state.update(_proposal_state_update(proposal, accepted=False))
+            rejected_step_size = _proposal_step_size(proposal, accepted=False)
+            if rejected_step_size is not None:
+                run_state.step_size = rejected_step_size
             stop_reason = "nonfinite_trial"
             _record_iteration(
                 active_trace,
@@ -549,12 +589,20 @@ def run_chunk(
             "acceptance": dict(accept_decision.technical),
         }
 
-        run_state.optimizer_state.update(dict(proposal.optimizer_state or {}))
+        branch_state_update = _proposal_state_update(
+            proposal,
+            accepted=accept_decision.accepted,
+        )
+        branch_step_size = _proposal_step_size(
+            proposal,
+            accepted=accept_decision.accepted,
+        )
+        run_state.optimizer_state.update(branch_state_update)
         if accept_decision.accepted:
             run_state.update_current(
                 proposal.controls.copy(name=proposal.controls.name),
                 trial_outcome.evaluation.metrics,
-                step_size=proposal.step_size,
+                step_size=branch_step_size,
                 iteration_increment=1,
             )
             current_eval = trial_outcome.evaluation
@@ -569,8 +617,8 @@ def run_chunk(
         else:
             run_state.iteration += 1
             run_state.global_iteration += 1
-            if proposal.step_size is not None:
-                run_state.step_size = float(proposal.step_size)
+            if branch_step_size is not None:
+                run_state.step_size = branch_step_size
 
         _record_iteration(
             active_trace,
