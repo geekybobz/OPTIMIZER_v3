@@ -1,7 +1,7 @@
 # OPTIMIZER v3 — Design & Implementation (self-contained)
 
-Status: **Phase 5 complete for review** — shared core engine implemented; Phase 6
-public facade is next only after approval.
+Status: **Phase 6 complete for review** — public facade implemented; Phase 7 first
+optimizers are next only after approval.
 Last updated: 2026-07-15
 
 > Start with the top-level docs in this README's reading order. The [`plan/`](plan/README.md)
@@ -65,12 +65,13 @@ public style should stay direct: `opt.adam(...)`, `opt.line_search(...)`,
 | **2** | optimizer-facing system contract | complete |
 | **3** | result and run/warmstart state | complete |
 | **4** | trace records and in-memory checkpoints | complete |
-| **5** | shared core engine | complete for review |
-| **6** | public facade (`optimizer/__init__.py`, `library.py`) | next after approval |
-| **7+** | schedules, optimizers, guesses, constraints, diagnostics/repairs, advanced methods, modes | pending |
+| **5** | shared core engine | complete |
+| **6** | public facade (`optimizer/__init__.py`, `library.py`) | complete for review |
+| **7** | first optimizers (`adam`, `momentum`, `line_search`) | next after approval |
+| **8+** | schedules, guesses, constraints, diagnostics/repairs, advanced methods, modes | pending |
 
-**Immediate next action:** review Phase 5. After approval, commit Phase 5 and move to
-Phase 6 public facade planning/implementation.
+**Immediate next action:** review Phase 6. After approval, commit Phase 6 and move to
+Phase 7 first optimizer planning/implementation.
 
 ---
 
@@ -175,6 +176,10 @@ Keep v3 history here so it travels with the folder.
 - **2026-07-15** — Phase 5 complete for review: added the shared chunk engine,
   evaluation/cache helpers, stopping rules, local parallel-map helpers, and focused
   engine tests.
+- **2026-07-15** — Phase 6 complete for review: added `import optimizer as opt`
+  facade, default `OptimizerLibrary`, bound `OptimizerContext` via `opt.context(system)`,
+  reserved direct method names, and public API tests using a temporary
+  universal-robust-4th-style fixture.
 
 ---
 

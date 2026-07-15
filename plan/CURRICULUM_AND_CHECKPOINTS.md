@@ -38,17 +38,19 @@ should not rebuild `J` from outside. It should receive a system with current par
 ## Basic Manual Curriculum
 
 ```python
-sys1 = sys.with_params(wF=1e5, w2=0.0, w4=0.0, wE=0.0)
-r1 = opt.adam(sys1, controls, maxiter=10)
+ctx = opt.context(sys, trace="run_001")
 
-sys2 = sys.with_params(wF=1e5, w2=1e6, w4=0.0, wE=0.0)
-r2 = opt.adam(sys2, r1, maxiter=10, warmstart=True)
+ctx1 = ctx.with_params(wF=1e5, w2=0.0, w4=0.0, wE=0.0)
+r1 = ctx1.adam(controls, maxiter=10)
 
-sys3 = sys.with_params(wF=1e5, w2=1e6, w4=10.0, wE=0.0)
-r3 = opt.adam(sys3, r2, maxiter=10, warmstart=True)
+ctx2 = ctx.with_params(wF=1e5, w2=1e6, w4=0.0, wE=0.0)
+r2 = ctx2.adam(r1.controls, maxiter=10, warmstart=True)
 
-sys4 = sys.with_params(wF=1e5, w2=1e6, w4=10.0, wE=1e-3)
-r4 = opt.line_search(sys4, r3, maxiter=10, warmstart=True)
+ctx3 = ctx.with_params(wF=1e5, w2=1e6, w4=10.0, wE=0.0)
+r3 = ctx3.adam(r2.controls, maxiter=10, warmstart=True)
+
+ctx4 = ctx.with_params(wF=1e5, w2=1e6, w4=10.0, wE=1e-3)
+r4 = ctx4.line_search(r3.controls, maxiter=10, warmstart=True)
 ```
 
 The user or later `modes/` can decide the next weights by reading logs.
@@ -181,4 +183,3 @@ for stage in stages:
         controls, state = trace.restore("stage_start")
         trace.event("rollback", reason="guard_failed")
 ```
-

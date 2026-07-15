@@ -112,7 +112,7 @@ def _numeric_payload_is_finite(value: Any) -> bool:
     """
 
     if isinstance(value, Number):
-        return bool(np.isfinite(float(value)))
+        return bool(np.all(np.isfinite(value)))
     if isinstance(value, np.ndarray):
         return bool(np.all(np.isfinite(value)))
     if isinstance(value, (list, tuple)):

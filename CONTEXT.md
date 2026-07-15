@@ -1,6 +1,6 @@
 # OPTIMIZER v3 Context
 
-Status: Phase 5 complete for review.
+Status: Phase 6 complete for review.
 Last updated: 2026-07-15.
 
 This file captures the durable context for implementation work. It should be read
@@ -23,6 +23,17 @@ explicitly approved.
    opt.repair_newton(...)
    ```
 
+   Both styles should be supported:
+
+   ```python
+   opt.adam(system, controls, ...)
+   ctx = opt.context(system)
+   ctx.adam(controls, ...)
+   ```
+
+   The context style is for notebooks and curriculum. It must be explicit object
+   state, not a mutable global such as `opt.system = system`.
+
 2. `system.py` owns the physics, objective components, cost prefactors, analytical
    gradient, hard residuals, Jacobians, and higher derivative hooks.
 
@@ -44,6 +55,15 @@ explicitly approved.
 
 5. Curriculum means short optimizer chunks plus system-param changes, logs, guards,
    and checkpoint rollback.
+
+   Preferred bound-system curriculum style:
+
+   ```python
+   ctx = opt.context(system, trace="run_001")
+   r1 = ctx.adam(controls, maxiter=10)
+   ctx2 = ctx.with_params(lambda2=1e6, lambda4=0.0)
+   r2 = ctx2.adam(r1.controls, maxiter=10, warmstart=r1)
+   ```
 
 6. Numerical finite-difference derivatives are diagnostics or explicit fallback
    experiments. Analytical gradients are the normal path.
@@ -94,6 +114,32 @@ run focused checks
 summarize results
 wait for review before the next phase
 ```
+
+## Testing Rule
+
+Future optimizer-facing tests should not rely only on toy/sample objective systems.
+Use a temporary system shaped from the universal fourth-order robust-control model
+until real downstream integration tests are connected:
+
+```text
+source idea:
+  /Users/billabobz/phd/CODES/universal_robust_control_4th/model_note/main.tex
+  /Users/billabobz/phd/CODES/universal_robust_control_4th/system.py
+
+temporary fixture:
+  tests/fixtures/universal_robust_4th/system.py
+
+required shape:
+  controls ux, uy, uz with endpoint samples
+  system-owned weights infidelity_weight, lambda2, lambda4, energy_weight
+  metrics J, infidelity, F_norm2, C_sym_norm2, energy
+  analytical gradient
+  hard residual vector [F, independent C_sym terms]
+  vectorized finite-alpha direction simulation
+```
+
+Small toy systems can still be kept for very narrow edge cases, but new optimizer
+behavior should be demonstrated on the fourth-order-style fixture first.
 
 ## Editing Rules
 

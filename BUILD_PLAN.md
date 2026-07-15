@@ -1,6 +1,6 @@
 # OPTIMIZER v3 Build Plan
 
-Status: Phase 5 complete for review.
+Status: Phase 6 complete for review.
 Last updated: 2026-07-15.
 
 This file defines the phase-by-phase build process. Each phase should be completed,
@@ -259,9 +259,17 @@ Acceptance:
 ```text
 import optimizer as opt works
 explicit style opt.adam(system, controls) is the reference
-optional bound-system style can wait
+bound-system context style opt.context(system) works for curriculum convenience
 focused tests pass
 ```
+
+Implementation status (2026-07-15): complete for review. Added package facade,
+default ``OptimizerLibrary``, package-level direct helpers, reserved direct names for
+later optimizer/guess/repair phases, and public API tests using a temporary
+universal-robust-4th-style system fixture. Updated after review to add
+``OptimizerContext`` via ``opt.context(system)`` / ``opt.bind(system)`` so staged
+curriculum can change system weights with ``ctx.with_params(...)`` without relying on
+a mutable global system.
 
 ## Phase 7: First Optimizers
 

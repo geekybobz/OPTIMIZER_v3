@@ -394,15 +394,19 @@ fixed = opt.repair_newton(sys, r.controls)
 diag = opt.geometry_probe(sys, fixed.controls)
 ```
 
-Optional notebook convenience can exist later:
+Bound-system notebook/curriculum convenience:
 
 ```python
-opt.system = sys
-r = opt.adam(controls, maxiter=1000)
+ctx = opt.context(sys)
+r = ctx.adam(controls, maxiter=1000)
+
+ctx = ctx.with_params(lambda2=1e6, lambda4=10.0)
+r = ctx.adam(r.controls, maxiter=10, warmstart=True)
 ```
 
-The explicit style should be the reference because it is clearer for scripts,
-parallelism, and reproducibility.
+The explicit style should remain the core implementation path because it is clearer
+for scripts, parallelism, and reproducibility. The context style should be explicit
+object state, not a mutable package global.
 
 ## Build Order
 
@@ -437,4 +441,3 @@ corrections() -> gradient()
 ```
 
 Downstream migration should be mechanical and opt-in.
-

@@ -30,19 +30,24 @@ diag = opt.geometry_probe(sys, fixed.controls)
 
 This is safest for scripts and multiprocessing because the system is explicit.
 
-## Optional Bound-System Style
+## Bound-System Context Style
 
-This can be supported later for notebook convenience:
+This is supported for notebook and curriculum convenience:
 
 ```python
 import optimizer as opt
 
-opt.system = system(params)
-controls = opt.fourier_guess(n_terms=8, amplitude=0.03)
-result = opt.adam(controls, maxiter=1000)
+ctx = opt.context(system(params))
+controls = ctx.fourier_guess(n_terms=8, amplitude=0.03)
+result = ctx.adam(controls, maxiter=1000)
+
+ctx = ctx.with_params(lambda2=1e6, lambda4=10.0)
+result = ctx.adam(result.controls, maxiter=10, warmstart=True)
 ```
 
-This is convenient, but it should not be the only supported style.
+This is convenient, but it should not be the only supported style. Avoid a mutable
+global like `opt.system = system`; it is weaker for multiprocessing, multiple systems,
+and reproducibility.
 
 ## Direct Functions
 
@@ -113,4 +118,3 @@ J_hist
 metrics_hist
 control_info
 ```
-
