@@ -1,0 +1,47 @@
+# Python cache and tooling
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Packaging/build artifacts
+build/
+dist/
+*.egg-info/
+
+# Local editor/system files
+.DS_Store
+.idea/
+.vscode/
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# Generated optimizer run artifacts at repository root
+/results/
+/outputs/
+/runs/
+/checkpoints/
+/artifacts/
+/tmp/
+
+# Large generated numeric artifacts
+*.npy
+*.npz
+*.pkl
+*.h5
+*.hdf5
+
+# Streaming/generated logs
+*.jsonl
+*.log
+
