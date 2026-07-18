@@ -29,13 +29,19 @@ from optimizer.optimizers.lbfgs import lbfgs
 from optimizer.optimizers.line_search import line_search
 from optimizer.optimizers.momentum import momentum
 from optimizer.optimizers.nonlinear_cg import ncg, nonlinear_cg
+from optimizer.catalog import attach_namespace_helpers
+
+
+attach_namespace_helpers(globals(), "optimizers")
 
 __all__ = [
     "adagrad",
     "adam",
     "cma_es",
+    "info",
     "lbfgs",
     "line_search",
+    "list",
     "momentum",
     "ncg",
     "nonlinear_cg",

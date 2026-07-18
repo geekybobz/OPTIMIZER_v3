@@ -34,6 +34,10 @@ from optimizer.utils.diagnostics import diagnostic_report, geometry_probe, metri
 from optimizer.utils.geometry import nullspace_basis, project_gradient
 from optimizer.utils.repairs import RepairResult, repair_newton
 from optimizer.utils.spectrum import control_spectrum, smoothness_report
+from optimizer.catalog import attach_namespace_helpers
+
+
+attach_namespace_helpers(globals(), "utils")
 
 __all__ = [
     "RepairResult",
@@ -42,6 +46,8 @@ __all__ = [
     "finite_difference_gradient",
     "finite_difference_jacobian",
     "geometry_probe",
+    "info",
+    "list",
     "metric_report",
     "nullspace_basis",
     "project_gradient",

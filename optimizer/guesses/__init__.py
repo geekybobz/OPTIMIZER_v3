@@ -33,12 +33,18 @@ from optimizer.guesses.harmonic import (
 )
 from optimizer.guesses.random import random_fourier_guess, random_guess, random_smooth_guess
 from optimizer.guesses.simple import constant_guess, ramp_guess, zero_guess
+from optimizer.catalog import attach_namespace_helpers
+
+
+attach_namespace_helpers(globals(), "guesses")
 
 __all__ = [
     "constant_guess",
     "cosine_guess",
     "fourier_guess",
     "gaussian_guess",
+    "info",
+    "list",
     "mix_guess",
     "perturb_guess",
     "ramp_guess",

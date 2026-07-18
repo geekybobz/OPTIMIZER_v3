@@ -14,5 +14,9 @@ How it fits the architecture
 """
 
 from optimizer.schedules.step_size import AdaptiveStepSchedule, ConstantSchedule
+from optimizer.catalog import attach_namespace_helpers
 
-__all__ = ["AdaptiveStepSchedule", "ConstantSchedule"]
+
+attach_namespace_helpers(globals(), "schedules")
+
+__all__ = ["AdaptiveStepSchedule", "ConstantSchedule", "info", "list"]

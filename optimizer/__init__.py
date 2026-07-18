@@ -36,7 +36,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, Iterable
 
-from optimizer import guesses, optimizers, schedules, utils
+from optimizer import catalog, guesses, optimizers, schedules, utils
 from optimizer.controls import ControlSpec, Controls
 from optimizer.core.engine import AcceptanceDecision, StepContext, StepProposal
 from optimizer.core.guards import MetricGuard
@@ -301,6 +301,9 @@ def geometry_probe(*args: Any, **kwargs: Any) -> dict[str, Any]:
     return library.geometry_probe(*args, **kwargs)
 
 
+catalog.attach_root_helpers(globals())
+
+
 __all__ = [
     "AcceptanceDecision",
     "AdaptiveStepSchedule",
@@ -334,6 +337,7 @@ __all__ = [
     "constant_guess",
     "constant_schedule",
     "context",
+    "catalog",
     "control_spec",
     "control_spectrum",
     "controls",
