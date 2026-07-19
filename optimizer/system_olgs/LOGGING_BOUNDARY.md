@@ -14,7 +14,7 @@ depends_on:
 connects_to:
   - LIFECYCLE
   - DERIVATIVES
-  - SYSTEM_STARTER_TEMPLATE
+  - OLGS_SYSTEM_BUILD_SKILL
 ---
 
 # OLGS Logging Boundary
@@ -77,7 +77,7 @@ manage persistent cache
 ## Related Notes
 
 - [[README|system_olgs]]
-- [[SYSTEM_STARTER_TEMPLATE|New System Starter]]
+- [[OLGS_SYSTEM_BUILD_SKILL|OLGS System Build Skill]]
 - [[CONTRACT|API Contract]]
 - [[LIFECYCLE|Computation Lifecycle]]
 - [[DERIVATIVES|Derivative Hooks]]

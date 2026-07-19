@@ -40,7 +40,7 @@ class QuadraticSystem:
         diff = controls.as_matrix(copy=False) - self.target
         return Controls.from_matrix(self.spec, 2.0 * self.weight * diff, name="grad")
 
-    def with_params(self, **updates):
+    def with_secondary(self, **updates):
         params = dict(self.params)
         params.update(updates)
         return QuadraticSystem(target=params["target"], weight=params["weight"])

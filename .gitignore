@@ -26,6 +26,9 @@ dist/
 # Notebook checkpoints
 .ipynb_checkpoints/
 
+# Local system API exploration notebooks/samples
+tests/system_check/
+
 # Generated optimizer run artifacts at repository root
 /results/
 /outputs/
@@ -40,9 +43,6 @@ dist/
 *.pkl
 *.h5
 *.hdf5
-
-# Private/local reference artifacts
-systems/universal_robust_4th/reference/
 
 # Streaming/generated logs
 *.jsonl

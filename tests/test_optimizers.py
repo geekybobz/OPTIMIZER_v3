@@ -1,33 +1,26 @@
-"""Tests for the first implemented optimizer phase.
-
-These tests intentionally use the temporary fourth-order robust-control fixture
-instead of a scalar toy function.  The goal is to verify the optimizer APIs against
-the same control shape, metric names, analytical-gradient contract, and curriculum
-style expected by downstream systems.
-"""
+"""Tests for the first implemented optimizer phase."""
 
 import unittest
 
 import numpy as np
 
 import optimizer as opt
-from fixtures.universal_robust_4th.system import TemporaryUniversalFourthOrderSystem
+from fixtures.quadratic_system import QuadraticVectorSystem
 
 
-def fourth_order_case():
-    """Return a small but nontrivial fourth-order fixture for optimizer tests."""
+def vector_case():
+    """Return a small nontrivial vector-control fixture for optimizer tests."""
 
-    return TemporaryUniversalFourthOrderSystem(
+    return QuadraticVectorSystem(
         N=17,
-        lambda2=0.25,
-        lambda4=0.05,
+        residual_weight=0.25,
         energy_weight=1.0e-3,
     )
 
 
 class OptimizerPhaseTests(unittest.TestCase):
-    def test_line_search_backtracking_decreases_fourth_order_objective(self):
-        system = fourth_order_case()
+    def test_line_search_backtracking_decreases_vector_objective(self):
+        system = vector_case()
         controls = opt.zeros(system.control_spec(), name="zero")
         initial = opt.evaluate(system, controls)
 
@@ -46,7 +39,7 @@ class OptimizerPhaseTests(unittest.TestCase):
         self.assertIn("last_accepted_step_size", result.state.optimizer_state)
 
     def test_line_search_armijo_variant_records_attempts(self):
-        system = fourth_order_case()
+        system = vector_case()
         controls = opt.zeros(system.control_spec(), name="zero")
 
         result = opt.line_search(
@@ -64,7 +57,7 @@ class OptimizerPhaseTests(unittest.TestCase):
         self.assertGreaterEqual(len(attempts), 1)
 
     def test_momentum_variants_move_controls_and_store_velocity(self):
-        system = fourth_order_case()
+        system = vector_case()
         controls = opt.zeros(system.control_spec(), name="zero")
         initial_j = opt.evaluate(system, controls).J
 
@@ -85,7 +78,7 @@ class OptimizerPhaseTests(unittest.TestCase):
                 self.assertTrue(np.all(np.isfinite(velocity)))
 
     def test_momentum_restart_resets_velocity_on_rejected_step(self):
-        system = fourth_order_case()
+        system = vector_case()
         controls = opt.zeros(system.control_spec(), name="zero")
 
         result = opt.momentum(
@@ -100,8 +93,8 @@ class OptimizerPhaseTests(unittest.TestCase):
         self.assertEqual(result.state.optimizer_state["reject_count"], 1)
         np.testing.assert_allclose(result.state.optimizer_state["velocity"], 0.0)
 
-    def test_adam_variants_decrease_fourth_order_objective(self):
-        system = fourth_order_case()
+    def test_adam_variants_decrease_vector_objective(self):
+        system = vector_case()
         controls = opt.zeros(system.control_spec(), name="zero")
         initial_j = opt.evaluate(system, controls).J
 
@@ -121,7 +114,7 @@ class OptimizerPhaseTests(unittest.TestCase):
                 self.assertGreaterEqual(result.state.optimizer_state["t"], 1)
 
     def test_adam_warmstart_transfers_moment_state(self):
-        system = fourth_order_case()
+        system = vector_case()
         controls = opt.zeros(system.control_spec(), name="zero")
 
         first = opt.adam(

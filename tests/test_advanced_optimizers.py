@@ -1,26 +1,19 @@
-"""Tests for advanced optimizer methods.
-
-These tests keep using the temporary fourth-order robust-control fixture instead of a
-toy scalar system.  The goal is not to prove each method is globally optimal; it is to
-verify that the public optimizer calls move realistic vector controls through the v3
-system contract and return standard ``OptimizerResult`` objects with useful state.
-"""
+"""Tests for advanced optimizer methods."""
 
 import unittest
 
 import numpy as np
 
 import optimizer as opt
-from fixtures.universal_robust_4th.system import TemporaryUniversalFourthOrderSystem
+from fixtures.quadratic_system import QuadraticVectorSystem
 
 
 def advanced_system():
-    """Return a small fourth-order fixture with nonzero gradient at zero controls."""
+    """Return a small vector fixture with nonzero gradient at zero controls."""
 
-    return TemporaryUniversalFourthOrderSystem(
+    return QuadraticVectorSystem(
         N=17,
-        lambda2=0.25,
-        lambda4=0.05,
+        residual_weight=0.25,
         energy_weight=1.0e-3,
     )
 

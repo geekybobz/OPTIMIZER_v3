@@ -12,7 +12,7 @@ connects_to:
   - LIFECYCLE
   - DERIVATIVES
   - LOGGING_BOUNDARY
-  - SYSTEM_STARTER_TEMPLATE
+  - OLGS_SYSTEM_BUILD_SKILL
 ---
 
 # OLGS System Documentation
@@ -78,15 +78,15 @@ DERIVATIVES.md
 LOGGING_BOUNDARY.md
   Cache/logging placeholders and what OLGS should not own yet.
 
-templates/SYSTEM_STARTER_TEMPLATE.md
-  Copyable starter document for a new project-local system.py.
+templates/OLGS_SYSTEM_BUILD_SKILL.md
+  Build protocol for turning theory notes into a project-local system.py.
 ```
 
 ## System Map
 
 Start here:
 
-- [[SYSTEM_STARTER_TEMPLATE|New System Starter]]
+- [[OLGS_SYSTEM_BUILD_SKILL|OLGS System Build Skill]]
 - [[CONTRACT|API Contract]]
 - [[PARAMS|System Configuration]]
 - [[LIFECYCLE|Computation Lifecycle]]
@@ -98,7 +98,7 @@ Advanced:
 
 Reading guide:
 
-- Starting a new project system: [[SYSTEM_STARTER_TEMPLATE|New System Starter]]
+- Building a new project system from theory: [[OLGS_SYSTEM_BUILD_SKILL|OLGS System Build Skill]]
 - Implementing a new system: [[CONTRACT|API Contract]]
 - Defining primary/secondary dicts: [[PARAMS|System Configuration]]
 - Calling from a notebook: [[LIFECYCLE|Computation Lifecycle]]
@@ -149,14 +149,12 @@ Current implementation files:
 optimizer/system_olgs/
   __init__.py
   olgs.py
-  params.py
   contract.py
   validation.py
   derivatives.py
   results.py
   templates/
-    SYSTEM_STARTER_TEMPLATE.md
-    system_template.py
+    OLGS_SYSTEM_BUILD_SKILL.md
 ```
 
 ## Reading Path
@@ -165,7 +163,7 @@ For a new system author:
 
 ```text
 README.md
-templates/SYSTEM_STARTER_TEMPLATE.md
+templates/OLGS_SYSTEM_BUILD_SKILL.md
 CONTRACT.md
 PARAMS.md
 LIFECYCLE.md

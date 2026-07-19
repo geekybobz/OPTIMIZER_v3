@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from optimizer.controls import ControlSpec, Controls
-from optimizer.system_olgs.contract import get_secondary_update_hook, probe_system
+from optimizer.system_olgs.contract import probe_system
 from optimizer.system_olgs.validation import validate_controls_for_system
 
 
@@ -32,11 +32,6 @@ class OLGS(ABC):
     @abstractmethod
     def with_secondary(self, **updates: Any) -> "OLGS":
         """Return an equivalent system with updated secondary params."""
-
-    def with_params(self, **updates: Any) -> "OLGS":
-        """Compatibility alias during migration to ``with_secondary``."""
-
-        return self.with_secondary(**updates)
 
     def validate_controls(self, controls: Controls) -> ControlSpec:
         """Validate controls against this system's control spec."""
@@ -86,15 +81,24 @@ class OLGS(ABC):
     def cache_status(self) -> dict[str, Any]:
         """Placeholder cache status until logging/blackbox ownership is redesigned."""
 
+        def has_value(name: str) -> bool:
+            value = getattr(self, name, None)
+            if isinstance(value, (dict, list, tuple, set)):
+                return bool(value)
+            return value is not None
+
         return {
-            "latest_controls": hasattr(self, "_latest_controls"),
-            "latest_metrics": hasattr(self, "_latest_metrics"),
-            "latest_state": hasattr(self, "_latest_state"),
+            "latest_controls": has_value("_latest_controls"),
+            "latest_metrics": has_value("_latest_metrics"),
+            "latest_state": has_value("_latest_state"),
             "owner": "placeholder",
         }
 
 
 def with_secondary(system: Any, **updates: Any) -> Any:
-    """Update a system through ``with_secondary`` or migration ``with_params``."""
+    """Update a system through ``with_secondary``."""
 
-    return get_secondary_update_hook(system)(**updates)
+    hook = getattr(system, "with_secondary", None)
+    if not callable(hook):
+        raise TypeError("System does not provide with_secondary(...).")
+    return hook(**updates)

@@ -159,11 +159,6 @@ class OptimizerContext:
         hook = get_secondary_update_hook(self.system)
         return replace(self, system=hook(**updates))
 
-    def with_params(self, **updates: Any) -> "OptimizerContext":
-        """Compatibility alias for systems still migrating to ``with_secondary``."""
-
-        return self.with_secondary(**updates)
-
     def with_trace(self, trace: Trace | str | None) -> "OptimizerContext":
         """Return a new context carrying the provided trace."""
 

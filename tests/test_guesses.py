@@ -1,9 +1,9 @@
 """Tests for initial guess generators.
 
 The guess phase matters because optimization outcomes depend strongly on the starting
-controls.  These tests use the temporary fourth-order fixture so every guess is
-validated against the same named-channel, endpoint-grid control layout used by later
-optimizer and repair tests.
+controls.  These tests use a named-channel vector fixture so every guess is validated
+against the same endpoint-grid control layout used by later optimizer and repair
+tests.
 """
 
 import unittest
@@ -11,11 +11,11 @@ import unittest
 import numpy as np
 
 import optimizer as opt
-from fixtures.universal_robust_4th.system import TemporaryUniversalFourthOrderSystem
+from fixtures.quadratic_system import QuadraticVectorSystem
 
 
 def system():
-    return TemporaryUniversalFourthOrderSystem(N=33)
+    return QuadraticVectorSystem(N=33)
 
 
 class GuessGeneratorTests(unittest.TestCase):

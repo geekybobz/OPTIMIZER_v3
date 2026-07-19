@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 import optimizer as opt
-from fixtures.universal_robust_4th.system import TemporaryUniversalFourthOrderSystem
+from fixtures.quadratic_system import QuadraticVectorSystem
 
 
 def public_descent_step(context):
@@ -37,8 +37,8 @@ class PublicApiTests(unittest.TestCase):
         self.assertEqual(methods["momentum"].status, "implemented")
         self.assertEqual(methods["line_search"].status, "implemented")
 
-    def test_public_evaluate_gradient_and_run_chunk_with_fourth_order_fixture(self):
-        system = TemporaryUniversalFourthOrderSystem(N=17, lambda2=0.25, lambda4=0.05)
+    def test_public_evaluate_gradient_and_run_chunk_with_vector_fixture(self):
+        system = QuadraticVectorSystem(N=17, residual_weight=0.25)
         controls = opt.zeros(system.control_spec(), name="zero")
 
         evaluation = opt.evaluate(system, controls)
@@ -46,10 +46,10 @@ class PublicApiTests(unittest.TestCase):
 
         self.assertGreater(evaluation.J, 0.0)
         self.assertEqual(gradient.shape, system.control_spec().shape)
-        self.assertIn("C_sym_norm2", evaluation.metrics)
+        self.assertIn("residual_norm2", evaluation.metrics)
         self.assertTrue(np.all(np.isfinite(gradient.as_matrix())))
 
-        trace = opt.trace("public-fourth-order")
+        trace = opt.trace("public-vector")
         result = opt.run_chunk(
             system,
             controls,
@@ -69,13 +69,13 @@ class PublicApiTests(unittest.TestCase):
         self.assertEqual(opt.warmstart(result, target_optimizer="public_descent").target_optimizer, "public_descent")
 
     def test_bound_context_supports_curriculum_param_changes_without_global_system(self):
-        system = TemporaryUniversalFourthOrderSystem(N=17, lambda2=0.0, lambda4=0.0)
+        system = QuadraticVectorSystem(N=17, residual_weight=0.0)
         ctx = opt.context(system, trace="curriculum-context", step_size=1.0)
         controls = ctx.zeros(name="ctx-zero")
 
         self.assertIsInstance(ctx, opt.OptimizerContext)
         self.assertEqual(ctx.control_spec().keys, ("ux", "uy", "uz"))
-        self.assertEqual(ctx.params["lambda2"], 0.0)
+        self.assertEqual(ctx.params["residual_weight"], 0.0)
 
         first = ctx.run_chunk(
             controls,
@@ -84,7 +84,7 @@ class PublicApiTests(unittest.TestCase):
             maxiter=2,
         )
 
-        ctx_second = ctx.with_params(lambda2=0.25, lambda4=0.05)
+        ctx_second = ctx.with_secondary(residual_weight=0.25)
         second = ctx_second.run_chunk(
             first.controls,
             step=public_descent_step,
@@ -93,14 +93,14 @@ class PublicApiTests(unittest.TestCase):
             warmstart=first.warmstart(target_optimizer="ctx_descent"),
         )
 
-        self.assertEqual(ctx.params["lambda2"], 0.0)
-        self.assertEqual(ctx_second.params["lambda2"], 0.25)
+        self.assertEqual(ctx.params["residual_weight"], 0.0)
+        self.assertEqual(ctx_second.params["residual_weight"], 0.25)
         self.assertIs(ctx.trace, ctx_second.trace)
         self.assertLess(second.J, ctx_second.evaluate(first.controls).J)
         self.assertEqual(len(ctx.trace.chunk_records), 2)
 
     def test_bind_alias_and_context_optimizer_methods_run(self):
-        ctx = opt.bind(TemporaryUniversalFourthOrderSystem(N=9))
+        ctx = opt.bind(QuadraticVectorSystem(N=9))
         controls = ctx.constant(0.0, name="zero")
 
         result = ctx.adam(controls, maxiter=2, step_size=0.05)
@@ -112,10 +112,10 @@ class PublicApiTests(unittest.TestCase):
         self.assertLessEqual(guess.max_abs(), 0.1 + 1.0e-12)
 
     def test_system_owned_params_and_vectorized_direction_simulation(self):
-        system = TemporaryUniversalFourthOrderSystem(N=17, energy_weight=0.0)
+        system = QuadraticVectorSystem(N=17, energy_weight=0.0)
         controls = system.reference_controls(amplitude=0.2)
         base = opt.evaluate(system, controls)
-        heavier = opt.evaluate(system.with_params(lambda4=2.0), controls)
+        heavier = opt.evaluate(system.with_secondary(residual_weight=2.0), controls)
 
         self.assertGreaterEqual(heavier.J, base.J)
 
@@ -127,13 +127,13 @@ class PublicApiTests(unittest.TestCase):
         self.assertIn("terminal_overlap", robust)
 
     def test_future_tool_methods_still_fail_clearly_until_implemented(self):
-        system = TemporaryUniversalFourthOrderSystem(N=9)
+        system = QuadraticVectorSystem(N=9)
 
         guess = opt.fourier_guess(system.control_spec(), amplitude=0.1)
         self.assertEqual(guess.shape, system.control_spec().shape)
 
     def test_public_diagnostic_and_repair_methods_are_implemented(self):
-        system = TemporaryUniversalFourthOrderSystem(N=9)
+        system = QuadraticVectorSystem(N=9)
         controls = system.reference_controls(amplitude=0.8)
 
         self.assertEqual(opt.methods()["repair_newton"].status, "implemented")

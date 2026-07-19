@@ -14,7 +14,7 @@ connects_to:
   - LIFECYCLE
   - DERIVATIVES
   - LOGGING_BOUNDARY
-  - SYSTEM_STARTER_TEMPLATE
+  - OLGS_SYSTEM_BUILD_SKILL
 ---
 
 # OLGS Contract
@@ -161,7 +161,7 @@ Optional methods should be discoverable and validated by OLGS helpers.
 ## Related Notes
 
 - [[README|system_olgs]]
-- [[SYSTEM_STARTER_TEMPLATE|New System Starter]]
+- [[OLGS_SYSTEM_BUILD_SKILL|OLGS System Build Skill]]
 - [[PARAMS|System Configuration]]
 - [[LIFECYCLE|Computation Lifecycle]]
 - [[DERIVATIVES|Derivative Hooks]]

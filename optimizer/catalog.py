@@ -1444,7 +1444,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 "helper",
                 "Bind a system once for notebook/curriculum convenience.",
                 inputs={"system": "System object to bind.", "trace": "Optional Trace or run id.", "defaults": "Default kwargs for bound runs."},
-                returns={"type": "OptimizerContext", "methods": "ctx.adam, ctx.evaluate, ctx.with_params, ctx.*_guess"},
+                returns={"type": "OptimizerContext", "methods": "ctx.adam, ctx.evaluate, ctx.with_secondary, ctx.*_guess"},
                 requires=("system contract",),
                 best_for=("notebooks", "curriculum workflows", "reducing repeated system arguments"),
                 example="ctx = opt.context(system, trace='run'); result = ctx.adam(controls, maxiter=10)",

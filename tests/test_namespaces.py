@@ -16,7 +16,7 @@ API contract instead of an accidental side effect of Python import caching.
 import unittest
 
 import optimizer as opt
-from fixtures.universal_robust_4th.system import TemporaryUniversalFourthOrderSystem
+from fixtures.quadratic_system import QuadraticVectorSystem
 
 
 class NamespaceApiTests(unittest.TestCase):
@@ -35,7 +35,7 @@ class NamespaceApiTests(unittest.TestCase):
         self.assertTrue(callable(opt.schedules.AdaptiveStepSchedule))
 
     def test_namespaced_calls_run_with_the_standard_system_contract(self):
-        system = TemporaryUniversalFourthOrderSystem(N=11, lambda2=0.2, lambda4=0.05)
+        system = QuadraticVectorSystem(N=11, residual_weight=0.2)
 
         controls = opt.guesses.random_fourier_guess(
             system,
@@ -61,7 +61,7 @@ class NamespaceApiTests(unittest.TestCase):
         self.assertIn("max_relative_error", gradient_check)
 
     def test_direct_shortcuts_remain_available_for_compact_notebook_use(self):
-        system = TemporaryUniversalFourthOrderSystem(N=9)
+        system = QuadraticVectorSystem(N=9)
         controls = opt.zero_guess(system)
 
         direct = opt.adagrad(system, controls, step_size=0.03, maxiter=1)

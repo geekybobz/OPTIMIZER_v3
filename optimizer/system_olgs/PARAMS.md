@@ -12,7 +12,7 @@ depends_on:
 connects_to:
   - CONTRACT
   - LIFECYCLE
-  - SYSTEM_STARTER_TEMPLATE
+  - OLGS_SYSTEM_BUILD_SKILL
 ---
 
 # OLGS Parameters
@@ -124,6 +124,6 @@ Parameter classes are not part of the public OLGS contract.
 ## Related Notes
 
 - [[README|system_olgs]]
-- [[SYSTEM_STARTER_TEMPLATE|New System Starter]]
+- [[OLGS_SYSTEM_BUILD_SKILL|OLGS System Build Skill]]
 - [[CONTRACT|API Contract]]
 - [[LIFECYCLE|Computation Lifecycle]]

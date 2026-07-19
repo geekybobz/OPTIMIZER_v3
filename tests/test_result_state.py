@@ -113,7 +113,7 @@ class OptimizerResultTests(unittest.TestCase):
             sample_controls(),
             metrics={"J": 4.0, "fidelity": 0.9},
             optimizer_name="momentum",
-            system_params={"lambda4": 10.0},
+            system_params={"residual_weight": 10.0},
             trace_id="trace",
         )
         state.iteration = 7
@@ -133,4 +133,3 @@ class OptimizerResultTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

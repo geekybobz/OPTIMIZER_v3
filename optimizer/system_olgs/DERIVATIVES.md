@@ -13,7 +13,7 @@ depends_on:
   - LIFECYCLE
 connects_to:
   - LOGGING_BOUNDARY
-  - SYSTEM_STARTER_TEMPLATE
+  - OLGS_SYSTEM_BUILD_SKILL
 ---
 
 # OLGS Derivatives
@@ -115,7 +115,7 @@ The exact HVP return convention should be documented by the system that exposes 
 ## Related Notes
 
 - [[README|system_olgs]]
-- [[SYSTEM_STARTER_TEMPLATE|New System Starter]]
+- [[OLGS_SYSTEM_BUILD_SKILL|OLGS System Build Skill]]
 - [[CONTRACT|API Contract]]
 - [[LIFECYCLE|Computation Lifecycle]]
 - [[LOGGING_BOUNDARY|Logging Boundary]]

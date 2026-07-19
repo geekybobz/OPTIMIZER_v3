@@ -4,7 +4,7 @@ from dataclasses import dataclass, replace
 import numpy as np
 
 from optimizer.controls import ControlSpec, Controls
-from optimizer.system import (
+from optimizer.system_olgs import (
     evaluate_system,
     gradient_system,
     optional_jacobian,
@@ -36,7 +36,7 @@ class DummySystem:
         u = controls.channel("u")
         return Controls.from_dict(self.control_spec(), {"u": 2.0 * self.params.weight * u})
 
-    def with_params(self, **updates):
+    def with_secondary(self, **updates):
         return DummySystem(replace(self.params, **updates))
 
     def residuals(self, controls, name="hard"):
@@ -53,7 +53,7 @@ class MissingGradientSystem:
     def evaluate(self, controls):
         return {"J": 0.0}
 
-    def with_params(self, **updates):
+    def with_secondary(self, **updates):
         return self
 
 
@@ -91,8 +91,8 @@ class SystemContractTests(unittest.TestCase):
         self.assertEqual(metrics["J"], 30.0)
         np.testing.assert_allclose(gradient.channel("u"), [2.0, 4.0, 6.0, 8.0])
 
-    def test_with_params_changes_system_weights(self):
-        system = DummySystem().with_params(weight=3.0)
+    def test_with_secondary_changes_system_weights(self):
+        system = DummySystem().with_secondary(weight=3.0)
         controls = Controls.from_dict(system.control_spec(), {"u": [1.0, 1.0, 1.0, 1.0]})
 
         metrics = evaluate_system(system, controls)
@@ -129,4 +129,3 @@ class SystemContractTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

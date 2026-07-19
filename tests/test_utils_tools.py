@@ -5,22 +5,21 @@ import unittest
 import numpy as np
 
 import optimizer as opt
-from fixtures.universal_robust_4th.system import TemporaryUniversalFourthOrderSystem
+from fixtures.quadratic_system import QuadraticVectorSystem
 
 
 def small_system():
-    """Return a small fourth-order fixture so finite differences stay cheap."""
+    """Return a small vector fixture so finite differences stay cheap."""
 
-    return TemporaryUniversalFourthOrderSystem(
+    return QuadraticVectorSystem(
         N=9,
-        lambda2=0.25,
-        lambda4=0.05,
+        residual_weight=0.25,
         energy_weight=1.0e-3,
     )
 
 
 class UtilityToolTests(unittest.TestCase):
-    def test_diagnostic_report_and_geometry_probe_use_fourth_order_residuals(self):
+    def test_diagnostic_report_and_geometry_probe_use_named_residuals(self):
         system = small_system()
         controls = opt.zeros(system.control_spec(), name="zero")
 
@@ -31,7 +30,7 @@ class UtilityToolTests(unittest.TestCase):
         self.assertTrue(report["residuals"]["available"])
         self.assertGreater(report["residuals"]["norm"], 0.0)
         self.assertEqual(geometry["kind"], "geometry_probe")
-        self.assertEqual(geometry["jacobian_source"], "finite_difference")
+        self.assertEqual(geometry["jacobian_source"], "analytical")
         self.assertGreater(geometry["rank"], 0)
 
     def test_verify_gradient_passes_on_fixture_analytical_gradient(self):

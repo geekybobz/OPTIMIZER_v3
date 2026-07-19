@@ -8,10 +8,6 @@ surface is intentionally small:
     evaluate(controls)
     gradient(controls)
     with_secondary(**updates)
-
-During migration, ``with_params`` is accepted as a compatibility update hook.  New
-systems should implement ``with_secondary`` because secondary params are the
-curriculum/objective weights that optimizers commonly change between stages.
 """
 
 from __future__ import annotations
@@ -53,7 +49,6 @@ class SystemProbe:
     has_evaluate: bool
     has_gradient: bool
     has_with_secondary: bool
-    has_with_params: bool
     has_forward_prop: bool
     has_back_prop: bool
     has_metrics: bool
@@ -71,7 +66,7 @@ class SystemProbe:
     def has_update_hook(self) -> bool:
         """Whether the system can return a param-updated copy."""
 
-        return self.has_with_secondary or self.has_with_params
+        return self.has_with_secondary
 
     @property
     def required_ok(self) -> bool:
@@ -90,7 +85,6 @@ class SystemProbe:
             "has_evaluate": self.has_evaluate,
             "has_gradient": self.has_gradient,
             "has_with_secondary": self.has_with_secondary,
-            "has_with_params": self.has_with_params,
             "has_update_hook": self.has_update_hook,
             "has_forward_prop": self.has_forward_prop,
             "has_back_prop": self.has_back_prop,
@@ -116,7 +110,6 @@ def probe_system(system: Any) -> SystemProbe:
         has_evaluate=callable(getattr(system, "evaluate", None)),
         has_gradient=callable(getattr(system, "gradient", None)),
         has_with_secondary=callable(getattr(system, "with_secondary", None)),
-        has_with_params=callable(getattr(system, "with_params", None)),
         has_forward_prop=callable(getattr(system, "forward_prop", None)),
         has_back_prop=callable(getattr(system, "back_prop", None)),
         has_metrics=callable(getattr(system, "metrics", None)),
@@ -138,10 +131,7 @@ def get_secondary_update_hook(system: Any) -> Any:
     hook = getattr(system, "with_secondary", None)
     if callable(hook):
         return hook
-    hook = getattr(system, "with_params", None)
-    if callable(hook):
-        return hook
-    raise TypeError("System does not provide with_secondary(...) or with_params(...).")
+    raise TypeError("System does not provide with_secondary(...).")
 
 
 def require_system(system: Any) -> OLGSystem:
@@ -156,7 +146,7 @@ def require_system(system: Any) -> OLGSystem:
             ("control_spec", probe.has_control_spec),
             ("evaluate", probe.has_evaluate),
             ("gradient", probe.has_gradient),
-            ("with_secondary or with_params", probe.has_update_hook),
+            ("with_secondary", probe.has_update_hook),
         )
         if not ok
     ]

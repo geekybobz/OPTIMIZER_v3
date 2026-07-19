@@ -64,16 +64,16 @@ class CheckpointTests(unittest.TestCase):
             label="accepted",
             controls=sample_controls(value=2.0),
             metrics={"J": 4.0},
-            system_params={"lambda4": 10.0},
+            system_params={"residual_weight": 10.0},
             optimizer_state={"m": np.array([1.0])},
             iteration=7,
-            stage="fourth_order",
+            stage="residual_polish",
         )
 
         payload = checkpoint.to_dict()
         self.assertEqual(payload["label"], "accepted")
         self.assertEqual(payload["metrics"]["J"], 4.0)
-        self.assertEqual(payload["system_params"]["lambda4"], 10.0)
+        self.assertEqual(payload["system_params"]["residual_weight"], 10.0)
         self.assertEqual(payload["optimizer_state_keys"], ["m"])
         self.assertEqual(payload["iteration"], 7)
 
@@ -119,4 +119,3 @@ class TraceCheckpointTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -14,7 +14,7 @@ connects_to:
   - PARAMS
   - DERIVATIVES
   - LOGGING_BOUNDARY
-  - SYSTEM_STARTER_TEMPLATE
+  - OLGS_SYSTEM_BUILD_SKILL
 ---
 
 # OLGS Computation Lifecycle
@@ -136,7 +136,7 @@ raise a clear error.
 ## Related Notes
 
 - [[README|system_olgs]]
-- [[SYSTEM_STARTER_TEMPLATE|New System Starter]]
+- [[OLGS_SYSTEM_BUILD_SKILL|OLGS System Build Skill]]
 - [[CONTRACT|API Contract]]
 - [[PARAMS|System Configuration]]
 - [[DERIVATIVES|Derivative Hooks]]
