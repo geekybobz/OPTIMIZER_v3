@@ -28,6 +28,10 @@ class PublicApiTests(unittest.TestCase):
         self.assertTrue(callable(opt.adam))
         self.assertTrue(callable(opt.context))
         self.assertTrue(callable(opt.bind))
+        self.assertTrue(callable(opt.info))
+        self.assertTrue(callable(opt.list))
+        self.assertTrue(callable(opt.search))
+        self.assertTrue(callable(opt.path))
         self.assertIsInstance(opt.library, opt.OptimizerLibrary)
 
         methods = opt.methods()

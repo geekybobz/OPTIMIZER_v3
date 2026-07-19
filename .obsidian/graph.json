@@ -1,22 +1,100 @@
 {
-  "collapse-filter": true,
+  "collapse-filter": false,
   "search": "",
   "showTags": false,
-  "showAttachments": false,
-  "hideUnresolved": false,
-  "showOrphans": true,
-  "collapse-color-groups": true,
-  "colorGroups": [],
-  "collapse-display": true,
+  "showAttachments": true,
+  "hideUnresolved": true,
+  "showOrphans": false,
+  "collapse-color-groups": false,
+  "colorGroups": [
+    {
+      "query": "path:README.md",
+      "color": {
+        "a": 1,
+        "rgb": 16766720
+      }
+    },
+    {
+      "query": "path:optimizer/optimizers",
+      "color": {
+        "a": 1,
+        "rgb": 14701138
+      }
+    },
+    {
+      "query": "path:optimizer/guesses",
+      "color": {
+        "a": 1,
+        "rgb": 5037610
+      }
+    },
+    {
+      "query": "path:optimizer/utils",
+      "color": {
+        "a": 1,
+        "rgb": 5486770
+      }
+    },
+    {
+      "query": "path:optimizer/system_olgs",
+      "color": {
+        "a": 1,
+        "rgb": 16755200
+      }
+    },
+    {
+      "query": "path:Theory",
+      "color": {
+        "a": 1,
+        "rgb": 11229951
+      }
+    },
+    {
+      "query": "path:optimizer/core",
+      "color": {
+        "a": 1,
+        "rgb": 4886754
+      }
+    },
+    {
+      "query": "path:optimizer/schedules",
+      "color": {
+        "a": 1,
+        "rgb": 10066329
+      }
+    },
+    {
+      "query": "path:optimizer/logs",
+      "color": {
+        "a": 1,
+        "rgb": 10066329
+      }
+    },
+    {
+      "query": "path:optimizer/blackbox",
+      "color": {
+        "a": 1,
+        "rgb": 10066329
+      }
+    },
+    {
+      "query": "path:tests",
+      "color": {
+        "a": 1,
+        "rgb": 10066329
+      }
+    }
+  ],
+  "collapse-display": false,
   "showArrow": false,
-  "textFadeMultiplier": 0,
-  "nodeSizeMultiplier": 1,
-  "lineSizeMultiplier": 1,
-  "collapse-forces": true,
-  "centerStrength": 0.518713248970312,
-  "repelStrength": 10,
-  "linkStrength": 1,
-  "linkDistance": 250,
-  "scale": 1,
-  "close": false
+  "textFadeMultiplier": -0.4,
+  "nodeSizeMultiplier": 1.37986979166667,
+  "lineSizeMultiplier": 1.38497395833333,
+  "collapse-forces": false,
+  "centerStrength": 0.375130208333333,
+  "repelStrength": 9.1796875,
+  "linkStrength": 0.917057291666667,
+  "linkDistance": 180,
+  "scale": 0.8078585155585889,
+  "close": true
 }

@@ -40,7 +40,7 @@ optional residuals/Jacobians/Hessians/HVPs
 
 See:
 
-- [OLGS README](../system_olgs/README.md)
+- [OLGS System Hub](../system_olgs/SYSTEM_OLGS_HUB.md)
 - [OLGS Contract](../system_olgs/CONTRACT.md)
 
 ## Core Owns
@@ -55,6 +55,11 @@ SystemEvaluator
 ```
 
 Optimizers call core; core stays method-agnostic.
+
+See:
+
+- [Core Hub](../core/CORE_HUB.md)
+- [Core Boundary](../core/CORE_BOUNDARY.md)
 
 ## Utils Own
 

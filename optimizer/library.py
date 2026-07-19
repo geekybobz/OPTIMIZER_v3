@@ -65,7 +65,7 @@ from optimizer.guesses import (
     sinc_guess as _sinc_guess,
     sine_guess as _sine_guess,
 )
-from optimizer.core.parallel import ParallelConfig, parallel_map
+from optimizer.utils.parallel import ParallelConfig, parallel_map
 from optimizer.logs.trace import Trace
 from optimizer.optimizers import adagrad as _adagrad
 from optimizer.optimizers import adam as _adam
@@ -719,7 +719,7 @@ class OptimizerLibrary:
             ),
             "diagnostics": MethodInfo("diagnostics", "implemented", "optimizer/blackbox/analysis.py", "Phase 12"),
             "warmstart": MethodInfo("warmstart", "implemented", "optimizer/state.py", "Phase 3"),
-            "parallel_map": MethodInfo("parallel_map", "implemented", "optimizer/core/parallel.py", "Phase 5"),
+            "parallel_map": MethodInfo("parallel_map", "implemented", "optimizer/utils/parallel.py", "Phase 5"),
             "context": MethodInfo("context", "implemented", "optimizer/library.py", "Phase 6"),
             "bind": MethodInfo("bind", "implemented", "optimizer/library.py", "Phase 6"),
             "adam": MethodInfo("adam", "implemented", "optimizer/optimizers/adam.py", "Phase 7"),

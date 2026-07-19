@@ -107,6 +107,15 @@ ctx = opt.context(system)
 result = ctx.adam(controls, maxiter=100)
 ```
 
+Runtime discovery:
+
+```python
+opt.optimizers.list(h=True)
+opt.optimizers.info("adam", h=True)
+opt.info("optimizers.adam", h=True)
+opt.search("warmstart", h=True)
+```
+
 ## Implementation Files
 
 Current source files:

@@ -68,12 +68,17 @@ run chunks
 trace and checkpoint plumbing
 ```
 
-`metric_guard` currently belongs here in implementation:
+`metric_guard` belongs to core in both implementation and catalog:
 
 - [Metric Guard Source](../core/guards.py)
+- [Core Hub](../core/CORE_HUB.md)
 
-The catalog groups it with utils conceptually, but `optimizer.utils` does not export
-`metric_guard` as a runtime function.
+Call it as `opt.core.metric_guard(...)`.
+
+Map-style parallel execution also lives in utils rather than core, because it is
+generic execution plumbing with no optimizer semantics:
+
+- [Parallel Source](parallel.py)
 
 ## Belongs in Theory
 

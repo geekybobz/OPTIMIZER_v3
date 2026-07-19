@@ -90,4 +90,5 @@ eps that is too large can hide local derivative errors
 - [Diagnostics](UTIL_DIAGNOSTICS.md)
 - [Residual Geometry](UTIL_RESIDUAL_GEOMETRY.md)
 - [Repair](UTIL_REPAIR.md)
+- [Core Evaluation](../core/CORE_EVALUATION.md)
 - [Source](./derivatives.py)

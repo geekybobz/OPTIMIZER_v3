@@ -38,8 +38,9 @@ turn this theory into a system file
 Also use it for closely related requests where the user provides theory notes and
 expects a new OLGS-compatible `system.py`.
 
-The operative Claude Code trigger lives in `.claude/skills/olgs-system-build/SKILL.md`,
-which points back to this protocol as the single source of truth.
+The operative Claude Code trigger lives at
+`.claude/skills/olgs-system-build/SKILL.md`, which points back to this protocol as
+the single source of truth. It is a hidden tooling shim, not an Obsidian graph node.
 
 ## Environment
 
@@ -50,7 +51,7 @@ example through `conda activate optimizer_v3` rather than the system Python.
 
 ## Reference Map
 
-- [system_olgs](../README.md)
+- [OLGS System Hub](../SYSTEM_OLGS_HUB.md)
 - [OLGS API Contract](../CONTRACT.md)
 - [Primary and Secondary Params](../PARAMS.md)
 - [Forward, Backward, Gradient Flow](../LIFECYCLE.md)

@@ -69,7 +69,7 @@ manage persistent cache
 
 ## Related Notes
 
-- [system_olgs](README.md)
+- [OLGS System Hub](SYSTEM_OLGS_HUB.md)
 - [OLGS System Build Skill](templates/OLGS_SYSTEM_BUILD_SKILL.md)
 - [API Contract](CONTRACT.md)
 - [Computation Lifecycle](LIFECYCLE.md)

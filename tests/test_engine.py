@@ -5,7 +5,7 @@ import numpy as np
 from optimizer.controls import ControlSpec, Controls
 from optimizer.core.engine import StepProposal, run_chunk
 from optimizer.core.evaluate import SystemEvaluator
-from optimizer.core.parallel import ParallelConfig, parallel_map
+from optimizer.utils.parallel import ParallelConfig, parallel_map
 from optimizer.logs.trace import Trace
 
 

@@ -23,7 +23,17 @@ class NamespaceApiTests(unittest.TestCase):
     def test_role_namespaces_are_explicit_public_api(self):
         self.assertIs(opt.util, opt.utils)
 
-        for name in ("optimizers", "utils", "util", "guesses", "schedules"):
+        for name in (
+            "info",
+            "list",
+            "path",
+            "search",
+            "optimizers",
+            "utils",
+            "util",
+            "guesses",
+            "schedules",
+        ):
             with self.subTest(name=name):
                 self.assertIn(name, opt.__all__)
 

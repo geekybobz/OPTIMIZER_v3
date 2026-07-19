@@ -1,6 +1,6 @@
 ---
-title: system_olgs
-type: module_index
+title: SYSTEM_OLGS_HUB
+type: module_hub
 module: optimizer/system_olgs
 tags:
   - optimizer
@@ -8,7 +8,7 @@ tags:
   - olgs
 ---
 
-# OLGS System Documentation
+# OLGS System Hub
 
 OLGS means **Open Loop Gradient System**.
 
@@ -17,8 +17,8 @@ the OLGS class format.  OLGS is the system template format for OPTIMIZER v3: a
 project system with analytical forward propagation, backward propagation, objective
 evaluation, and gradient.
 
-The intent is compact documentation.  This README is the entry point; each linked
-file owns one technical part of the system API.
+The intent is compact documentation. This hub is the entry point; each linked file
+owns one technical part of the system API.
 
 ## Design Scope
 
@@ -53,7 +53,7 @@ logging and blackbox connection
 Read in this order:
 
 ```text
-README.md
+SYSTEM_OLGS_HUB.md
   Entry point and design scope.
 
 CONTRACT.md
@@ -101,7 +101,7 @@ Reading guide:
 ## Target User Shape
 
 ```python
-from systems.my_project.system import System
+from my_project.system import System
 import optimizer as opt
 
 system = System(
@@ -155,7 +155,7 @@ optimizer/system_olgs/
 For a new system author:
 
 ```text
-README.md
+SYSTEM_OLGS_HUB.md
 templates/OLGS_SYSTEM_BUILD_SKILL.md
 CONTRACT.md
 PARAMS.md

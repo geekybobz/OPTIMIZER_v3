@@ -127,4 +127,7 @@ proposals or warmstart state in the current implementation.
 - [Optimizer Contract](OPTIMIZER_CONTRACT.md)
 - [Acceptance and Stopping](OPTIMIZER_ACCEPTANCE.md)
 - [State and Warmstart](OPTIMIZER_STATE_WARMSTART.md)
+- [Core Hub](../core/CORE_HUB.md)
+- [Core Lifecycle](../core/CORE_LIFECYCLE.md)
+- [Core Contract](../core/CORE_CONTRACT.md)
 - [Core Engine Source](../core/engine.py)

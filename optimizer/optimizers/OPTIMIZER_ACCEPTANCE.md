@@ -107,5 +107,7 @@ Rejected trial controls are not marked as best.
 
 - [Optimizer Lifecycle](OPTIMIZER_LIFECYCLE.md)
 - [Line Search](LINE_SEARCH.md)
+- [Core Acceptance and Guards](../core/CORE_ACCEPTANCE_GUARDS.md)
+- [Core Stopping](../core/CORE_STOPPING.md)
 - [Core Stopping Source](../core/stopping.py)
 - [Core Engine Source](../core/engine.py)

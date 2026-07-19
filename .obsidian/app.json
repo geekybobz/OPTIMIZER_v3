@@ -1,1 +1,11 @@
-{}
+{
+  "userIgnoreFilters": [
+    ".git/",
+    ".claude/",
+    ".pytest_cache/",
+    "optimizer_v3.egg-info/",
+    "runs/",
+    "__pycache__/",
+    "tests/system_check/"
+  ]
+}

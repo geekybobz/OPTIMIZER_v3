@@ -389,7 +389,8 @@ _GROUP_MODULES = {
     "guesses": "optimizer.guesses",
     "utils": "optimizer.utils",
     "schedules": "optimizer.schedules",
-    "core": "optimizer",
+    "base": "optimizer",
+    "core": "optimizer.core",
 }
 
 
@@ -1139,26 +1140,6 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 tags=("residual", "repair", "jacobian"),
             ),
             _make_item(
-                "metric_guard",
-                "utils",
-                "guard",
-                "Build a reusable multi-metric accept/reject guard for run_chunk or optimizer accept hooks.",
-                inputs={
-                    "improve": "Metric that should improve or not get worse, default J.",
-                    "mode": "min or max.",
-                    "require": "Mapping of metric -> (operator, threshold[, tolerance]).",
-                    "tolerance": "Default tolerance for improve and two-field requirements.",
-                },
-                returns={"type": "MetricGuard", "meaning": "Callable accept function returning AcceptanceDecision."},
-                requires=("scalar metrics",),
-                best_for=("preventing one metric from improving while another breaks", "custom acceptance in line_search/run_chunk"),
-                related=("optimizers.line_search", "core.run_chunk"),
-                example="guard = opt.utils.metric_guard(improve='J', require={'fidelity': ('>=', 0.0)})",
-                module="optimizer/core/guards.py",
-                phase="Phase 11",
-                tags=("guard", "acceptance", "metrics"),
-            ),
-            _make_item(
                 "control_spectrum",
                 "utils",
                 "spectrum",
@@ -1257,9 +1238,9 @@ def _build_groups() -> dict[str, CatalogGroup]:
         ),
     )
 
-    core_group = CatalogGroup(
-        name="core",
-        summary="Core data objects, engine helpers, blackbox ledgers, trace, checkpoints, and bound context utilities.",
+    base_group = CatalogGroup(
+        name="base",
+        summary="Base data objects and top-level entry points: Controls, results, warmstart state, trace, blackbox ledgers, and bound context utilities.",
         common_inputs={
             "system": "Project physics object satisfying the optimizer contract.",
             "controls": "Named dense control matrix represented by Controls.",
@@ -1278,7 +1259,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
         items=(
             _make_item(
                 "ControlSpec",
-                "core",
+                "base",
                 "data_object",
                 "Named control layout: channel keys, control_dim, dtype, dt, and metadata.",
                 inputs={"keys": "Unique channel names.", "control_dim": "Number of time samples."},
@@ -1291,7 +1272,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
             ),
             _make_item(
                 "Controls",
-                "core",
+                "base",
                 "data_object",
                 "Named control values backed by a dense (n_controls, control_dim) matrix.",
                 inputs={"spec": "ControlSpec.", "values": "Matrix with shape spec.shape."},
@@ -1304,7 +1285,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
             ),
             _make_item(
                 "evaluate",
-                "core",
+                "base",
                 "helper",
                 "Evaluate a system/Controls pair and wrap metrics in Evaluation.",
                 inputs={"system": "Must provide evaluate(...).", "controls": "Controls matching system.control_spec()."},
@@ -1318,7 +1299,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
             ),
             _make_item(
                 "gradient",
-                "core",
+                "base",
                 "helper",
                 "Call and validate the system analytical gradient.",
                 inputs={"system": "Must provide gradient(...).", "controls": "Controls matching system.control_spec()."},
@@ -1332,29 +1313,8 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 tags=("gradient", "controls"),
             ),
             _make_item(
-                "run_chunk",
-                "core",
-                "engine",
-                "Shared optimizer engine for custom StepProposal functions.",
-                inputs={
-                    "system": "Must provide evaluate(...) and usually gradient(...).",
-                    "controls/state/warmstart": "Starting point for the chunk.",
-                    "step": "Callable from StepContext to StepProposal or Controls.",
-                    "optimizer_name": "Name recorded in result and trace.",
-                    "maxiter": "Chunk iteration budget.",
-                },
-                returns=_RESULT_RETURN,
-                requires=("system.evaluate", "system.gradient", "Controls", "step callable"),
-                best_for=("custom optimizer experiments", "shared tracing/checkpoint behavior", "advanced users"),
-                related=("core.StepContext", "core.StepProposal", "utils.metric_guard"),
-                example="result = opt.run_chunk(system, controls, step=my_step, optimizer_name='custom', maxiter=5)",
-                module="optimizer/core/engine.py",
-                phase="Phase 5",
-                tags=("engine", "advanced"),
-            ),
-            _make_item(
                 "OptimizerResult",
-                "core",
+                "base",
                 "result_object",
                 "Standard return object from optimizer calls.",
                 inputs={"constructor": "Usually produced by optimizer methods."},
@@ -1367,7 +1327,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
             ),
             _make_item(
                 "WarmStartState",
-                "core",
+                "base",
                 "data_object",
                 "Safe handoff state for starting or continuing an optimizer.",
                 inputs={"result_or_state": "Usually created from result.warmstart(...) or opt.warmstart(...)."},
@@ -1381,7 +1341,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
             ),
             _make_item(
                 "Trace",
-                "core",
+                "base",
                 "data_object",
                 "In-memory run ledger for iteration records, chunk records, events, and checkpoints.",
                 inputs={"run_id": "String id for a run ledger."},
@@ -1395,14 +1355,14 @@ def _build_groups() -> dict[str, CatalogGroup]:
             ),
             _make_item(
                 "BlackBoxRun",
-                "core",
+                "base",
                 "data_object",
                 "Durable numeric blackbox writer for blackbox.json, ledger.jsonl, and selected arrays/*.npz artifacts.",
                 inputs={"run_dir": "Run folder.", "policy": "minimal, standard, full, or policy mapping."},
                 returns={"type": "BlackBoxRun", "methods": "record_iteration, record_chunk, snapshot, record_repair, close, records"},
                 requires=("writable run folder",),
                 best_for=("closed-loop numeric audit trails", "post-run diagnostics", "TensorBoard-like dashboard data source"),
-                related=("core.diagnostics", "optimizers.adam", "utils.repair_newton"),
+                related=("base.diagnostics", "optimizers.adam", "utils.repair_newton"),
                 example="box = opt.blackbox.start(run_dir); result = opt.adam(system, controls, blackbox=box)",
                 module="optimizer/blackbox/run.py",
                 phase="Phase 12",
@@ -1411,14 +1371,14 @@ def _build_groups() -> dict[str, CatalogGroup]:
             ),
             _make_item(
                 "diagnostics",
-                "core",
+                "base",
                 "helper",
                 "Read a blackbox run folder and return structured historical diagnostics without extra system calls.",
                 inputs={"run_dir": "Folder containing blackbox.json and ledger.jsonl.", "details": "summary, gradient, decisions, repairs, or thresholds."},
                 returns={"type": "dict", "fields": "manifest, latest_iteration, analysis, optional detail tables"},
                 requires=("blackbox run folder",),
                 best_for=("closed-loop review", "gradient trend inspection", "accept/reject and repair analysis"),
-                related=("core.BlackBoxRun", "utils.diagnostic_report"),
+                related=("base.BlackBoxRun", "utils.diagnostic_report"),
                 example="report = opt.diagnostics(run_dir, details='gradient')",
                 module="optimizer/blackbox/analysis.py",
                 phase="Phase 12",
@@ -1426,7 +1386,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
             ),
             _make_item(
                 "context",
-                "core",
+                "base",
                 "helper",
                 "Bind a system once for notebook/curriculum convenience.",
                 inputs={"system": "System object to bind.", "trace": "Optional Trace or run id.", "defaults": "Default kwargs for bound runs."},
@@ -1442,11 +1402,174 @@ def _build_groups() -> dict[str, CatalogGroup]:
         ),
     )
 
+    core_group = CatalogGroup(
+        name="core",
+        summary="Shared chunk engine: the proposal contract, validated system evaluation, acceptance guards, and stopping rules.",
+        common_inputs={
+            "system": "Project physics object satisfying the optimizer contract.",
+            "controls": "Named dense control matrix represented by Controls.",
+        },
+        common_returns={
+            "StepProposal": "Trial update returned by one optimizer iteration.",
+            "AcceptanceDecision": "Engine verdict on whether a trial replaces the current controls.",
+            "OptimizerResult": "Standard optimizer result returned by run_chunk.",
+        },
+        workflow=(
+            "Write a step callable mapping StepContext to StepProposal.",
+            "Pass it to run_chunk with an optimizer_name and an iteration budget.",
+            "Tighten acceptance with metric_guard and stopping with StoppingConfig.",
+        ),
+        items=(
+            _make_item(
+                "run_chunk",
+                "core",
+                "engine",
+                "Shared optimizer engine for custom StepProposal functions.",
+                inputs={
+                    "system": "Must provide evaluate(...) and usually gradient(...).",
+                    "controls/state/warmstart": "Starting point for the chunk.",
+                    "step": "Callable from StepContext to StepProposal or Controls.",
+                    "optimizer_name": "Name recorded in result and trace.",
+                    "maxiter": "Chunk iteration budget.",
+                },
+                returns=_RESULT_RETURN,
+                requires=("system.evaluate", "system.gradient", "Controls", "step callable"),
+                best_for=("custom optimizer experiments", "shared tracing/checkpoint behavior", "advanced users"),
+                watch_out=(
+                    "attempted iterations are counted whether a trial is accepted or rejected",
+                    "pass either stopping=StoppingConfig(...) or the loose target/stall arguments, not both",
+                ),
+                related=("core.StepContext", "core.StepProposal", "core.metric_guard"),
+                example="result = opt.run_chunk(system, controls, step=my_step, optimizer_name='custom', maxiter=5)",
+                module="optimizer/core/engine.py",
+                phase="Phase 5",
+                tags=("engine", "advanced"),
+            ),
+            _make_item(
+                "StepContext",
+                "core",
+                "data_object",
+                "Read-only bundle the engine hands to a proposal function each iteration.",
+                returns={
+                    "fields": "system, evaluator, state, evaluation, gradient, iteration, stage",
+                    "meaning": "Everything a method needs to propose the next trial controls.",
+                },
+                requires=("run_chunk",),
+                best_for=("writing a custom step callable",),
+                related=("core.StepProposal", "core.run_chunk"),
+                example="def my_step(ctx): return opt.StepProposal(ctx.state.controls - 0.01 * ctx.gradient)",
+                module="optimizer/core/engine.py",
+                phase="Phase 5",
+                tags=("engine", "contract"),
+            ),
+            _make_item(
+                "StepProposal",
+                "core",
+                "data_object",
+                "Trial update returned by one optimizer iteration.",
+                inputs={
+                    "controls": "Proposed trial controls.",
+                    "step_size": "Optional step size to retain on the chunk state.",
+                    "optimizer_state": "Optimizer-private state update applied after the proposal.",
+                    "optimizer_state_on_accept/on_reject": "Branch-specific state so moments advance only on accepted moves.",
+                    "technical": "Free-form payload recorded in the iteration log.",
+                },
+                requires=("Controls",),
+                best_for=("returning a trial from a custom step callable",),
+                watch_out=("branch-specific fields win over the plain optimizer_state field",),
+                related=("core.StepContext", "core.AcceptanceDecision"),
+                example="proposal = opt.StepProposal(trial_controls, step_size=0.05)",
+                module="optimizer/core/engine.py",
+                phase="Phase 5",
+                tags=("engine", "contract"),
+            ),
+            _make_item(
+                "AcceptanceDecision",
+                "core",
+                "data_object",
+                "Engine verdict on whether a trial replaces the current controls.",
+                returns={
+                    "fields": "accepted, reason, technical",
+                    "meaning": "Recorded on the iteration log with the reason string.",
+                },
+                requires=("Evaluation",),
+                best_for=("writing a custom accept function",),
+                related=("core.metric_guard", "core.run_chunk"),
+                example="return opt.AcceptanceDecision(accepted=True, reason='accepted')",
+                module="optimizer/core/engine.py",
+                phase="Phase 5",
+                tags=("engine", "acceptance"),
+            ),
+            _make_item(
+                "SystemEvaluator",
+                "core",
+                "helper",
+                "Validation and cache wrapper around an optimizer-facing system.",
+                inputs={
+                    "system": "Object satisfying the optimizer system contract.",
+                    "use_cache": "Reuse evaluations when numeric control content is unchanged.",
+                },
+                returns={
+                    "type": "SystemEvaluator",
+                    "meaning": "evaluate/gradient raise; try_evaluate/try_gradient return structured outcomes.",
+                },
+                requires=("system.evaluate", "system.gradient"),
+                best_for=("batch probes that should not repeat expensive propagation",),
+                not_for=("finite-difference fallbacks, which live in utils.derivatives",),
+                related=("core.run_chunk", "utils.verify_gradient"),
+                example="ev = opt.SystemEvaluator(system); snapshot = ev.evaluate(controls)",
+                module="optimizer/core/evaluate.py",
+                phase="Phase 5",
+                tags=("evaluation", "cache"),
+            ),
+            _make_item(
+                "StoppingConfig",
+                "core",
+                "data_object",
+                "Declarative stopping rules for one chunk: budget, target, stall, and finiteness.",
+                inputs={
+                    "maxiter": "Attempted engine iterations.",
+                    "target_value/target_metric/target_mode": "Stop once a metric reaches a threshold.",
+                    "stall_patience/stall_tolerance/stall_metric": "Stop when a metric stops improving.",
+                    "check_finite": "Stop before target/stall logic when metrics go non-finite.",
+                },
+                requires=("scalar metrics",),
+                best_for=("reusing one stopping policy across chunks",),
+                related=("core.run_chunk",),
+                example="result = opt.run_chunk(system, controls, step=my_step, optimizer_name='custom', maxiter=50, stopping=opt.StoppingConfig(maxiter=50, target_value=1e-6))",
+                module="optimizer/core/stopping.py",
+                phase="Phase 5",
+                tags=("stopping", "budget"),
+            ),
+            _make_item(
+                "metric_guard",
+                "core",
+                "guard",
+                "Build a reusable multi-metric accept/reject guard for run_chunk or optimizer accept hooks.",
+                inputs={
+                    "improve": "Metric that should improve or not get worse, default J.",
+                    "mode": "min or max.",
+                    "require": "Mapping of metric -> (operator, threshold[, tolerance]).",
+                    "tolerance": "Default tolerance for improve and two-field requirements.",
+                },
+                returns={"type": "MetricGuard", "meaning": "Callable accept function returning AcceptanceDecision."},
+                requires=("scalar metrics",),
+                best_for=("preventing one metric from improving while another breaks", "custom acceptance in line_search/run_chunk"),
+                related=("optimizers.line_search", "core.run_chunk", "core.AcceptanceDecision"),
+                example="guard = opt.core.metric_guard(improve='J', require={'fidelity': ('>=', 0.0)})",
+                module="optimizer/core/guards.py",
+                phase="Phase 11",
+                tags=("guard", "acceptance", "metrics"),
+            ),
+        ),
+    )
+
     return {
         "optimizers": optimizers_group,
         "guesses": guesses_group,
         "utils": utils_group,
         "schedules": schedules_group,
+        "base": base_group,
         "core": core_group,
     }
 
@@ -1643,7 +1766,8 @@ _PATHS: dict[str, dict[str, Any]] = {
     "beginner": {
         "goal": "Find the public surface and run a small, inspectable optimization.",
         "steps": (
-            "opt.catalog.groups(h=True)",
+            "opt.info(h=True)",
+            "opt.list(h=True)",
             "opt.guesses.list(h=True)",
             "controls = opt.guesses.random_fourier_guess(system, amplitude=0.1, modes=5, seed=1)",
             "check = opt.utils.verify_gradient(system, controls)",
@@ -1689,6 +1813,7 @@ optimizers = CatalogGroupView("optimizers")
 guesses = CatalogGroupView("guesses")
 utils = CatalogGroupView("utils")
 schedules = CatalogGroupView("schedules")
+base = CatalogGroupView("base")
 core = CatalogGroupView("core")
 
 
@@ -1699,6 +1824,7 @@ __all__ = [
     "CatalogItemView",
     "attach_namespace_helpers",
     "attach_root_helpers",
+    "base",
     "core",
     "group",
     "groups",

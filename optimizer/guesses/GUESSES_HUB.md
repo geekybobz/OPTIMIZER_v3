@@ -86,6 +86,15 @@ ctx = opt.context(system)
 controls = ctx.random_fourier_guess(amplitude=0.1, modes=5, seed=1)
 ```
 
+Runtime discovery:
+
+```python
+opt.guesses.list(h=True)
+opt.guesses.info("random_fourier_guess", h=True)
+opt.search("fourier", h=True)
+opt.info("guesses.random_fourier_guess", h=True)
+```
+
 ## Implementation Files
 
 Current source files:

@@ -6,6 +6,31 @@ import optimizer as opt
 
 
 class CatalogTests(unittest.TestCase):
+    def test_root_discovery_helpers_support_import_optimizer_as_opt(self):
+        overview = opt.info()
+        self.assertEqual(overview["name"], "OPTIMIZER v3")
+        self.assertIn("groups", overview)
+        self.assertIn("optimizers", overview["groups"])
+        self.assertIn("beginner", overview["paths"])
+
+        human = opt.info(h=True)
+        self.assertIn("Start here:", human)
+        self.assertIn("opt.list(h=True)", human)
+
+        listing = opt.list()
+        self.assertIn("items", listing)
+        self.assertTrue(any(item["name"] == "adam" for item in listing["items"]["optimizers"]))
+
+        method = opt.info("adam")
+        self.assertEqual(method["id"], "optimizers.adam")
+
+        search = opt.search("gradient")
+        self.assertGreater(search["count"], 0)
+
+        path = opt.path("beginner")
+        self.assertIn("steps", path)
+        self.assertIn("opt.info(h=True)", path["steps"])
+
     def test_catalog_groups_and_namespace_lists_are_structured(self):
         groups = opt.catalog.groups()
         self.assertIn("optimizers", groups)

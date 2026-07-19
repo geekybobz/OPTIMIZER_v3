@@ -25,4 +25,4 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["optimizer*", "systems*"]
+include = ["optimizer*"]

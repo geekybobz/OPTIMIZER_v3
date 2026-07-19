@@ -14,7 +14,8 @@ always matches input order.
 
 How it fits the architecture
 ----------------------------
-- ``engine.py`` remains single-trajectory for Phase 5.
+- this is generic execution plumbing, not optimizer policy, so it lives in ``utils``
+  rather than ``core``: nothing in the chunk engine imports it.
 - diagnostics and future batch modes can call ``parallel_map`` for independent work.
 - public APIs can expose a small ``ParallelConfig`` instead of executor internals.
 

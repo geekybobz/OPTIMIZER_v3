@@ -52,9 +52,10 @@ This note is the compact index of public utilities.
 
 ## Catalog Note
 
-`metric_guard` appears in the catalog's utils group, but its implementation lives in
-`optimizer/core/guards.py` and it is not exported as `opt.utils.metric_guard` in the
-current runtime package.
+`metric_guard` is not a utils method.  It is implemented in `optimizer/core/guards.py`,
+catalogued in the `core` group, and called as `opt.core.metric_guard(...)`.
+
+- [Core Hub](../core/CORE_HUB.md)
 
 ## Related Notes
 

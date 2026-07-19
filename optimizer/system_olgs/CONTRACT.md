@@ -152,7 +152,7 @@ Optional methods should be discoverable and validated by OLGS helpers.
 
 ## Related Notes
 
-- [system_olgs](README.md)
+- [OLGS System Hub](SYSTEM_OLGS_HUB.md)
 - [OLGS System Build Skill](templates/OLGS_SYSTEM_BUILD_SKILL.md)
 - [System Configuration](PARAMS.md)
 - [Computation Lifecycle](LIFECYCLE.md)

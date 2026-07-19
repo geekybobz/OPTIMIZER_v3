@@ -36,12 +36,19 @@ from __future__ import annotations
 
 from typing import Any, Callable, Iterable
 
-from optimizer import blackbox, catalog, guesses, optimizers, schedules, utils
+from optimizer import blackbox, catalog, core, guesses, optimizers, schedules, utils
 from optimizer.blackbox import BlackBoxPolicy, BlackBoxRun
+from optimizer.catalog import base
 from optimizer.controls import ControlSpec, Controls
-from optimizer.core.engine import AcceptanceDecision, StepContext, StepProposal
-from optimizer.core.guards import MetricGuard
-from optimizer.core.parallel import ParallelConfig
+from optimizer.core import (
+    AcceptanceDecision,
+    MetricGuard,
+    StepContext,
+    StepProposal,
+    StoppingConfig,
+    SystemEvaluator,
+)
+from optimizer.utils.parallel import ParallelConfig
 from optimizer.library import DEFAULT_LIBRARY, MethodInfo, OptimizerContext, OptimizerLibrary
 from optimizer.logs.checkpoint import Checkpoint
 from optimizer.logs.records import ChunkRecord, EventRecord, IterationRecord
@@ -325,6 +332,91 @@ def geometry_probe(*args: Any, **kwargs: Any) -> dict[str, Any]:
     return library.geometry_probe(*args, **kwargs)
 
 
+_DISCOVERY_PATHS = ("beginner", "debug_gradient", "repair_residuals", "optimize_then_polish")
+
+
+def _root_info_payload() -> dict[str, Any]:
+    paths: dict[str, Any] = {}
+    for path_name in _DISCOVERY_PATHS:
+        path_info = catalog.path(path_name)
+        if isinstance(path_info, dict):
+            paths[path_name] = path_info
+
+    return {
+        "name": "OPTIMIZER v3",
+        "summary": "Namespace-first optimization toolbox for system-defined control problems.",
+        "start_here": [
+            "opt.info(h=True)",
+            "opt.list(h=True)",
+            "opt.search('gradient', h=True)",
+            "opt.path('beginner', h=True)",
+            "opt.optimizers.list(h=True)",
+            "opt.guesses.list(h=True)",
+            "opt.utils.list(h=True)",
+            "opt.core.list(h=True)",
+        ],
+        "groups": catalog.groups(),
+        "paths": paths,
+        "examples": {
+            "method_details": "opt.info('adam', h=True)",
+            "namespace_details": "opt.optimizers.info('adam', h=True)",
+            "debug_derivatives": "opt.utils.list(kind='derivative', h=True)",
+            "guess_search": "opt.search('fourier', h=True)",
+        },
+    }
+
+
+def _render_root_info(payload: dict[str, Any]) -> str:
+    lines = [payload["name"], f"Summary: {payload['summary']}"]
+
+    lines.append("Start here:")
+    lines.extend(f"- {call}" for call in payload["start_here"])
+
+    groups = payload["groups"]
+    if isinstance(groups, dict):
+        lines.append("Groups:")
+        for name, data in groups.items():
+            lines.append(f"- {name}: {data['summary']} ({data['count']} items)")
+
+    lines.append("Paths:")
+    for name, data in payload["paths"].items():
+        lines.append(f"- {name}: {data['goal']}")
+
+    lines.append("Examples:")
+    for label, call in payload["examples"].items():
+        lines.append(f"- {label}: {call}")
+
+    return "\n".join(lines)
+
+
+def list(*, h: bool = False) -> dict[str, Any] | str:
+    """Return the full discovery catalog from the root ``opt`` namespace."""
+
+    return catalog.list(h=h)
+
+
+def info(name: str | None = None, *, h: bool = False) -> dict[str, Any] | str:
+    """Return root discovery help or detailed metadata for one catalog item."""
+
+    if name is not None:
+        return catalog.info(name, h=h)
+
+    payload = _root_info_payload()
+    return _render_root_info(payload) if h else payload
+
+
+def search(query: str, *, h: bool = False) -> dict[str, Any] | str:
+    """Search the discovery catalog from the root ``opt`` namespace."""
+
+    return catalog.search(query, h=h)
+
+
+def path(name: str, *, h: bool = False) -> dict[str, Any] | str:
+    """Return a focused workflow path such as ``beginner`` or ``debug_gradient``."""
+
+    return catalog.path(name, h=h)
+
+
 catalog.attach_root_helpers(globals())
 
 
@@ -353,12 +445,15 @@ __all__ = [
     "RunState",
     "StepContext",
     "StepProposal",
+    "StoppingConfig",
+    "SystemEvaluator",
     "SystemProbe",
     "Trace",
     "WarmStartState",
     "adagrad",
     "adam",
     "adaptive_step_schedule",
+    "base",
     "bind",
     "blackbox",
     "blackbox_analyze",
@@ -374,6 +469,7 @@ __all__ = [
     "control_spec",
     "control_spectrum",
     "controls",
+    "core",
     "cosine_guess",
     "diagnostic_report",
     "diagnostics",
@@ -389,9 +485,11 @@ __all__ = [
     "gradient",
     "gradient_system",
     "guesses",
+    "info",
     "library",
     "lbfgs",
     "line_search",
+    "list",
     "metric_guard",
     "metric_report",
     "methods",
@@ -406,6 +504,7 @@ __all__ = [
     "optional_hvp",
     "optional_residuals",
     "parallel_map",
+    "path",
     "perturb_guess",
     "project_gradient",
     "probe_system",
@@ -419,6 +518,7 @@ __all__ = [
     "run_chunk",
     "schedules",
     "scale_guess",
+    "search",
     "sinc_guess",
     "sine_guess",
     "smoothness_report",

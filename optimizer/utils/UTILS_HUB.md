@@ -93,6 +93,15 @@ ctx = opt.context(system)
 geometry = ctx.geometry_probe(controls, eps=1.0e-6)
 ```
 
+Runtime discovery:
+
+```python
+opt.utils.list(h=True)
+opt.utils.list(kind="derivative", h=True)
+opt.utils.info("verify_gradient", h=True)
+opt.info("utils.verify_gradient", h=True)
+```
+
 ## Implementation Files
 
 Current source files:
@@ -103,9 +112,14 @@ optimizer/utils/
   diagnostics.py
   derivatives.py
   geometry.py
+  parallel.py
   repairs.py
   spectrum.py
 ```
+
+`parallel.py` holds map-style execution helpers.  It is generic plumbing rather than a
+diagnostic tool, so it is not part of the `opt.utils` method namespace; use
+`opt.parallel_map(...)`.  See [Util Boundary](UTIL_BOUNDARY.md).
 
 ## Theory Map
 
