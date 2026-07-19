@@ -95,7 +95,7 @@ Recommended for constrained or staged workflows:
 ```python
 residuals(controls, name="...")
 jacobian(controls, name="...")
-with_params(...)
+with_secondary(...)
 metric_schema()
 ```
 
@@ -173,4 +173,3 @@ The standard install is editable inside conda environment `optimizer_v3`.
 Generated controls, project-specific reference artifacts, run outputs, checkpoints,
 and local result data should not be tracked unless deliberately reviewed. Numeric
 artifacts are ignored by default, and `systems/*/reference/` is private/local.
-

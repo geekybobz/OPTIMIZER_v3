@@ -19,7 +19,7 @@ How it fits the architecture
 - low-level modules keep owning implementation details.
 - optimizer/tool modules can be attached here without changing user import style.
 - curriculum workflows can keep one bound context and advance weights through
-  ``ctx.with_params(...)``.
+  ``ctx.with_secondary(...)``.
 - tests can exercise the public API through the same path notebooks will use.
 
 What this file deliberately does not do
@@ -41,6 +41,11 @@ from dataclasses import asdict, dataclass, is_dataclass, replace
 from typing import Any, Callable, Iterable
 from uuid import uuid4
 
+from optimizer.blackbox import analyze as _blackbox_analyze
+from optimizer.blackbox import diagnostics as _blackbox_diagnostics
+from optimizer.blackbox import prune as _blackbox_prune
+from optimizer.blackbox import reset as _blackbox_reset
+from optimizer.blackbox import start as _blackbox_start
 from optimizer.controls import ControlSpec, Controls
 from optimizer.core.engine import StepFunction, run_chunk
 from optimizer.core.evaluate import SystemEvaluator
@@ -75,7 +80,7 @@ from optimizer.optimizers import rmsprop as _rmsprop
 from optimizer.result import Evaluation, OptimizerResult
 from optimizer.schedules import AdaptiveStepSchedule, ConstantSchedule
 from optimizer.state import RunState, WarmStartState
-from optimizer.system import require_system
+from optimizer.system_olgs import get_secondary_update_hook, require_system
 from optimizer.utils import (
     control_spectrum as _control_spectrum,
     diagnostic_report as _diagnostic_report,
@@ -148,13 +153,16 @@ class OptimizerContext:
 
         return _system_params(self.system)
 
-    def with_params(self, **updates: Any) -> "OptimizerContext":
-        """Return a new context whose system has updated params."""
+    def with_secondary(self, **updates: Any) -> "OptimizerContext":
+        """Return a new context whose system has updated secondary params."""
 
-        hook = getattr(self.system, "with_params", None)
-        if not callable(hook):
-            raise TypeError("Bound system does not provide with_params(...).")
+        hook = get_secondary_update_hook(self.system)
         return replace(self, system=hook(**updates))
+
+    def with_params(self, **updates: Any) -> "OptimizerContext":
+        """Compatibility alias for systems still migrating to ``with_secondary``."""
+
+        return self.with_secondary(**updates)
 
     def with_trace(self, trace: Trace | str | None) -> "OptimizerContext":
         """Return a new context carrying the provided trace."""
@@ -456,6 +464,31 @@ class OptimizerLibrary:
 
         return parallel_map(function, items, config=config)
 
+    def blackbox_start(self, *args: Any, **kwargs: Any) -> Any:
+        """Create a numeric blackbox run ledger."""
+
+        return _blackbox_start(*args, **kwargs)
+
+    def blackbox_analyze(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        """Analyze a blackbox run folder without extra system calls."""
+
+        return _blackbox_analyze(*args, **kwargs)
+
+    def diagnostics(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        """Return historical diagnostics from a blackbox run folder."""
+
+        return _blackbox_diagnostics(*args, **kwargs)
+
+    def blackbox_reset(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        """Reset all or part of a blackbox run folder."""
+
+        return _blackbox_reset(*args, **kwargs)
+
+    def blackbox_prune(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        """Prune transient blackbox artifacts."""
+
+        return _blackbox_prune(*args, **kwargs)
+
     def context(
         self,
         system: Any,
@@ -693,6 +726,14 @@ class OptimizerLibrary:
             "evaluate": MethodInfo("evaluate", "implemented", "optimizer/core/evaluate.py", "Phase 5"),
             "gradient": MethodInfo("gradient", "implemented", "optimizer/core/evaluate.py", "Phase 5"),
             "trace": MethodInfo("trace", "implemented", "optimizer/logs/trace.py", "Phase 4"),
+            "blackbox_start": MethodInfo("blackbox_start", "implemented", "optimizer/blackbox/run.py", "Phase 12"),
+            "blackbox_analyze": MethodInfo(
+                "blackbox_analyze",
+                "implemented",
+                "optimizer/blackbox/analysis.py",
+                "Phase 12",
+            ),
+            "diagnostics": MethodInfo("diagnostics", "implemented", "optimizer/blackbox/analysis.py", "Phase 12"),
             "warmstart": MethodInfo("warmstart", "implemented", "optimizer/state.py", "Phase 3"),
             "parallel_map": MethodInfo("parallel_map", "implemented", "optimizer/core/parallel.py", "Phase 5"),
             "context": MethodInfo("context", "implemented", "optimizer/library.py", "Phase 6"),

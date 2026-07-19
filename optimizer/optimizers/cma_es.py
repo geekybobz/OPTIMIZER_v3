@@ -45,12 +45,13 @@ from uuid import uuid4
 import numpy as np
 
 from optimizer.controls import Controls
+from optimizer.blackbox.run import BlackBoxRun, ensure_run
 from optimizer.core.evaluate import SystemEvaluator
 from optimizer.logs.trace import Trace
 from optimizer.optimizers._common import controls_from_flat_like, require_finite, require_variant
 from optimizer.result import Evaluation, OptimizerResult
 from optimizer.state import RunState
-from optimizer.system import validate_controls_for_system
+from optimizer.system_olgs import validate_controls_for_system
 
 
 VALID_VARIANTS = ("diagonal", "isotropic")
@@ -158,6 +159,8 @@ def cma_es(
     accept_tolerance: float = 0.0,
     trace: Trace | None = None,
     create_trace: bool = True,
+    blackbox: BlackBoxRun | str | bool | None = None,
+    blackbox_policy: Any | None = None,
     stage: str | None = None,
     use_cache: bool = True,
 ) -> OptimizerResult:
@@ -181,6 +184,8 @@ def cma_es(
     evaluator = SystemEvaluator(system, use_cache=use_cache)
     validate_controls_for_system(evaluator.system, controls)
     active_trace = trace if trace is not None else (Trace(run_id=uuid4().hex) if create_trace else None)
+    active_blackbox = ensure_run(blackbox, policy=blackbox_policy)
+    owns_blackbox = active_blackbox is not None and not isinstance(blackbox, BlackBoxRun)
     initial = evaluator.evaluate(controls)
     state = RunState.initial(
         controls.copy(name=controls.name),
@@ -191,6 +196,29 @@ def cma_es(
     )
     if active_trace is not None:
         active_trace.checkpoint("chunk_start", state.controls, state, stage=stage)
+    if active_blackbox is not None:
+        active_blackbox.record_start(
+            system=evaluator.system,
+            controls=controls,
+            metrics=initial.metrics,
+            optimizer="cma_es",
+            stage=stage,
+            objective={"metric": accept_metric, "mode": accept_mode},
+            config={
+                "variant": config.variant,
+                "maxiter": int(maxiter),
+                "population_size": population_size,
+                "elite_fraction": float(elite_fraction),
+                "sigma": float(sigma),
+                "min_sigma": float(min_sigma),
+                "covariance_lr": float(covariance_lr),
+                "seed": seed,
+                "accept_metric": accept_metric,
+                "accept_mode": accept_mode,
+                "accept_tolerance": float(accept_tolerance),
+                "use_cache": bool(use_cache),
+            },
+        )
 
     rng = np.random.default_rng(seed)
     dimension = controls.spec.size
@@ -235,6 +263,14 @@ def cma_es(
 
         best_eval = evaluations[best_index]
         best_value = float(values[best_index])
+        previous_controls = state.controls
+        previous_metrics = dict(state.metrics)
+        previous_value = float(current_value)
+        best_controls = (
+            controls_from_flat_like(controls, samples[best_index], name="cma_es_best")
+            if best_eval is not None
+            else None
+        )
         accepted = best_eval is not None and _improves(
             best_value,
             current_value,
@@ -242,7 +278,6 @@ def cma_es(
             tolerance=float(accept_tolerance),
         )
         if accepted:
-            best_controls = controls_from_flat_like(controls, samples[best_index], name="cma_es_best")
             mean = elite_mean
             diagonal_sigma = next_diagonal_sigma
             state.update_current(
@@ -257,6 +292,23 @@ def cma_es(
             if active_trace is not None:
                 active_trace.checkpoint("latest", state.controls, state, stage=stage)
                 active_trace.checkpoint(f"best_{accept_metric}", state.controls, state, stage=stage)
+            if active_blackbox is not None:
+                active_blackbox.record_checkpoint(
+                    "latest",
+                    state.controls,
+                    metrics=state.metrics,
+                    optimizer="cma_es",
+                    iteration=state.iteration,
+                    stage=stage,
+                )
+                active_blackbox.record_checkpoint(
+                    f"best_{accept_metric}",
+                    state.controls,
+                    metrics=state.metrics,
+                    optimizer="cma_es",
+                    iteration=state.iteration,
+                    stage=stage,
+                )
         else:
             # Even rejected generations shrink/adapt the sampling radius slightly
             # around the existing mean, so repeated failures do not keep sampling the
@@ -298,6 +350,42 @@ def cma_es(
                 accepted=accepted,
                 reason="accepted" if accepted else "rejected_no_improvement",
             )
+        if active_blackbox is not None:
+            active_blackbox.record_iteration(
+                optimizer="cma_es",
+                iteration=state.iteration,
+                global_iteration=state.global_iteration,
+                metrics=state.metrics,
+                previous_metrics=previous_metrics,
+                trial_metrics=None if best_eval is None else best_eval.metrics,
+                controls=state.controls,
+                previous_controls=previous_controls,
+                proposal_controls=best_controls,
+                gradient=None,
+                technical={
+                    "variant": config.variant,
+                    "population_size": int(population),
+                    "elite_count": int(elite_count),
+                    "sigma_mean": float(np.mean(diagonal_sigma)),
+                    "sigma_max": float(np.max(diagonal_sigma)),
+                    "best_population_value": best_value,
+                    "best_population_index": best_index,
+                    "failed_evaluations": int(sum(error is not None for error in errors)),
+                    "acceptance": {
+                        "accept_metric": accept_metric,
+                        "accept_mode": accept_mode,
+                        "current_value": previous_metrics.get(accept_metric),
+                        "trial_value": best_value,
+                        "improvement": float(previous_value - best_value) if accept_mode == "min" else float(best_value - previous_value),
+                        "tolerance": float(accept_tolerance),
+                    },
+                },
+                stage=stage,
+                accepted=accepted,
+                reason="accepted" if accepted else "rejected_no_improvement",
+                accept_metric=accept_metric,
+                accept_mode=accept_mode,
+            )
 
     state.stop_reason = "maxiter"
     if active_trace is not None:
@@ -313,4 +401,26 @@ def cma_es(
             accepted=accepted_any,
             reason=state.stop_reason,
         )
-    return OptimizerResult.from_state(state, stop_reason=state.stop_reason, optimizer="cma_es", trace=active_trace)
+    if active_blackbox is not None:
+        active_blackbox.record_chunk(
+            optimizer="cma_es",
+            chunk=0,
+            start_iteration=0,
+            end_iteration=state.iteration,
+            start_metrics=initial.metrics,
+            end_metrics=state.metrics,
+            system_params=state.system_params,
+            stage=stage,
+            accepted=accepted_any,
+            reason=state.stop_reason,
+        )
+    result = OptimizerResult.from_state(
+        state,
+        stop_reason=state.stop_reason,
+        optimizer="cma_es",
+        trace=active_trace,
+        blackbox=active_blackbox,
+    )
+    if active_blackbox is not None and owns_blackbox:
+        active_blackbox.close(result)
+    return result

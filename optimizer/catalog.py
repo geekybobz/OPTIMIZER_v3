@@ -1273,7 +1273,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
 
     core_group = CatalogGroup(
         name="core",
-        summary="Core data objects, engine helpers, trace, checkpoints, and bound context utilities.",
+        summary="Core data objects, engine helpers, blackbox ledgers, trace, checkpoints, and bound context utilities.",
         common_inputs={
             "system": "Project physics object satisfying the optimizer contract.",
             "controls": "Named dense control matrix represented by Controls.",
@@ -1282,11 +1282,12 @@ def _build_groups() -> dict[str, CatalogGroup]:
             "Evaluation": "Single evaluate(...) snapshot.",
             "OptimizerResult": "Standard optimizer result.",
             "Trace": "In-memory run records and checkpoints.",
+            "BlackBoxRun": "Durable numeric run ledger with selected array artifacts.",
         },
         workflow=(
             "Build or receive Controls matching system.control_spec().",
             "Call evaluate/gradient or a role namespace method.",
-            "Carry OptimizerResult, WarmStartState, and Trace across chunks.",
+            "Carry OptimizerResult, WarmStartState, Trace, or BlackBoxRun across chunks.",
         ),
         items=(
             _make_item(
@@ -1405,6 +1406,37 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/logs/trace.py",
                 phase="Phase 4",
                 tags=("trace", "checkpoint", "logs"),
+            ),
+            _make_item(
+                "BlackBoxRun",
+                "core",
+                "data_object",
+                "Durable numeric blackbox writer for blackbox.json, ledger.jsonl, and selected arrays/*.npz artifacts.",
+                inputs={"run_dir": "Run folder.", "policy": "minimal, standard, full, or policy mapping."},
+                returns={"type": "BlackBoxRun", "methods": "record_iteration, record_chunk, snapshot, record_repair, close, records"},
+                requires=("writable run folder",),
+                best_for=("closed-loop numeric audit trails", "post-run diagnostics", "TensorBoard-like dashboard data source"),
+                related=("core.diagnostics", "optimizers.adam", "utils.repair_newton"),
+                example="box = opt.blackbox.start(run_dir); result = opt.adam(system, controls, blackbox=box)",
+                module="optimizer/blackbox/run.py",
+                phase="Phase 12",
+                aliases=("blackbox_start",),
+                tags=("blackbox", "ledger", "diagnostics", "artifacts"),
+            ),
+            _make_item(
+                "diagnostics",
+                "core",
+                "helper",
+                "Read a blackbox run folder and return structured historical diagnostics without extra system calls.",
+                inputs={"run_dir": "Folder containing blackbox.json and ledger.jsonl.", "details": "summary, gradient, decisions, repairs, or thresholds."},
+                returns={"type": "dict", "fields": "manifest, latest_iteration, analysis, optional detail tables"},
+                requires=("blackbox run folder",),
+                best_for=("closed-loop review", "gradient trend inspection", "accept/reject and repair analysis"),
+                related=("core.BlackBoxRun", "utils.diagnostic_report"),
+                example="report = opt.diagnostics(run_dir, details='gradient')",
+                module="optimizer/blackbox/analysis.py",
+                phase="Phase 12",
+                tags=("blackbox", "diagnostics", "analysis"),
             ),
             _make_item(
                 "context",

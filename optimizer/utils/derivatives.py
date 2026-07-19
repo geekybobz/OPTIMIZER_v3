@@ -37,7 +37,7 @@ from typing import Any, Callable, Mapping
 import numpy as np
 
 from optimizer.controls import Controls
-from optimizer.system import (
+from optimizer.system_olgs import (
     evaluate_system,
     gradient_system,
     optional_jacobian,

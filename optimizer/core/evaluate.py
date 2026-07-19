@@ -13,7 +13,7 @@ the system should remain the only place where physics is computed.
 
 How it fits the architecture
 ----------------------------
-- ``system.py`` defines the required hooks and validation helpers.
+- ``system_olgs`` defines the required hooks and validation helpers.
 - ``result.py`` defines ``Evaluation`` snapshots.
 - ``engine.py`` uses this evaluator for current/trial metrics and gradients.
 - future diagnostics can reuse the same cache behavior for batch probes.
@@ -42,7 +42,7 @@ import numpy as np
 
 from optimizer.controls import Controls
 from optimizer.result import Evaluation
-from optimizer.system import OptimizerSystem, evaluate_system, gradient_system, require_system
+from optimizer.system_olgs import OptimizerSystem, evaluate_system, gradient_system, require_system
 
 
 ControlCacheKey = tuple[tuple[str, ...], int, str, tuple[int, int], bytes]

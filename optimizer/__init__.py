@@ -36,7 +36,8 @@ from __future__ import annotations
 
 from typing import Any, Callable, Iterable
 
-from optimizer import catalog, guesses, optimizers, schedules, utils
+from optimizer import blackbox, catalog, guesses, optimizers, schedules, utils
+from optimizer.blackbox import BlackBoxPolicy, BlackBoxRun
 from optimizer.controls import ControlSpec, Controls
 from optimizer.core.engine import AcceptanceDecision, StepContext, StepProposal
 from optimizer.core.guards import MetricGuard
@@ -48,17 +49,26 @@ from optimizer.logs.trace import Trace
 from optimizer.result import Evaluation, OptimizerResult
 from optimizer.schedules import AdaptiveStepSchedule, ConstantSchedule
 from optimizer.state import RunState, WarmStartState
-from optimizer.system import (
+from optimizer.system_olgs import (
+    OLGS,
+    OLGSystem,
     OptimizerSystem,
+    PrimaryParams,
+    SecondaryParams,
     SystemProbe,
     evaluate_system,
+    finite_difference_hessian,
+    finite_difference_hvp,
     gradient_system,
+    optional_hessian,
+    optional_hvp,
     optional_jacobian,
     optional_residuals,
     probe_system,
     require_system,
     validate_controls_for_system,
     validate_metrics,
+    with_secondary,
 )
 from optimizer.utils.repairs import RepairResult
 
@@ -130,6 +140,26 @@ def parallel_map(
     config: ParallelConfig | None = None,
 ) -> list[Any]:
     return library.parallel_map(function, items, config=config)
+
+
+def blackbox_start(*args: Any, **kwargs: Any) -> BlackBoxRun:
+    return library.blackbox_start(*args, **kwargs)
+
+
+def blackbox_analyze(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    return library.blackbox_analyze(*args, **kwargs)
+
+
+def diagnostics(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    return library.diagnostics(*args, **kwargs)
+
+
+def blackbox_reset(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    return library.blackbox_reset(*args, **kwargs)
+
+
+def blackbox_prune(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    return library.blackbox_prune(*args, **kwargs)
 
 
 def context(system: Any, *, trace: Trace | str | None = None, **defaults: Any) -> OptimizerContext:
@@ -307,6 +337,8 @@ catalog.attach_root_helpers(globals())
 __all__ = [
     "AcceptanceDecision",
     "AdaptiveStepSchedule",
+    "BlackBoxPolicy",
+    "BlackBoxRun",
     "Checkpoint",
     "ChunkRecord",
     "ControlSpec",
@@ -316,13 +348,17 @@ __all__ = [
     "IterationRecord",
     "MethodInfo",
     "MetricGuard",
+    "OLGS",
+    "OLGSystem",
     "OptimizerContext",
     "OptimizerLibrary",
     "OptimizerResult",
     "OptimizerSystem",
     "ParallelConfig",
+    "PrimaryParams",
     "RepairResult",
     "RunState",
+    "SecondaryParams",
     "StepContext",
     "StepProposal",
     "SystemProbe",
@@ -332,6 +368,11 @@ __all__ = [
     "adam",
     "adaptive_step_schedule",
     "bind",
+    "blackbox",
+    "blackbox_analyze",
+    "blackbox_prune",
+    "blackbox_reset",
+    "blackbox_start",
     "cma_es",
     "constant",
     "constant_guess",
@@ -343,8 +384,11 @@ __all__ = [
     "controls",
     "cosine_guess",
     "diagnostic_report",
+    "diagnostics",
     "evaluate",
     "evaluate_system",
+    "finite_difference_hessian",
+    "finite_difference_hvp",
     "finite_difference_gradient",
     "finite_difference_jacobian",
     "fourier_guess",
@@ -366,6 +410,8 @@ __all__ = [
     "nullspace_basis",
     "optimizers",
     "optional_jacobian",
+    "optional_hessian",
+    "optional_hvp",
     "optional_residuals",
     "parallel_map",
     "perturb_guess",
@@ -392,6 +438,7 @@ __all__ = [
     "verify_gradient",
     "verify_jacobian",
     "warmstart",
+    "with_secondary",
     "zero_guess",
     "zeros",
 ]

@@ -6,7 +6,7 @@ The optimizer needs a technical history that is cheaper and lighter than full
 checkpoints.  During curriculum-style work, the user needs to inspect questions like:
 
     Which stage changed the system weights?
-    Did fidelity break after a lambda4 ramp?
+    Did fidelity break after a secondary-weight ramp?
     Did the step size collapse?
     Was a trial accepted or rejected?
 
@@ -185,4 +185,3 @@ class EventRecord:
 
     def to_dict(self) -> dict[str, Any]:
         return {"run_id": self.run_id, "event": self.event, "payload": dict(self.payload)}
-

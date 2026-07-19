@@ -14,7 +14,7 @@ function that maps ``StepContext`` to ``StepProposal``.  The engine handles the 
 How it fits the architecture
 ----------------------------
 - ``controls.py`` defines the object being moved.
-- ``system.py`` defines how metrics and gradients are produced analytically.
+- ``system_olgs`` defines how metrics and gradients are produced analytically.
 - ``state.py`` stores mutable chunk state and warmstart handoff state.
 - ``result.py`` standardizes the returned result.
 - ``logs/trace.py`` receives iteration/chunk records and checkpoints.
@@ -43,12 +43,13 @@ from uuid import uuid4
 import numpy as np
 
 from optimizer.controls import Controls
+from optimizer.blackbox.run import BlackBoxRun, ensure_run
 from optimizer.core.evaluate import SystemEvaluator
 from optimizer.core.stopping import StopDecision, StopTracker, StoppingConfig
 from optimizer.logs.trace import Trace
 from optimizer.result import Evaluation, OptimizerResult
 from optimizer.state import RunState, WarmStartState
-from optimizer.system import OptimizerSystem, validate_controls_for_system
+from optimizer.system_olgs import OptimizerSystem, validate_controls_for_system
 
 
 @dataclass(frozen=True)
@@ -317,16 +318,26 @@ def _ensure_trace(trace: Trace | None, *, create_trace: bool) -> Trace | None:
 
 def _record_checkpoint(
     trace: Trace | None,
+    blackbox: BlackBoxRun | None,
     label: str,
     state: RunState,
     *,
+    optimizer_name: str | None = None,
     stage: str | None,
 ) -> None:
-    """Create a trace checkpoint when tracing is enabled."""
+    """Create trace/blackbox checkpoints when enabled."""
 
-    if trace is None:
-        return
-    trace.checkpoint(label, state.controls, state, stage=stage)
+    if trace is not None:
+        trace.checkpoint(label, state.controls, state, stage=stage)
+    if blackbox is not None:
+        blackbox.record_checkpoint(
+            label,
+            state.controls,
+            metrics=state.metrics,
+            optimizer=optimizer_name,
+            iteration=state.iteration,
+            stage=stage,
+        )
 
 
 def _record_iteration(
@@ -404,6 +415,8 @@ def run_chunk(
     warmstart: WarmStartState | None = None,
     trace: Trace | None = None,
     create_trace: bool = True,
+    blackbox: BlackBoxRun | str | bool | None = None,
+    blackbox_policy: Any | None = None,
     step_size: float | None = None,
     stopping: StoppingConfig | None = None,
     target_value: float | None = None,
@@ -430,6 +443,8 @@ def run_chunk(
 
     evaluator = SystemEvaluator(system, use_cache=use_cache)
     active_trace = _ensure_trace(trace, create_trace=create_trace)
+    active_blackbox = ensure_run(blackbox, policy=blackbox_policy)
+    owns_blackbox = active_blackbox is not None and not isinstance(blackbox, BlackBoxRun)
     active_controls = _start_controls(controls, state, warmstart)
     validate_controls_for_system(evaluator.system, active_controls)
 
@@ -451,6 +466,26 @@ def run_chunk(
     )
     start_metrics = dict(run_state.metrics)
     start_iteration = int(run_state.iteration)
+    if active_blackbox is not None:
+        active_blackbox.record_start(
+            system=evaluator.system,
+            controls=active_controls,
+            metrics=run_state.metrics,
+            optimizer=optimizer_name,
+            stage=stage,
+            objective={"metric": accept_metric, "mode": accept_mode},
+            config={
+                "maxiter": int(maxiter),
+                "target_metric": target_metric,
+                "target_value": target_value,
+                "stall_patience": stall_patience,
+                "stall_tolerance": stall_tolerance,
+                "accept_metric": accept_metric,
+                "accept_mode": accept_mode,
+                "accept_tolerance": accept_tolerance,
+                "use_cache": bool(use_cache),
+            },
+        )
 
     stop_config = stopping or StoppingConfig(
         maxiter=maxiter,
@@ -462,7 +497,14 @@ def run_chunk(
     tracker = StopTracker(stop_config, initial_metrics=run_state.metrics)
 
     if checkpoint_start:
-        _record_checkpoint(active_trace, "chunk_start", run_state, stage=stage)
+        _record_checkpoint(
+            active_trace,
+            active_blackbox,
+            "chunk_start",
+            run_state,
+            optimizer_name=optimizer_name,
+            stage=stage,
+        )
 
     initial_stop = tracker.check_initial_metrics(run_state.metrics)
     if initial_stop.stop:
@@ -480,12 +522,29 @@ def run_chunk(
             accepted=None,
             reason=initial_stop.reason,
         )
-        return OptimizerResult.from_state(
+        if active_blackbox is not None:
+            active_blackbox.record_chunk(
+                optimizer=optimizer_name,
+                chunk=chunk,
+                start_iteration=start_iteration,
+                end_iteration=run_state.iteration,
+                start_metrics=start_metrics,
+                end_metrics=run_state.metrics,
+                system_params=run_state.system_params,
+                stage=stage,
+                accepted=None,
+                reason=initial_stop.reason,
+            )
+        result = OptimizerResult.from_state(
             run_state,
             stop_reason=initial_stop.reason or "stopped",
             optimizer=optimizer_name,
             trace=active_trace,
+            blackbox=active_blackbox,
         )
+        if active_blackbox is not None and owns_blackbox:
+            active_blackbox.close(result)
+        return result
 
     current_eval = initial_outcome.evaluation
     stop_reason = "maxiter"
@@ -499,6 +558,8 @@ def run_chunk(
 
         gradient_outcome = evaluator.try_gradient(run_state.controls)
         if not gradient_outcome.ok or gradient_outcome.gradient is None:
+            previous_controls = run_state.controls
+            previous_metrics = dict(run_state.metrics)
             run_state.iteration += 1
             run_state.global_iteration += 1
             stop_reason = "gradient_failed"
@@ -511,6 +572,22 @@ def run_chunk(
                 accepted=False,
                 reason=stop_reason,
             )
+            if active_blackbox is not None:
+                active_blackbox.record_iteration(
+                    optimizer=optimizer_name,
+                    iteration=run_state.iteration,
+                    global_iteration=run_state.global_iteration,
+                    metrics=run_state.metrics,
+                    previous_metrics=previous_metrics,
+                    controls=run_state.controls,
+                    previous_controls=previous_controls,
+                    technical={"error": gradient_outcome.error},
+                    stage=stage,
+                    accepted=False,
+                    reason=stop_reason,
+                    accept_metric=accept_metric,
+                    accept_mode=accept_mode,
+                )
             break
 
         context = StepContext(
@@ -524,6 +601,8 @@ def run_chunk(
         )
 
         try:
+            previous_controls = run_state.controls
+            previous_metrics = dict(run_state.metrics)
             raw_proposal = step(context)
             proposal = raw_proposal if isinstance(raw_proposal, StepProposal) else StepProposal(raw_proposal)
             validate_controls_for_system(evaluator.system, proposal.controls)
@@ -540,6 +619,22 @@ def run_chunk(
                 accepted=False,
                 reason=stop_reason,
             )
+            if active_blackbox is not None:
+                active_blackbox.record_iteration(
+                    optimizer=optimizer_name,
+                    iteration=run_state.iteration,
+                    global_iteration=run_state.global_iteration,
+                    metrics=run_state.metrics,
+                    previous_metrics=previous_metrics,
+                    controls=run_state.controls,
+                    previous_controls=previous_controls,
+                    technical={"error": f"{type(exc).__name__}: {exc}"},
+                    stage=stage,
+                    accepted=False,
+                    reason=stop_reason,
+                    accept_metric=accept_metric,
+                    accept_mode=accept_mode,
+                )
             break
 
         trial_outcome = evaluator.try_evaluate(proposal.controls)
@@ -563,6 +658,27 @@ def run_chunk(
                 accepted=False,
                 reason=stop_reason,
             )
+            if active_blackbox is not None:
+                active_blackbox.record_iteration(
+                    optimizer=optimizer_name,
+                    iteration=run_state.iteration,
+                    global_iteration=run_state.global_iteration,
+                    metrics=run_state.metrics,
+                    previous_metrics=previous_metrics,
+                    controls=run_state.controls,
+                    previous_controls=previous_controls,
+                    proposal_controls=proposal.controls,
+                    gradient=gradient_outcome.gradient,
+                    technical={
+                        "proposal": dict(proposal.technical),
+                        "error": trial_outcome.error,
+                    },
+                    stage=stage,
+                    accepted=False,
+                    reason=stop_reason,
+                    accept_metric=accept_metric,
+                    accept_mode=accept_mode,
+                )
             break
 
         accept_function = accept
@@ -609,11 +725,32 @@ def run_chunk(
             accepted_any = True
             improved = run_state.update_best_by_metric(metric=accept_metric, mode=accept_mode)
             if checkpoint_latest:
-                _record_checkpoint(active_trace, "latest", run_state, stage=stage)
+                _record_checkpoint(
+                    active_trace,
+                    active_blackbox,
+                    "latest",
+                    run_state,
+                    optimizer_name=optimizer_name,
+                    stage=stage,
+                )
             if checkpoint_accepted:
-                _record_checkpoint(active_trace, "accepted", run_state, stage=stage)
+                _record_checkpoint(
+                    active_trace,
+                    active_blackbox,
+                    "accepted",
+                    run_state,
+                    optimizer_name=optimizer_name,
+                    stage=stage,
+                )
             if checkpoint_best and improved:
-                _record_checkpoint(active_trace, f"best_{accept_metric}", run_state, stage=stage)
+                _record_checkpoint(
+                    active_trace,
+                    active_blackbox,
+                    f"best_{accept_metric}",
+                    run_state,
+                    optimizer_name=optimizer_name,
+                    stage=stage,
+                )
         else:
             run_state.iteration += 1
             run_state.global_iteration += 1
@@ -629,6 +766,25 @@ def run_chunk(
             accepted=accept_decision.accepted,
             reason=accept_decision.reason,
         )
+        if active_blackbox is not None:
+            active_blackbox.record_iteration(
+                optimizer=optimizer_name,
+                iteration=run_state.iteration,
+                global_iteration=run_state.global_iteration,
+                metrics=run_state.metrics,
+                previous_metrics=previous_metrics,
+                trial_metrics=trial_outcome.evaluation.metrics,
+                controls=run_state.controls,
+                previous_controls=previous_controls,
+                proposal_controls=proposal.controls,
+                gradient=gradient_outcome.gradient,
+                technical=technical,
+                stage=stage,
+                accepted=accept_decision.accepted,
+                reason=accept_decision.reason,
+                accept_metric=accept_metric,
+                accept_mode=accept_mode,
+            )
 
         metric_decision: StopDecision = tracker.check_metrics(run_state.metrics)
         if metric_decision.stop:
@@ -649,9 +805,26 @@ def run_chunk(
         accepted=accepted_any,
         reason=stop_reason,
     )
-    return OptimizerResult.from_state(
+    if active_blackbox is not None:
+        active_blackbox.record_chunk(
+            optimizer=optimizer_name,
+            chunk=chunk,
+            start_iteration=start_iteration,
+            end_iteration=run_state.iteration,
+            start_metrics=start_metrics,
+            end_metrics=run_state.metrics,
+            system_params=run_state.system_params,
+            stage=stage,
+            accepted=accepted_any,
+            reason=stop_reason,
+        )
+    result = OptimizerResult.from_state(
         run_state,
         stop_reason=stop_reason,
         optimizer=optimizer_name,
         trace=active_trace,
+        blackbox=active_blackbox,
     )
+    if active_blackbox is not None and owns_blackbox:
+        active_blackbox.close(result)
+    return result

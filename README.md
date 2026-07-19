@@ -68,7 +68,7 @@ Compact aliases such as `opt.adam(...)`, `opt.fourier_guess(...)`, and
 ```text
 optimizer/
   controls.py          vectorized ControlSpec and Controls
-  system.py            optimizer-facing system contract helpers
+  system_olgs/         OLGS class, system contract helpers, params, derivatives, template
   result.py            Evaluation and OptimizerResult
   state.py             RunState and WarmStartState
   library.py           root facade and bound-system context
@@ -98,7 +98,7 @@ Optional but important for constrained work:
 ```text
 residuals(controls, name=...)
 jacobian(controls, name=...)
-with_params(...)
+with_secondary(...)
 metric_schema()
 ```
 
@@ -118,4 +118,3 @@ Inside the standard environment:
 ```bash
 conda run -n optimizer_v3 python -m unittest discover -s tests
 ```
-

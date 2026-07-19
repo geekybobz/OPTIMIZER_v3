@@ -42,7 +42,7 @@ import numpy as np
 
 from optimizer.controls import Controls
 from optimizer.state import RunState, WarmStartState
-from optimizer.system import validate_metrics
+from optimizer.system_olgs import validate_metrics
 
 
 def _json_safe(value: Any) -> Any:
@@ -125,6 +125,8 @@ class OptimizerResult:
     system_params: dict[str, Any] = field(default_factory=dict)
     trace_id: str | None = None
     checkpoint_ids: dict[str, str] = field(default_factory=dict)
+    blackbox_path: str | None = None
+    blackbox_run_id: str | None = None
 
     @classmethod
     def from_state(
@@ -134,9 +136,12 @@ class OptimizerResult:
         stop_reason: str,
         optimizer: str | None = None,
         trace: Any | None = None,
+        blackbox: Any | None = None,
     ) -> "OptimizerResult":
         """Create a public result from a final run state."""
 
+        blackbox_path = None if blackbox is None else str(getattr(blackbox, "run_dir", ""))
+        blackbox_run_id = None if blackbox is None else str(getattr(blackbox, "run_id", ""))
         return cls(
             controls=state.controls,
             metrics=validate_metrics(state.metrics),
@@ -148,6 +153,8 @@ class OptimizerResult:
             system_params=dict(state.system_params),
             trace_id=state.trace_id,
             checkpoint_ids=dict(state.checkpoint_ids),
+            blackbox_path=blackbox_path,
+            blackbox_run_id=blackbox_run_id,
         )
 
     @property
@@ -181,6 +188,8 @@ class OptimizerResult:
             "system_params": _json_safe(self.system_params),
             "trace_id": self.trace_id,
             "checkpoint_ids": dict(self.checkpoint_ids),
+            "blackbox_path": self.blackbox_path,
+            "blackbox_run_id": self.blackbox_run_id,
         }
         if include_state and self.state is not None:
             payload["state"] = {

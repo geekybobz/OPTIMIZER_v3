@@ -18,7 +18,7 @@ How it fits the architecture
 What this file deliberately does not do
 ---------------------------------------
 It does not optimize energy, fidelity, or a curriculum objective.  It only reduces a
-named residual vector such as ``hard`` or ``fourth_order``.
+named residual vector such as ``hard`` or ``residual_polish``.
 
 Reviewer invariants
 -------------------
@@ -37,7 +37,8 @@ from typing import Any
 import numpy as np
 
 from optimizer.controls import Controls
-from optimizer.system import optional_residuals, validate_controls_for_system
+from optimizer.blackbox.run import BlackBoxRun, ensure_run
+from optimizer.system_olgs import optional_residuals, validate_controls_for_system
 from optimizer.utils.derivatives import get_jacobian
 
 
@@ -141,6 +142,8 @@ def repair_newton(
     line_search: bool = True,
     shrink: float = 0.5,
     max_backtracks: int = 8,
+    blackbox: BlackBoxRun | str | bool | None = None,
+    blackbox_policy: Any | None = None,
 ) -> RepairResult:
     """Repair controls by reducing a named residual vector."""
 
@@ -163,6 +166,27 @@ def repair_newton(
         raise ValueError("max_backtracks must be >= 1.")
 
     current = controls.copy(name=controls.name)
+    active_blackbox = ensure_run(blackbox, policy=blackbox_policy)
+    if active_blackbox is not None:
+        active_blackbox.record_start(
+            system=system,
+            controls=controls,
+            optimizer="repair_newton",
+            stage="repair",
+            objective={"residuals": residuals, "mode": "repair"},
+            config={
+                "method": method,
+                "maxiter": int(maxiter),
+                "tolerance": tolerance,
+                "damping": damping,
+                "fallback": bool(fallback),
+                "eps": float(eps),
+                "max_step_norm": max_step_norm,
+                "line_search": bool(line_search),
+                "shrink": shrink,
+                "max_backtracks": int(max_backtracks),
+            },
+        )
     history: list[dict[str, Any]] = []
     jacobian_source = "uncomputed"
     stop_reason = "maxiter"
@@ -180,7 +204,7 @@ def repair_newton(
         )
         if residual_norm <= tolerance:
             stop_reason = "converged"
-            return RepairResult(
+            result = RepairResult(
                 controls=current,
                 residuals=residual_vec,
                 residual_norm=residual_norm,
@@ -193,6 +217,16 @@ def repair_newton(
                 history=history,
                 stop_reason=stop_reason,
             )
+            if active_blackbox is not None:
+                active_blackbox.record_repair(
+                    method=method,
+                    residual_name=residuals,
+                    before_controls=controls,
+                    after_controls=result.controls,
+                    result=result,
+                    stage="repair",
+                )
+            return result
         if iteration == int(maxiter):
             break
 
@@ -253,7 +287,7 @@ def repair_newton(
     final_residual = optional_residuals(system, current, name=residuals)
     final_norm = float(np.linalg.norm(final_residual))
     final_max_abs = float(np.max(np.abs(final_residual))) if final_residual.size else 0.0
-    return RepairResult(
+    result = RepairResult(
         controls=current,
         residuals=final_residual,
         residual_norm=final_norm,
@@ -266,3 +300,13 @@ def repair_newton(
         history=history,
         stop_reason="converged" if final_norm <= tolerance else stop_reason,
     )
+    if active_blackbox is not None:
+        active_blackbox.record_repair(
+            method=method,
+            residual_name=residuals,
+            before_controls=controls,
+            after_controls=result.controls,
+            result=result,
+            stage="repair",
+        )
+    return result

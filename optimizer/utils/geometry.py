@@ -36,7 +36,7 @@ from typing import Any
 import numpy as np
 
 from optimizer.controls import Controls
-from optimizer.system import optional_residuals, validate_controls_for_system
+from optimizer.system_olgs import optional_residuals, validate_controls_for_system
 from optimizer.utils.derivatives import get_jacobian
 
 
