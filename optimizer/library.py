@@ -64,7 +64,6 @@ from optimizer.guesses import (
     scale_guess as _scale_guess,
     sinc_guess as _sinc_guess,
     sine_guess as _sine_guess,
-    zero_guess as _zero_guess,
 )
 from optimizer.core.parallel import ParallelConfig, parallel_map
 from optimizer.logs.trace import Trace
@@ -304,11 +303,6 @@ class OptimizerContext:
     # ------------------------------------------------------------------
     # Bound guess generators
     # ------------------------------------------------------------------
-
-    def zero_guess(self, *args: Any, **kwargs: Any) -> Controls:
-        """Create a zero guess for the bound system."""
-
-        return self.library.zero_guess(self.system, *args, **kwargs)
 
     def constant_guess(self, *args: Any, **kwargs: Any) -> Controls:
         """Create a constant guess for the bound system."""
@@ -639,11 +633,6 @@ class OptimizerLibrary:
     # Guess generators
     # ------------------------------------------------------------------
 
-    def zero_guess(self, *args: Any, **kwargs: Any) -> Controls:
-        """Create all-zero initial controls."""
-
-        return _zero_guess(*args, **kwargs)
-
     def constant_guess(self, *args: Any, **kwargs: Any) -> Controls:
         """Create constant initial controls."""
 
@@ -758,7 +747,6 @@ class OptimizerLibrary:
                 "optimizer/guesses/harmonic.py",
                 "Phase 9",
             ),
-            "zero_guess": MethodInfo("zero_guess", "implemented", "optimizer/guesses/simple.py", "Phase 9"),
             "constant_guess": MethodInfo(
                 "constant_guess",
                 "implemented",

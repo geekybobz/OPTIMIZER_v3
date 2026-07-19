@@ -19,14 +19,12 @@ def system():
 
 
 class GuessGeneratorTests(unittest.TestCase):
-    def test_zero_constant_and_ramp_guesses_match_system_spec(self):
+    def test_constant_and_ramp_guesses_match_system_spec(self):
         sys = system()
-        zero = opt.zero_guess(sys)
         const = opt.constant_guess(sys, value={"ux": 0.2, "uy": 0.0, "uz": -0.1})
         ramp = opt.ramp_guess(sys, start=0.0, stop={"ux": 0.3, "uy": 0.0, "uz": 0.0})
 
-        self.assertEqual(zero.shape, sys.control_spec().shape)
-        np.testing.assert_allclose(zero.as_matrix(), 0.0)
+        self.assertEqual(const.shape, sys.control_spec().shape)
         self.assertAlmostEqual(float(np.max(const.channel("ux"))), 0.2)
         self.assertAlmostEqual(float(np.min(const.channel("uz"))), -0.1)
         self.assertAlmostEqual(ramp.channel("ux")[0], 0.0)

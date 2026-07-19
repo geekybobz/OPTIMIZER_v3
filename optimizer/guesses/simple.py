@@ -2,10 +2,10 @@
 
 Why this file exists
 --------------------
-The first guesses users reach for should be explicit and predictable: all zeros,
-constant channels, and ramps.  These are not sophisticated, but they are essential
-for debugging gradients, checking objectives, and establishing baseline optimizer
-behavior before trying random or Fourier starts.
+The first guesses users reach for should be explicit and predictable: constant
+channels and ramps.  These are not sophisticated, but they are essential for checking
+objectives and establishing baseline optimizer behavior before trying random or
+Fourier starts.
 
 How it fits the architecture
 ----------------------------
@@ -15,7 +15,6 @@ How it fits the architecture
 
 Reviewer invariants
 -------------------
-- zero guesses are exactly zero on every channel.
 - constant and ramp guesses still support selected-channel generation.
 - no random state is used in this module.
 """
@@ -29,21 +28,6 @@ import numpy as np
 
 from optimizer.controls import Controls
 from optimizer.guesses.base import finalize_guess, resolve_spec, time_grid, unit_matrix
-
-
-def zero_guess(
-    target: Any,
-    *,
-    name: str | None = None,
-    meta: Mapping[str, Any] | None = None,
-) -> Controls:
-    """Return all-zero controls for a system or spec."""
-
-    spec = resolve_spec(target)
-    return Controls.zeros(spec, name=name or "zero_guess").copy(
-        name=name or "zero_guess",
-        meta={"guess": "zero", **dict(meta or {})},
-    )
 
 
 def constant_guess(

@@ -269,10 +269,6 @@ def adaptive_step_schedule(**kwargs: Any) -> AdaptiveStepSchedule:
     return library.adaptive_step_schedule(**kwargs)
 
 
-def zero_guess(*args: Any, **kwargs: Any) -> Controls:
-    return library.zero_guess(*args, **kwargs)
-
-
 def constant_guess(*args: Any, **kwargs: Any) -> Controls:
     return library.constant_guess(*args, **kwargs)
 
@@ -435,6 +431,5 @@ __all__ = [
     "verify_jacobian",
     "warmstart",
     "with_secondary",
-    "zero_guess",
     "zeros",
 ]

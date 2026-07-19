@@ -21,7 +21,7 @@ def advanced_system():
 class AdvancedOptimizerTests(unittest.TestCase):
     def test_adagrad_and_rmsprop_decrease_fixture_objective(self):
         system = advanced_system()
-        controls = opt.zero_guess(system)
+        controls = opt.constant_guess(system, value=0.0)
         initial = opt.evaluate(system, controls).J
 
         adagrad = opt.adagrad(system, controls, step_size=0.05, maxiter=4)
@@ -52,7 +52,7 @@ class AdvancedOptimizerTests(unittest.TestCase):
 
     def test_nonlinear_cg_variants_decrease_fixture_objective(self):
         system = advanced_system()
-        controls = opt.zero_guess(system)
+        controls = opt.constant_guess(system, value=0.0)
         initial = opt.evaluate(system, controls).J
 
         for variant in ("fletcher_reeves", "polak_ribiere_plus", "hestenes_stiefel"):
@@ -70,7 +70,7 @@ class AdvancedOptimizerTests(unittest.TestCase):
 
     def test_cma_es_population_search_returns_improved_standard_result(self):
         system = advanced_system()
-        controls = opt.zero_guess(system)
+        controls = opt.constant_guess(system, value=0.0)
         initial = opt.evaluate(system, controls).J
 
         result = opt.cma_es(

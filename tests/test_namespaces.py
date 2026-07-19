@@ -62,7 +62,7 @@ class NamespaceApiTests(unittest.TestCase):
 
     def test_direct_shortcuts_remain_available_for_compact_notebook_use(self):
         system = QuadraticVectorSystem(N=9)
-        controls = opt.zero_guess(system)
+        controls = opt.constant_guess(system, value=0.0)
 
         direct = opt.adagrad(system, controls, step_size=0.03, maxiter=1)
         namespaced = opt.optimizers.adagrad(system, controls, step_size=0.03, maxiter=1)

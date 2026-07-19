@@ -660,20 +660,6 @@ def _build_groups() -> dict[str, CatalogGroup]:
         ),
         items=(
             _make_item(
-                "zero_guess",
-                "guesses",
-                "guess",
-                "All-zero Controls for a system or ControlSpec.",
-                inputs={"target": "System or ControlSpec.", "name/meta": "Optional labels for the returned Controls."},
-                returns={"type": "Controls", "meaning": "Every control channel is exactly zero."},
-                requires=("ControlSpec or system.control_spec",),
-                best_for=("baseline objective checks", "gradient checks at zero", "simple optimizer smoke tests"),
-                example="controls = opt.guesses.zero_guess(system)",
-                module="optimizer/guesses/simple.py",
-                phase="Phase 9",
-                tags=("deterministic", "baseline", "simple"),
-            ),
-            _make_item(
                 "constant_guess",
                 "guesses",
                 "guess",
