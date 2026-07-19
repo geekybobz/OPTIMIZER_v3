@@ -1,6 +1,6 @@
 ---
-title: optimizer optimizers
-type: module_index
+title: OPTIMIZERS_HUB
+type: module_hub
 module: optimizer/optimizers
 tags:
   - optimizer
@@ -12,7 +12,7 @@ tags:
 
 This folder contains the optimizer method layer for OPTIMIZER v3.
 
-The intent is compact documentation. Use this README as the entry point, then open
+The intent is compact documentation. Use this hub as the entry point, then open
 only the focused file needed for the current task.
 
 ## Design Scope
@@ -47,28 +47,28 @@ deep mathematical theory notes
 Read in this order:
 
 ```text
-README.md
+OPTIMIZERS_HUB.md
   Entry point and module map.
 
-CONTRACT.md
+OPTIMIZER_CONTRACT.md
   Public optimizer API contract and common arguments.
 
-METHODS.md
+OPTIMIZER_METHODS.md
   Compact table of implemented optimizers.
 
-LIFECYCLE.md
+OPTIMIZER_LIFECYCLE.md
   Engine-driven proposal/evaluate/accept flow and CMA-ES exception.
 
-STATE_AND_WARMSTART.md
+OPTIMIZER_STATE_WARMSTART.md
   RunState, optimizer_state, and safe handoff behavior.
 
-ACCEPTANCE_AND_STOPPING.md
+OPTIMIZER_ACCEPTANCE.md
   Accept/reject metrics and stopping rules.
 
-BOUNDARY.md
+OPTIMIZER_BOUNDARY.md
   What belongs in optimizers, systems, utils, guesses, and theory.
 
-COMMON.md
+OPTIMIZER_COMMON.md
   Shared helper behavior from _common.py.
 ```
 
@@ -130,14 +130,14 @@ Long mathematical notes live outside this runtime package:
 
 ```text
 Theory/optimizers/
-  README.md
-  gradient_descent_and_line_search.md
-  momentum.md
-  adam_family.md
-  adaptive_scaling.md
-  nonlinear_cg.md
-  lbfgs.md
-  cma_es.md
+  OPTIMIZER_THEORY_HUB.md
+  THEORY_LINE_SEARCH.md
+  THEORY_MOMENTUM.md
+  THEORY_ADAM_FAMILY.md
+  THEORY_ADAPTIVE_SCALING.md
+  THEORY_NONLINEAR_CG.md
+  THEORY_LBFGS.md
+  THEORY_CMA_ES.md
 ```
 
 Each method reference links to its corresponding theory note, and each theory note
@@ -145,8 +145,8 @@ links back to the API reference.
 
 ## Related Notes
 
-- [Optimizer Contract](CONTRACT.md)
-- [Optimizer Methods](METHODS.md)
-- [Optimizer Lifecycle](LIFECYCLE.md)
-- [State and Warmstart](STATE_AND_WARMSTART.md)
-- [Theory Hub](../../Theory/optimizers/README.md)
+- [Optimizer Contract](OPTIMIZER_CONTRACT.md)
+- [Optimizer Methods](OPTIMIZER_METHODS.md)
+- [Optimizer Lifecycle](OPTIMIZER_LIFECYCLE.md)
+- [State and Warmstart](OPTIMIZER_STATE_WARMSTART.md)
+- [Theory Hub](../../Theory/optimizers/OPTIMIZER_THEORY_HUB.md)

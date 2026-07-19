@@ -7,14 +7,6 @@ tags:
   - system
   - olgs
   - api
-depends_on:
-  - README
-connects_to:
-  - PARAMS
-  - LIFECYCLE
-  - DERIVATIVES
-  - LOGGING_BOUNDARY
-  - OLGS_SYSTEM_BUILD_SKILL
 ---
 
 # OLGS Contract
@@ -160,9 +152,9 @@ Optional methods should be discoverable and validated by OLGS helpers.
 
 ## Related Notes
 
-- [[README|system_olgs]]
-- [[OLGS_SYSTEM_BUILD_SKILL|OLGS System Build Skill]]
-- [[PARAMS|System Configuration]]
-- [[LIFECYCLE|Computation Lifecycle]]
-- [[DERIVATIVES|Derivative Hooks]]
-- [[LOGGING_BOUNDARY|Logging Boundary]]
+- [system_olgs](README.md)
+- [OLGS System Build Skill](templates/OLGS_SYSTEM_BUILD_SKILL.md)
+- [System Configuration](PARAMS.md)
+- [Computation Lifecycle](LIFECYCLE.md)
+- [Derivative Hooks](DERIVATIVES.md)
+- [Logging Boundary](LOGGING_BOUNDARY.md)

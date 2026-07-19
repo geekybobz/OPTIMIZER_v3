@@ -1,5 +1,5 @@
 ---
-title: Optimizer Boundary
+title: OPTIMIZER_BOUNDARY
 type: module_boundary
 module: optimizer/optimizers
 tags:
@@ -96,6 +96,6 @@ Long theory notes should live in `Theory/optimizers`, not in runtime modules.
 
 ## Related Notes
 
-- [Optimizer Contract](CONTRACT.md)
-- [Theory Hub](../../Theory/optimizers/README.md)
-- [Common Helpers](COMMON.md)
+- [Optimizer Contract](OPTIMIZER_CONTRACT.md)
+- [Theory Hub](../../Theory/optimizers/OPTIMIZER_THEORY_HUB.md)
+- [Common Helpers](OPTIMIZER_COMMON.md)

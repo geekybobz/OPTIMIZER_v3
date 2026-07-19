@@ -23,6 +23,12 @@ dist/
 .idea/
 .vscode/
 
+# Obsidian per-user UI state (shared vault settings stay tracked)
+.obsidian/workspace.json
+
+# Claude Code local settings (the skills/ directory stays tracked)
+.claude/settings.local.json
+
 # Notebook checkpoints
 .ipynb_checkpoints/
 

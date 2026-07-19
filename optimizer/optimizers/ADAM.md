@@ -116,11 +116,11 @@ warmstart transfers moment state only into another adam call
 
 ## Related Theory
 
-- [Adam Family Theory](../../Theory/optimizers/adam_family.md)
+- [Adam Family Theory](../../Theory/optimizers/THEORY_ADAM_FAMILY.md)
 
 ## Related Notes
 
-- [Methods](METHODS.md)
-- [State and Warmstart](STATE_AND_WARMSTART.md)
+- [Methods](OPTIMIZER_METHODS.md)
+- [State and Warmstart](OPTIMIZER_STATE_WARMSTART.md)
 - [AdaGrad and RMSProp](ADAGRAD_RMSPROP.md)
 - [Source](./adam.py)

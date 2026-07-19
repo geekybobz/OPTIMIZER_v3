@@ -1,5 +1,5 @@
 ---
-title: L-BFGS Theory
+title: THEORY_LBFGS
 type: theory_reference
 module: Theory/optimizers
 related_method: optimizer/optimizers/LBFGS.md
@@ -88,6 +88,39 @@ the implementation restarts to:
 p = -g
 ```
 
+## Worked Example
+
+One accepted move on the 1-D quadratic `J(u) = 2 u^2` (true curvature `H = 4`):
+
+```text
+u: 0.5 -> 0.4        s = -0.1
+g: 2.0 -> 1.6        y = -0.4
+
+s^T y = 0.04 > curvature_eps   -> pair stored
+gamma = (s^T y) / (y^T y) = 0.04 / 0.16 = 0.25 = 1/H
+```
+
+With that single pair, the two-loop recursion reproduces the exact Newton
+direction at `u = 0.4`:
+
+```text
+p = -(1/H) * g = -0.25 * 1.6 = -0.4
+u + 1.0 * p = 0.4 - 0.4 = 0.0   (the exact minimizer)
+```
+
+`step_size` multiplies `p`, so the default `0.1` applies a damped version of
+this ideal step; on a true quadratic `step_size = 1` would land exactly.
+
+## Convergence Notes
+
+```text
+BFGS with Wolfe line searches converges superlinearly near a smooth minimum
+L-BFGS gives up superlinear speed for O(history_size * n) memory and work;
+  close to a solution it still clearly beats first-order methods
+stale or noisy curvature pairs degrade the direction; the curvature guard
+  and steepest-descent restart bound the damage
+```
+
 ## Practical Use
 
 Use L-BFGS when:
@@ -107,8 +140,17 @@ no strong-Wolfe line search in this implementation
 poor behavior on noisy or discontinuous objectives
 ```
 
+## References
+
+```text
+Nocedal (1980), Updating quasi-Newton matrices with limited storage
+Liu & Nocedal (1989), On the limited memory BFGS method for large scale
+  optimization
+Nocedal & Wright, Numerical Optimization, 2nd ed., ch. 7
+```
+
 ## API Reference
 
 - [L-BFGS](../../optimizer/optimizers/LBFGS.md)
-- [State and Warmstart](../../optimizer/optimizers/STATE_AND_WARMSTART.md)
-- [Optimizer Methods](../../optimizer/optimizers/METHODS.md)
+- [State and Warmstart](../../optimizer/optimizers/OPTIMIZER_STATE_WARMSTART.md)
+- [Optimizer Methods](../../optimizer/optimizers/OPTIMIZER_METHODS.md)

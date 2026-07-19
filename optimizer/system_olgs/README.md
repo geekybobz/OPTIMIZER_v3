@@ -6,13 +6,6 @@ tags:
   - optimizer
   - system
   - olgs
-connects_to:
-  - CONTRACT
-  - PARAMS
-  - LIFECYCLE
-  - DERIVATIVES
-  - LOGGING_BOUNDARY
-  - OLGS_SYSTEM_BUILD_SKILL
 ---
 
 # OLGS System Documentation
@@ -86,24 +79,24 @@ templates/OLGS_SYSTEM_BUILD_SKILL.md
 
 Start here:
 
-- [[OLGS_SYSTEM_BUILD_SKILL|OLGS System Build Skill]]
-- [[CONTRACT|API Contract]]
-- [[PARAMS|System Configuration]]
-- [[LIFECYCLE|Computation Lifecycle]]
+- [OLGS System Build Skill](templates/OLGS_SYSTEM_BUILD_SKILL.md)
+- [API Contract](CONTRACT.md)
+- [System Configuration](PARAMS.md)
+- [Computation Lifecycle](LIFECYCLE.md)
 
 Advanced:
 
-- [[DERIVATIVES|Derivative Hooks]]
-- [[LOGGING_BOUNDARY|Logging Boundary]]
+- [Derivative Hooks](DERIVATIVES.md)
+- [Logging Boundary](LOGGING_BOUNDARY.md)
 
 Reading guide:
 
-- Building a new project system from theory: [[OLGS_SYSTEM_BUILD_SKILL|OLGS System Build Skill]]
-- Implementing a new system: [[CONTRACT|API Contract]]
-- Defining primary/secondary dicts: [[PARAMS|System Configuration]]
-- Calling from a notebook: [[LIFECYCLE|Computation Lifecycle]]
-- Building repair/Newton tools: [[DERIVATIVES|Derivative Hooks]]
-- Connecting logs or blackbox: [[LOGGING_BOUNDARY|Logging Boundary]]
+- Building a new project system from theory: [OLGS System Build Skill](templates/OLGS_SYSTEM_BUILD_SKILL.md)
+- Implementing a new system: [API Contract](CONTRACT.md)
+- Defining primary/secondary dicts: [System Configuration](PARAMS.md)
+- Calling from a notebook: [Computation Lifecycle](LIFECYCLE.md)
+- Building repair/Newton tools: [Derivative Hooks](DERIVATIVES.md)
+- Connecting logs or blackbox: [Logging Boundary](LOGGING_BOUNDARY.md)
 
 ## Target User Shape
 

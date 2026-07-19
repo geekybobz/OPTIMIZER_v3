@@ -7,12 +7,6 @@ tags:
   - system
   - olgs
   - parameters
-depends_on:
-  - README
-connects_to:
-  - CONTRACT
-  - LIFECYCLE
-  - OLGS_SYSTEM_BUILD_SKILL
 ---
 
 # OLGS Parameters
@@ -123,7 +117,7 @@ Parameter classes are not part of the public OLGS contract.
 
 ## Related Notes
 
-- [[README|system_olgs]]
-- [[OLGS_SYSTEM_BUILD_SKILL|OLGS System Build Skill]]
-- [[CONTRACT|API Contract]]
-- [[LIFECYCLE|Computation Lifecycle]]
+- [system_olgs](README.md)
+- [OLGS System Build Skill](templates/OLGS_SYSTEM_BUILD_SKILL.md)
+- [API Contract](CONTRACT.md)
+- [Computation Lifecycle](LIFECYCLE.md)

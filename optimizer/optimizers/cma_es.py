@@ -32,7 +32,7 @@ Reviewer invariants
 -------------------
 - population candidates are finite controls matching the system spec.
 - accepted generations improve the selected metric.
-- best-so-far controls are tracked even when the mean update is rejected.
+- best-so-far controls advance only through accepted generations.
 - random seed controls reproducibility.
 """
 

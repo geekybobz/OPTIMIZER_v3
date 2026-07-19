@@ -101,10 +101,10 @@ restart intentionally drops velocity after rejection
 
 ## Related Theory
 
-- [Momentum Theory](../../Theory/optimizers/momentum.md)
+- [Momentum Theory](../../Theory/optimizers/THEORY_MOMENTUM.md)
 
 ## Related Notes
 
-- [Methods](METHODS.md)
-- [State and Warmstart](STATE_AND_WARMSTART.md)
+- [Methods](OPTIMIZER_METHODS.md)
+- [State and Warmstart](OPTIMIZER_STATE_WARMSTART.md)
 - [Source](./momentum.py)

@@ -1,5 +1,5 @@
 ---
-title: Optimizer Contract
+title: OPTIMIZER_CONTRACT
 type: api_contract
 module: optimizer/optimizers
 tags:
@@ -107,6 +107,17 @@ ncg
 The optimizer should not silently replace a missing analytical gradient with finite
 differences.
 
+Direction convention:
+
+```text
+momentum, adam, adagrad, rmsprop, lbfgs, and nonlinear_cg always step along
+  -grad J; for them accept_mode changes only the acceptance test
+line_search additionally flips its step direction when accept_mode="max"
+```
+
+For the fixed-direction methods, a maximization goal belongs in the objective and
+gradient themselves; use `accept_metric`/`accept_mode` for guarded acceptance.
+
 ## Derivative-Free Method
 
 `cma_es` requires `system.evaluate(controls)` but does not call
@@ -136,7 +147,7 @@ but not from incompatible private memory.
 
 ## Related Notes
 
-- [Optimizer Methods](METHODS.md)
-- [Optimizer Lifecycle](LIFECYCLE.md)
-- [State and Warmstart](STATE_AND_WARMSTART.md)
+- [Optimizer Methods](OPTIMIZER_METHODS.md)
+- [Optimizer Lifecycle](OPTIMIZER_LIFECYCLE.md)
+- [State and Warmstart](OPTIMIZER_STATE_WARMSTART.md)
 - [OLGS Contract](../system_olgs/CONTRACT.md)

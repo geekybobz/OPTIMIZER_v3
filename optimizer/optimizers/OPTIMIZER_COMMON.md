@@ -1,5 +1,5 @@
 ---
-title: Optimizer Common Helpers
+title: OPTIMIZER_COMMON
 type: helper_reference
 module: optimizer/optimizers
 source: optimizer/optimizers/_common.py
@@ -77,6 +77,6 @@ checked.
 
 ## Related Notes
 
-- [State and Warmstart](STATE_AND_WARMSTART.md)
-- [Optimizer Lifecycle](LIFECYCLE.md)
+- [State and Warmstart](OPTIMIZER_STATE_WARMSTART.md)
+- [Optimizer Lifecycle](OPTIMIZER_LIFECYCLE.md)
 - [Source](./_common.py)

@@ -113,10 +113,10 @@ these methods do not carry first-moment momentum
 
 ## Related Theory
 
-- [Adaptive Scaling Theory](../../Theory/optimizers/adaptive_scaling.md)
+- [Adaptive Scaling Theory](../../Theory/optimizers/THEORY_ADAPTIVE_SCALING.md)
 
 ## Related Notes
 
-- [Methods](METHODS.md)
+- [Methods](OPTIMIZER_METHODS.md)
 - [Adam](ADAM.md)
 - [Source](./adaptive.py)

@@ -1,5 +1,5 @@
 ---
-title: Nonlinear CG Theory
+title: THEORY_NONLINEAR_CG
 type: theory_reference
 module: Theory/optimizers
 related_method: optimizer/optimizers/NONLINEAR_CG.md
@@ -83,6 +83,44 @@ p_t = -g_t
 beta = 0
 ```
 
+## Worked Example
+
+Numbers from an ill-conditioned quadratic after one accepted step:
+
+```text
+g_prev = (1, 10)         p_prev = (-1, -10)
+g      = (0.9, -0.5)     (the steep coordinate overshot and flipped sign)
+
+y = g - g_prev = (-0.1, -10.5)
+
+fletcher_reeves:    beta = (0.81 + 0.25) / 101         = 0.0105
+polak_ribiere(+):   beta = (g^T y) / 101 = 5.16 / 101  = 0.0511
+hestenes_stiefel:   beta = 5.16 / (p_prev^T y = 105.1) = 0.0491
+```
+
+With the Polak-Ribiere-plus beta:
+
+```text
+p = -g + 0.0511 * p_prev = (-0.951, -0.011)
+g^T p = -0.850 < 0   -> descent direction
+```
+
+The previous-direction term almost cancels the oscillating `u2` component.
+Conjugacy is exactly the mechanism that removes the zigzag left over from
+steepest descent.
+
+## Convergence Notes
+
+```text
+linear CG with exact line search terminates in at most n steps on an
+  n-dimensional quadratic
+nonlinear variants inherit that behavior only approximately and rely on
+  (strong) Wolfe line searches for the classic guarantees
+polak_ribiere_plus with restarts is the standard globally convergent choice
+with this implementation's fixed engine step, conjugacy is approximate;
+  expect more restarts than a Wolfe-based implementation
+```
+
 ## Practical Use
 
 Use nonlinear CG when:
@@ -99,6 +137,14 @@ Watch for:
 missing strong-Wolfe line search
 frequent restarts with noisy gradients
 sensitivity to step_size
+```
+
+## References
+
+```text
+Fletcher & Reeves (1964); Polak & Ribiere (1969)   original beta formulas
+Hager & Zhang (2006), A survey of nonlinear conjugate gradient methods
+Nocedal & Wright, Numerical Optimization, 2nd ed., ch. 5
 ```
 
 ## API Reference

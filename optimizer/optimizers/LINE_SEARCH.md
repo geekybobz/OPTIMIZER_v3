@@ -100,11 +100,11 @@ Armijo depends on directional derivative sign and accept mode
 
 ## Related Theory
 
-- [Gradient Descent and Line Search Theory](../../Theory/optimizers/gradient_descent_and_line_search.md)
+- [Gradient Descent and Line Search Theory](../../Theory/optimizers/THEORY_LINE_SEARCH.md)
 
 ## Related Notes
 
-- [Methods](METHODS.md)
-- [Acceptance and Stopping](ACCEPTANCE_AND_STOPPING.md)
-- [Lifecycle](LIFECYCLE.md)
+- [Methods](OPTIMIZER_METHODS.md)
+- [Acceptance and Stopping](OPTIMIZER_ACCEPTANCE.md)
+- [Lifecycle](OPTIMIZER_LIFECYCLE.md)
 - [Source](./line_search.py)

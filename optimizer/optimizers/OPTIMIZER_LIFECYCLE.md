@@ -1,5 +1,5 @@
 ---
-title: Optimizer Lifecycle
+title: OPTIMIZER_LIFECYCLE
 type: computation_flow
 module: optimizer/optimizers
 tags:
@@ -114,7 +114,7 @@ start controls as population mean
   -> rank candidates by accept_metric
   -> compute elite mean and spread
   -> accept generation if best candidate improves
-  -> adapt sigma
+  -> adapt sigma (accepted: blend toward elite spread; rejected: shrink by 0.9)
   -> record standard trace records where practical
   -> return OptimizerResult
 ```
@@ -124,7 +124,7 @@ proposals or warmstart state in the current implementation.
 
 ## Related Notes
 
-- [Optimizer Contract](CONTRACT.md)
-- [Acceptance and Stopping](ACCEPTANCE_AND_STOPPING.md)
-- [State and Warmstart](STATE_AND_WARMSTART.md)
+- [Optimizer Contract](OPTIMIZER_CONTRACT.md)
+- [Acceptance and Stopping](OPTIMIZER_ACCEPTANCE.md)
+- [State and Warmstart](OPTIMIZER_STATE_WARMSTART.md)
 - [Core Engine Source](../core/engine.py)

@@ -4,17 +4,17 @@
     "type": "split",
     "children": [
       {
-        "id": "eb1efc0053462b74",
+        "id": "eb3a608d67b007fe",
         "type": "tabs",
         "children": [
           {
-            "id": "3b46fc90b12e7544",
+            "id": "a615b881451373cc",
             "type": "leaf",
             "state": {
-              "type": "empty",
+              "type": "graph",
               "state": {},
-              "icon": "lucide-file",
-              "title": "New tab"
+              "icon": "lucide-git-fork",
+              "title": "Graph view"
             }
           }
         ]
@@ -176,6 +176,34 @@
       "bases:Create new base": false
     }
   },
-  "active": "3b46fc90b12e7544",
-  "lastOpenFiles": []
+  "active": "a615b881451373cc",
+  "lastOpenFiles": [
+    "Theory/optimizers/THEORY_CMA_ES.md",
+    "Theory/optimizers/THEORY_LBFGS.md",
+    "Theory/optimizers/THEORY_NONLINEAR_CG.md",
+    "Theory/optimizers/THEORY_ADAPTIVE_SCALING.md",
+    "Theory/optimizers/THEORY_ADAM_FAMILY.md",
+    "Theory/optimizers/THEORY_MOMENTUM.md",
+    "Theory/optimizers/THEORY_LINE_SEARCH.md",
+    "Theory/optimizers/OPTIMIZER_THEORY_HUB.md",
+    "optimizer/optimizers/OPTIMIZER_COMMON.md",
+    "optimizer/optimizers/OPTIMIZER_BOUNDARY.md",
+    "optimizer/optimizers/OPTIMIZER_ACCEPTANCE.md",
+    "optimizer/optimizers/OPTIMIZER_STATE_WARMSTART.md",
+    "optimizer/optimizers/OPTIMIZER_LIFECYCLE.md",
+    "optimizer/optimizers/OPTIMIZER_METHODS.md",
+    "optimizer/optimizers/OPTIMIZER_CONTRACT.md",
+    "optimizer/optimizers/OPTIMIZERS_HUB.md",
+    "optimizer/optimizers/ACCEPTANCE_AND_STOPPING.md",
+    "tests/__pycache__/test_utils_tools.cpython-311-pytest-9.1.1.pyc",
+    "tests/__pycache__/test_trace_checkpoint.cpython-311-pytest-9.1.1.pyc",
+    "tests/__pycache__/test_system_contract.cpython-311-pytest-9.1.1.pyc",
+    "tests/__pycache__/test_result_state.cpython-311-pytest-9.1.1.pyc",
+    "tests/__pycache__/test_public_api.cpython-311-pytest-9.1.1.pyc",
+    "tests/__pycache__/test_optimizers.cpython-311-pytest-9.1.1.pyc",
+    "tests/__pycache__/test_namespaces.cpython-311-pytest-9.1.1.pyc",
+    "tests/__pycache__/test_guesses.cpython-311-pytest-9.1.1.pyc",
+    "tests/__pycache__/test_engine.cpython-311-pytest-9.1.1.pyc",
+    "tests/__pycache__/test_controls.cpython-311-pytest-9.1.1.pyc"
+  ]
 }

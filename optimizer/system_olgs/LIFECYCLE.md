@@ -7,14 +7,6 @@ tags:
   - system
   - olgs
   - lifecycle
-depends_on:
-  - README
-  - CONTRACT
-connects_to:
-  - PARAMS
-  - DERIVATIVES
-  - LOGGING_BOUNDARY
-  - OLGS_SYSTEM_BUILD_SKILL
 ---
 
 # OLGS Computation Lifecycle
@@ -135,9 +127,9 @@ raise a clear error.
 
 ## Related Notes
 
-- [[README|system_olgs]]
-- [[OLGS_SYSTEM_BUILD_SKILL|OLGS System Build Skill]]
-- [[CONTRACT|API Contract]]
-- [[PARAMS|System Configuration]]
-- [[DERIVATIVES|Derivative Hooks]]
-- [[LOGGING_BOUNDARY|Logging Boundary]]
+- [system_olgs](README.md)
+- [OLGS System Build Skill](templates/OLGS_SYSTEM_BUILD_SKILL.md)
+- [API Contract](CONTRACT.md)
+- [System Configuration](PARAMS.md)
+- [Derivative Hooks](DERIVATIVES.md)
+- [Logging Boundary](LOGGING_BOUNDARY.md)

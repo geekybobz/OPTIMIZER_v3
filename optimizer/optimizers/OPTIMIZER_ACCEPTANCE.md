@@ -1,5 +1,5 @@
 ---
-title: Acceptance and Stopping
+title: OPTIMIZER_ACCEPTANCE
 type: engine_policy
 module: optimizer/optimizers
 tags:
@@ -35,6 +35,10 @@ accept when trial_metric >= current_metric - accept_tolerance
 ```
 
 The selected metric must exist and be scalar.
+
+`accept_mode` changes only this test for most methods. Among the gradient methods,
+only `line_search` flips its proposal direction for `accept_mode="max"`; the others
+always propose steps along `-grad J`.
 
 ## Custom Acceptance
 
@@ -101,7 +105,7 @@ Rejected trial controls are not marked as best.
 
 ## Related Notes
 
-- [Optimizer Lifecycle](LIFECYCLE.md)
+- [Optimizer Lifecycle](OPTIMIZER_LIFECYCLE.md)
 - [Line Search](LINE_SEARCH.md)
 - [Core Stopping Source](../core/stopping.py)
 - [Core Engine Source](../core/engine.py)

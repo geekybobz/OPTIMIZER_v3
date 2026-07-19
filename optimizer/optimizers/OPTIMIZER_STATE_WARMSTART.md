@@ -1,5 +1,5 @@
 ---
-title: State and Warmstart
+title: OPTIMIZER_STATE_WARMSTART
 type: state_contract
 module: optimizer/optimizers
 tags:
@@ -107,6 +107,9 @@ adam
   step_size
   accept_count
   reject_count
+  last_gradient_norm
+  last_raw_step_norm
+  last_step_clipped
 
 adagrad/rmsprop
   method
@@ -116,15 +119,22 @@ adagrad/rmsprop
   eps
   accept_count
   reject_count
+  last_gradient_norm
+  last_raw_step_norm
+  last_step_clipped
 
 lbfgs
   history_size
   s_history
   y_history
   step_size
+  accept_count
+  reject_count
   last_gradient
+  last_gradient_norm
   last_curvature
   last_pair_accepted
+  last_step_clipped
 
 nonlinear_cg
   variant
@@ -133,6 +143,12 @@ nonlinear_cg
   step_size
   beta
   restarted
+  accept_count
+  reject_count
+  last_gradient_norm
+  last_direction_norm
+  last_raw_step_norm
+  last_step_clipped
 
 cma_es
   variant
@@ -163,7 +179,7 @@ Line-search step-size adaptation
 
 ## Related Notes
 
-- [Optimizer Lifecycle](LIFECYCLE.md)
+- [Optimizer Lifecycle](OPTIMIZER_LIFECYCLE.md)
 - [Adam](ADAM.md)
 - [Momentum](MOMENTUM.md)
 - [L-BFGS](LBFGS.md)

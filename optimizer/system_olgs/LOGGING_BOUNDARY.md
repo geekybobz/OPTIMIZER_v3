@@ -8,13 +8,6 @@ tags:
   - olgs
   - logging
   - blackbox
-depends_on:
-  - README
-  - CONTRACT
-connects_to:
-  - LIFECYCLE
-  - DERIVATIVES
-  - OLGS_SYSTEM_BUILD_SKILL
 ---
 
 # OLGS Logging Boundary
@@ -76,8 +69,8 @@ manage persistent cache
 
 ## Related Notes
 
-- [[README|system_olgs]]
-- [[OLGS_SYSTEM_BUILD_SKILL|OLGS System Build Skill]]
-- [[CONTRACT|API Contract]]
-- [[LIFECYCLE|Computation Lifecycle]]
-- [[DERIVATIVES|Derivative Hooks]]
+- [system_olgs](README.md)
+- [OLGS System Build Skill](templates/OLGS_SYSTEM_BUILD_SKILL.md)
+- [API Contract](CONTRACT.md)
+- [Computation Lifecycle](LIFECYCLE.md)
+- [Derivative Hooks](DERIVATIVES.md)

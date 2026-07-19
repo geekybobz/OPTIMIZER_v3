@@ -1,5 +1,5 @@
 ---
-title: Optimizer Methods
+title: OPTIMIZER_METHODS
 type: method_index
 module: optimizer/optimizers
 tags:
@@ -65,6 +65,6 @@ reuse Adam moment vectors because Adam private state is not L-BFGS private state
 
 ## Related Notes
 
-- [Optimizer Contract](CONTRACT.md)
-- [Optimizer Lifecycle](LIFECYCLE.md)
-- [Theory Hub](../../Theory/optimizers/README.md)
+- [Optimizer Contract](OPTIMIZER_CONTRACT.md)
+- [Optimizer Lifecycle](OPTIMIZER_LIFECYCLE.md)
+- [Theory Hub](../../Theory/optimizers/OPTIMIZER_THEORY_HUB.md)

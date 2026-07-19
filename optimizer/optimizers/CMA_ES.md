@@ -72,6 +72,7 @@ accept_tolerance
 trace
 create_trace
 blackbox
+blackbox_policy
 stage
 use_cache
 ```
@@ -104,16 +105,18 @@ best_population_index
 ```text
 uses many system evaluations per generation
 best-so-far improves only through accepted generations
+rejected generations shrink the sampling radius by a factor of 0.9 toward
+  min_sigma
 poor sigma or large dimension can be expensive
 not intended as a fast local polish method
 ```
 
 ## Related Theory
 
-- [CMA-ES Theory](../../Theory/optimizers/cma_es.md)
+- [CMA-ES Theory](../../Theory/optimizers/THEORY_CMA_ES.md)
 
 ## Related Notes
 
-- [Methods](METHODS.md)
-- [Lifecycle](LIFECYCLE.md)
+- [Methods](OPTIMIZER_METHODS.md)
+- [Lifecycle](OPTIMIZER_LIFECYCLE.md)
 - [Source](./cma_es.py)

@@ -95,11 +95,11 @@ may restart often when gradients are noisy or poorly scaled
 
 ## Related Theory
 
-- [Nonlinear CG Theory](../../Theory/optimizers/nonlinear_cg.md)
+- [Nonlinear CG Theory](../../Theory/optimizers/THEORY_NONLINEAR_CG.md)
 
 ## Related Notes
 
-- [Methods](METHODS.md)
+- [Methods](OPTIMIZER_METHODS.md)
 - [L-BFGS](LBFGS.md)
 - [Line Search](LINE_SEARCH.md)
 - [Source](./nonlinear_cg.py)

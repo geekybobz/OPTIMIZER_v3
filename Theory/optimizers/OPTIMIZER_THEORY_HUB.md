@@ -1,6 +1,6 @@
 ---
-title: optimizer theory
-type: theory_index
+title: OPTIMIZER_THEORY_HUB
+type: theory_hub
 module: Theory/optimizers
 tags:
   - optimizer
@@ -25,25 +25,25 @@ not make the code-facing docs too large.
 ## Theory Map
 
 ```text
-gradient_descent_and_line_search.md
+THEORY_LINE_SEARCH.md
   Gradient descent, normalized steps, backtracking, Armijo.
 
-momentum.md
+THEORY_MOMENTUM.md
   Heavy-ball momentum, Nesterov lookahead, restart behavior.
 
-adam_family.md
+THEORY_ADAM_FAMILY.md
   Adam, AMSGrad, AdamW, RAdam, AdaBelief.
 
-adaptive_scaling.md
+THEORY_ADAPTIVE_SCALING.md
   AdaGrad and RMSProp squared-gradient scaling.
 
-nonlinear_cg.md
+THEORY_NONLINEAR_CG.md
   Nonlinear conjugate-gradient beta formulas and restart logic.
 
-lbfgs.md
+THEORY_LBFGS.md
   Limited-memory BFGS curvature pairs and two-loop recursion.
 
-cma_es.md
+THEORY_CMA_ES.md
   Population search, elite selection, diagonal/isotropic covariance adaptation.
 ```
 
@@ -51,8 +51,8 @@ cma_es.md
 
 Use API docs when coding:
 
-- [Optimizer Methods](../../optimizer/optimizers/METHODS.md)
-- [Optimizer Contract](../../optimizer/optimizers/CONTRACT.md)
+- [Optimizer Methods](../../optimizer/optimizers/OPTIMIZER_METHODS.md)
+- [Optimizer Contract](../../optimizer/optimizers/OPTIMIZER_CONTRACT.md)
 
 Use theory notes when checking mathematical meaning:
 
@@ -75,12 +75,12 @@ This gives two-way traversal:
 
 ```text
 optimizer/optimizers/ADAM.md
-  -> Theory/optimizers/adam_family.md
+  -> Theory/optimizers/THEORY_ADAM_FAMILY.md
       -> optimizer/optimizers/ADAM.md
 ```
 
 ## Related Notes
 
-- [Optimizer Documentation Hub](../../optimizer/optimizers/README.md)
-- [Optimizer Methods](../../optimizer/optimizers/METHODS.md)
-- [Optimizer Boundary](../../optimizer/optimizers/BOUNDARY.md)
+- [Optimizer Documentation Hub](../../optimizer/optimizers/OPTIMIZERS_HUB.md)
+- [Optimizer Methods](../../optimizer/optimizers/OPTIMIZER_METHODS.md)
+- [Optimizer Boundary](../../optimizer/optimizers/OPTIMIZER_BOUNDARY.md)

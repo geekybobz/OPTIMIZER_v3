@@ -8,14 +8,6 @@ tags:
   - olgs
   - skill
   - theory_to_code
-depends_on:
-  - README
-  - CONTRACT
-  - PARAMS
-  - LIFECYCLE
-connects_to:
-  - DERIVATIVES
-  - LOGGING_BOUNDARY
 ---
 
 # OLGS System Build Skill
@@ -24,7 +16,8 @@ Use this document as the build protocol for creating a new physical OLGS system
 from theory notes and user requirements.
 
 The output is a project-local `system.py` that implements the OLGS API.
-This is not a copy-paste class template. It is a constraint document for turning a
+This is not a copy-paste class template. It is a build protocol with a small set
+of mandatory API rules and a larger set of implementation hints for turning a
 mathematical model into a clean system file.
 
 ## Trigger
@@ -45,22 +38,24 @@ turn this theory into a system file
 Also use it for closely related requests where the user provides theory notes and
 expects a new OLGS-compatible `system.py`.
 
+The operative Claude Code trigger lives in `.claude/skills/olgs-system-build/SKILL.md`,
+which points back to this protocol as the single source of truth.
+
 ## Environment
 
-Use the OPTIMIZER v3 conda environment for implementation and checks.
+Use the `optimizer_v3` conda environment for implementation and checks.
 
 Expected Python/Jupyter checks should run inside the project environment, for
-example through the configured optimizer v3 conda env rather than the system
-Python.
+example through `conda activate optimizer_v3` rather than the system Python.
 
 ## Reference Map
 
-- [[README|system_olgs]]
-- [[CONTRACT|OLGS API Contract]]
-- [[PARAMS|Primary and Secondary Params]]
-- [[LIFECYCLE|Forward, Backward, Gradient Flow]]
-- [[DERIVATIVES|Optional Derivative Hooks]]
-- [[LOGGING_BOUNDARY|Logging Boundary Placeholder]]
+- [system_olgs](../README.md)
+- [OLGS API Contract](../CONTRACT.md)
+- [Primary and Secondary Params](../PARAMS.md)
+- [Forward, Backward, Gradient Flow](../LIFECYCLE.md)
+- [Optional Derivative Hooks](../DERIVATIVES.md)
+- [Logging Boundary Placeholder](../LOGGING_BOUNDARY.md)
 
 ## Role
 
@@ -136,8 +131,8 @@ gradient sign and scaling
 whether the derivation can support the requested OLGS methods
 ```
 
-If the theory and requested API do not align, stop and report the mismatch before
-writing fragile code.
+If the theory and requested API do not align, report the mismatch before writing
+fragile code. Ask the user only when the missing assumption affects correctness.
 
 ## OLGS Mapping
 
@@ -159,9 +154,45 @@ robustness, ensemble, trajectory, or projection scans -> simulate
 No runtime parameter group is used for now. Runtime choices are either internal
 system choices or notebook/test choices unless the OLGS contract is expanded later.
 
+## Computational Lifecycle Planning
+
+Before writing code, sketch the cheapest valid computation path for each public
+API call. Treat this as a design aid, not a rigid rule:
+
+```text
+evaluate -> usually final metrics only
+forward_prop -> full forward data when it is useful for gradients, debugging, or inspection
+back_prop/gradient -> the history, checkpoints, or recomputation needed by the derivative
+simulate -> system-native scans or requested diagnostic trajectories
+```
+
+Prefer purpose-specific internal kernels when one universal propagation routine
+would store much more data than a call actually needs:
+
+```text
+_propagate_final(...)        # final-state metrics; often O(state_dim^2) memory
+_propagate_for_gradient(...) # derivative data; may be O(N*state_dim^2)
+_propagate_observables(...)  # notebook trajectories; store observables, not full states
+```
+
+Useful estimates to include in the plan when the model is large:
+
+```text
+state dimension
+number of time/control steps
+largest arrays and dtypes
+evaluate memory scale
+gradient memory scale
+simulate/trajectory memory scale
+whether checkpointing or recomputation might help later
+```
+
+The goal is to make cheap API calls naturally cheap while keeping expensive data
+available when the math or user workflow genuinely needs it.
+
 ## System File Boundary
 
-The system file should contain:
+The system file should usually contain:
 
 ```text
 physical model constants and defaults
@@ -178,7 +209,7 @@ plotting helpers when explicitly requested
 logging placeholder hooks until the logging layer is finalized
 ```
 
-The system file should not contain:
+The system file should avoid:
 
 ```text
 optimizer calls
@@ -189,8 +220,8 @@ full logging implementation until the logging layer is finalized
 ```
 
 Performance loops mean repeated timing, scaling, stress, or optimizer-run sweeps.
-Those belong in tests, notebooks, benchmark scripts, or experiment folders unless
-the user explicitly asks for system-owned performance diagnostics.
+Those usually belong in tests, notebooks, benchmark scripts, or experiment folders
+unless the user explicitly asks for system-owned performance diagnostics.
 
 ## Mandatory API
 
@@ -220,10 +251,19 @@ unknown secondary keys fail clearly
 control validation fails clearly on wrong shape or keys
 ```
 
+Implementation hints:
+
+```text
+reuse stored forward state when it is simple and safe
+recompute forward state when it makes correctness clearer
+avoid making cache behavior part of the public contract
+keep performance choices local to the system until they are measured
+```
+
 ## Optional API
 
-Add optional methods only when required by the theory or explicitly requested by
-the user:
+Add optional methods when required by the theory, requested by the user, or clearly
+useful for normal inspection/testing:
 
 ```text
 simulate(controls, ...)
@@ -240,8 +280,8 @@ cache_reset()
 cache_status()
 ```
 
-If an optional method would help testing or analysis but is outside the requested
-API, ask the user before adding it.
+Ask the user before adding optional methods only when they introduce substantial
+new physics, file formats, plotting surfaces, or expensive simulation behavior.
 
 ## Build Protocol
 
@@ -252,16 +292,17 @@ Follow this order:
 2. Summarize the physical model.
 3. Double-check derivation details against dimensions and OLGS needs.
 4. Extract state, controls, perturbations, objectives, constraints, and gradient route.
-5. Define primary and secondary dict defaults.
-6. Define ControlSpec and control channel order.
-7. Implement forward_prop.
-8. Implement evaluate.
-9. Implement back_prop.
-10. Implement analytical gradient.
-11. Add simulate only when system-native simulation is required.
-12. Add optional hooks only when theory or user requirements support them.
-13. Run sanity checks.
-14. Report assumptions and any optional additions needing user approval.
+5. Sketch the computational lifecycle and expected memory bottlenecks.
+6. Define primary and secondary dict defaults.
+7. Define ControlSpec and control channel order.
+8. Implement evaluate using the cheapest correct path when practical.
+9. Implement forward_prop for full forward data when needed.
+10. Implement back_prop.
+11. Implement analytical gradient.
+12. Add simulate when system-native simulation is useful or requested.
+13. Add optional hooks when theory, user requirements, or normal diagnostics support them.
+14. Run sanity checks.
+15. Report assumptions and any optional additions needing user approval.
 ```
 
 ## Sanity Checks
@@ -279,8 +320,19 @@ back_prop returns expected structures
 evaluate returns finite J
 gradient returns finite Controls
 gradient shape matches controls shape
+gradient after evaluate on the same controls returns correct finite values
 with_secondary returns a new instance
 simulate works when implemented
+```
+
+Useful performance checks when practical:
+
+```text
+repeat evaluate/gradient on the same controls and confirm cache behavior is understandable
+check whether avoiding duplicate forward propagation matters for the system cost
+document any deliberate recomputation in the output report
+for large models, confirm evaluate does not store full trajectory data unless needed
+for trajectory simulations, prefer scalar/vector observables over full state histories when that answers the question
 ```
 
 For gradient confidence, compare the analytical gradient against a small finite
@@ -313,6 +365,7 @@ files created or updated
 physical model summary
 primary params
 secondary params
+computational lifecycle summary
 implemented mandatory API methods
 implemented optional API methods
 sanity checks run

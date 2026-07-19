@@ -83,16 +83,18 @@ History length never exceeds `history_size`.
 ```text
 first iteration falls back to steepest descent
 nonpositive curvature pairs are skipped
+each iteration also computes a gradient at the trial controls to form the
+  curvature pair, so one iteration costs two gradient calls
 this implementation does not include a strong-Wolfe line search
 use after rough optimization rather than as global search
 ```
 
 ## Related Theory
 
-- [L-BFGS Theory](../../Theory/optimizers/lbfgs.md)
+- [L-BFGS Theory](../../Theory/optimizers/THEORY_LBFGS.md)
 
 ## Related Notes
 
-- [Methods](METHODS.md)
-- [State and Warmstart](STATE_AND_WARMSTART.md)
+- [Methods](OPTIMIZER_METHODS.md)
+- [State and Warmstart](OPTIMIZER_STATE_WARMSTART.md)
 - [Source](./lbfgs.py)

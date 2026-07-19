@@ -7,13 +7,6 @@ tags:
   - system
   - olgs
   - derivatives
-depends_on:
-  - README
-  - CONTRACT
-  - LIFECYCLE
-connects_to:
-  - LOGGING_BOUNDARY
-  - OLGS_SYSTEM_BUILD_SKILL
 ---
 
 # OLGS Derivatives
@@ -114,8 +107,8 @@ The exact HVP return convention should be documented by the system that exposes 
 
 ## Related Notes
 
-- [[README|system_olgs]]
-- [[OLGS_SYSTEM_BUILD_SKILL|OLGS System Build Skill]]
-- [[CONTRACT|API Contract]]
-- [[LIFECYCLE|Computation Lifecycle]]
-- [[LOGGING_BOUNDARY|Logging Boundary]]
+- [system_olgs](README.md)
+- [OLGS System Build Skill](templates/OLGS_SYSTEM_BUILD_SKILL.md)
+- [API Contract](CONTRACT.md)
+- [Computation Lifecycle](LIFECYCLE.md)
+- [Logging Boundary](LOGGING_BOUNDARY.md)
