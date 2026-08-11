@@ -32,8 +32,18 @@ from optimizer.core.engine import (
     default_accept,
     run_chunk,
 )
-from optimizer.core.evaluate import EvaluationOutcome, GradientOutcome, SystemEvaluator
+from optimizer.core.evaluate import EvaluationOutcome, GradientOutcome, SystemEvaluator, ValueGradientOutcome
 from optimizer.core.guards import MetricGuard, metric_guard
+from optimizer.core.observer import (
+    CheckpointEvent,
+    ChunkEvent,
+    IterationEvent,
+    ObserverAdapter,
+    RunObserver,
+    RunStartEvent,
+    SnapshotFacts,
+    TerminalEvent,
+)
 from optimizer.core.stopping import StopDecision, StoppingConfig, StopTracker
 from optimizer.catalog import attach_namespace_helpers
 
@@ -42,15 +52,24 @@ attach_namespace_helpers(globals(), "core")
 
 __all__ = [
     "AcceptanceDecision",
+    "CheckpointEvent",
+    "ChunkEvent",
     "EvaluationOutcome",
     "GradientOutcome",
+    "IterationEvent",
     "MetricGuard",
+    "ObserverAdapter",
+    "RunObserver",
+    "RunStartEvent",
+    "SnapshotFacts",
     "StepContext",
     "StepProposal",
     "StopDecision",
     "StopTracker",
     "StoppingConfig",
     "SystemEvaluator",
+    "ValueGradientOutcome",
+    "TerminalEvent",
     "default_accept",
     "info",
     "list",

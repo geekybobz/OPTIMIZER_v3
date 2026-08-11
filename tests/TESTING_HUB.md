@@ -30,8 +30,14 @@ utility tools
 engine behavior
 result and state objects
 trace and checkpoint behavior
-blackbox behavior
 system contract behavior
+mandatory system specification and declared-metric validation
+generic plot-data and Bloch rendering
+capability-selected system scaffolding and overwrite protection
+conditional numerical capabilities and API gates
+projected, proximal, Newton-CG, and trust-region behavior
+continuation transitions and explicit control transfer
+advanced-method tracker passivity and HVP counters
 ```
 
 ## Current Files

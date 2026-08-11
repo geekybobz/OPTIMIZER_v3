@@ -1,5 +1,5 @@
 ---
-title: OPTIMIZER_V3_ENTRY
+title: OPTIMIZER_V4_ENTRY
 type: root_hub
 module: root
 tags:
@@ -8,9 +8,9 @@ tags:
   - hub
 ---
 
-# OPTIMIZER v3 Entry
+# OPTIMIZER v4 Entry
 
-OPTIMIZER v3 is a namespace-first optimization toolbox for system-defined control
+OPTIMIZER v4 is a namespace-first optimization toolbox for system-defined control
 problems.
 
 A project system owns the physics:
@@ -20,6 +20,7 @@ control layout
 metrics and objective value
 analytical gradient
 optional residuals and Jacobians
+optional combined evaluation, bounds, HVP, or proximal capability
 primary and secondary parameters
 ```
 
@@ -32,7 +33,6 @@ optimizer loops
 diagnostics and repairs
 schedules
 logs and checkpoints
-blackbox run records
 result objects
 ```
 
@@ -62,6 +62,20 @@ report = opt.utils.diagnostic_report(sys, r2.controls)
 fixed = opt.utils.repair_newton(sys, r2.controls, residuals="hard")
 ```
 
+Capability-gated numerical methods remain direct:
+
+```python
+feasible = opt.optimizers.projected_gradient(sys, controls, maxiter=50)
+newton = opt.optimizers.newton_cg(sys, controls, maxiter=20)
+trusted = opt.optimizers.trust_region(sys, controls, maxiter=20)
+composite = opt.optimizers.proximal_gradient(sys, controls, maxiter=50)
+```
+
+`opt.system_info(sys)["capabilities"]` reports which calls are compatible before
+any numerical work. `opt.continuation(...)` coordinates explicit parameter stages
+and requires an explicit control-transfer callable when a stage changes the control
+layout or time spacing.
+
 Preferred public style groups calls by role:
 
 ```text
@@ -69,6 +83,7 @@ opt.optimizers.*
 opt.guesses.*
 opt.utils.*
 opt.schedules.*
+opt.campaigns.*
 ```
 
 Compact aliases such as `opt.adam(...)`, `opt.random_fourier_guess(...)`, and
@@ -124,7 +139,6 @@ Use placeholder hubs for folders that are intentionally not fully documented yet
 ```text
 optimizer/schedules/SCHEDULES_HUB.md
 optimizer/logs/LOGS_HUB.md
-optimizer/blackbox/BLACKBOX_HUB.md
 tests/TESTING_HUB.md
 ```
 
@@ -140,7 +154,7 @@ red       optimizer methods and optimizer theory
 blue      core engine, acceptance, stopping, and shared runtime objects
 teal      diagnostics, derivative checks, repair, spectrum, and analysis utilities
 purple    theory notes
-gray      placeholder or not-yet-expanded folders: schedules, logs, blackbox, tests
+gray      placeholder or not-yet-expanded folders: schedules, logs, tests
 ```
 
 ## Main Workflow
@@ -169,7 +183,7 @@ optional warmstart into another optimizer
 
 ## Architecture
 
-OPTIMIZER v3 separates project physics from optimizer engineering.
+OPTIMIZER v4 separates project physics from optimizer engineering.
 
 The project system owns:
 
@@ -230,7 +244,6 @@ folder receives the same structured treatment as optimizers, guesses, and utils.
 
 - [Schedules Placeholder Hub](optimizer/schedules/SCHEDULES_HUB.md)
 - [Logs Placeholder Hub](optimizer/logs/LOGS_HUB.md)
-- [Blackbox Placeholder Hub](optimizer/blackbox/BLACKBOX_HUB.md)
 - [Testing Placeholder Hub](tests/TESTING_HUB.md)
 
 ## Current Package Map
@@ -246,9 +259,10 @@ optimizer/
   optimizers/          Adam, momentum, line search, AdaGrad, RMSProp, L-BFGS, NCG, CMA-ES
   guesses/             simple, harmonic, random, and composite initial controls
   utils/               diagnostics, derivatives, geometry, repair, spectrum, parallel tools
+  visualization/       generic plot-data models and optional renderers
+  campaigns/           multi-stage scout, comparison, refinement, challenge, and validation
   schedules/           step-size policies
   logs/                in-memory trace records and checkpoints
-  blackbox/            run records, artifact policy, and analysis helpers
 ```
 
 Concrete project systems should live outside this library repository. This package
@@ -259,6 +273,7 @@ only provides the generic `optimizer.system_olgs` contract and helper layer.
 Every OLGS project system must provide:
 
 ```text
+system_spec() -> complete static metric/API/derivative declaration
 control_spec()
 evaluate(controls) -> metrics dict with scalar J
 gradient(controls) -> Controls
@@ -279,12 +294,18 @@ Optional but important for constrained or staged work:
 ```text
 residuals(controls, name=...)
 jacobian(controls, name=...)
-metric_schema()
-residual_schema()
+plot_data(controls, kind=...)
 ```
 
-The system owns metric names and objective weights. Optimizer methods do not assemble
-physics objectives externally.
+The system owns metric names, meanings, analytical derivative provenance, and
+objective weights through `system_spec()`. Optimizer methods do not assemble physics
+objectives externally.
+
+Create a small capability-selected system scaffold with:
+
+```bash
+python -m optimizer.system_olgs.scaffold my_problem/system.py --profile qubit
+```
 
 For the detailed contract, read:
 
@@ -299,7 +320,7 @@ library:
 
 ```bash
 ./install.sh
-conda activate optimizer_v3
+conda activate optimizer_v4
 ```
 
 After activation, this works from any folder:
@@ -312,7 +333,7 @@ Editable install means source edits in this checkout are visible after restartin
 Python. The installer records the live paths in:
 
 ```text
-~/.optimizer_v3/install.json
+~/.optimizer_v4/install.json
 ```
 
 Useful commands:
@@ -335,7 +356,7 @@ python -m unittest discover -s tests
 Inside the standard environment:
 
 ```bash
-conda run -n optimizer_v3 python -m unittest discover -s tests
+conda run -n optimizer_v4 python -m unittest discover -s tests
 ```
 
 ## Repository Hygiene

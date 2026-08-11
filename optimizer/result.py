@@ -125,8 +125,7 @@ class OptimizerResult:
     system_params: dict[str, Any] = field(default_factory=dict)
     trace_id: str | None = None
     checkpoint_ids: dict[str, str] = field(default_factory=dict)
-    blackbox_path: str | None = None
-    blackbox_run_id: str | None = None
+    tracking_failures: tuple[dict[str, str], ...] = ()
 
     @classmethod
     def from_state(
@@ -136,12 +135,10 @@ class OptimizerResult:
         stop_reason: str,
         optimizer: str | None = None,
         trace: Any | None = None,
-        blackbox: Any | None = None,
+        tracking_failures: tuple[dict[str, str], ...] = (),
     ) -> "OptimizerResult":
         """Create a public result from a final run state."""
 
-        blackbox_path = None if blackbox is None else str(getattr(blackbox, "run_dir", ""))
-        blackbox_run_id = None if blackbox is None else str(getattr(blackbox, "run_id", ""))
         return cls(
             controls=state.controls,
             metrics=validate_metrics(state.metrics),
@@ -153,8 +150,7 @@ class OptimizerResult:
             system_params=dict(state.system_params),
             trace_id=state.trace_id,
             checkpoint_ids=dict(state.checkpoint_ids),
-            blackbox_path=blackbox_path,
-            blackbox_run_id=blackbox_run_id,
+            tracking_failures=tuple(dict(failure) for failure in tracking_failures),
         )
 
     @property
@@ -188,8 +184,8 @@ class OptimizerResult:
             "system_params": _json_safe(self.system_params),
             "trace_id": self.trace_id,
             "checkpoint_ids": dict(self.checkpoint_ids),
-            "blackbox_path": self.blackbox_path,
-            "blackbox_run_id": self.blackbox_run_id,
+            "tracking_complete": not self.tracking_failures,
+            "tracking_failures": [dict(failure) for failure in self.tracking_failures],
         }
         if include_state and self.state is not None:
             payload["state"] = {

@@ -1,12 +1,11 @@
-"""First-order optimizer implementations for OPTIMIZER v3.
+"""Optimizer implementations for OPTIMIZER v4.
 
 Why this package exists
 -----------------------
 The public API should stay direct, but the implementation still needs clean module
-boundaries.  This package contains optimizers whose job is to move controls using
-``system.gradient(...)`` and the shared engine.  Repair tools, projections,
-Jacobian-based constraint handling, and diagnostics deliberately live outside this
-package in later phases.
+boundaries. This package contains first-order, derivative-free, projected,
+proximal, and matrix-free second-order methods. Advanced methods use conditional
+system capabilities while the four-hook OLGS core remains unchanged.
 
 How it fits the architecture
 ----------------------------
@@ -18,7 +17,7 @@ How it fits the architecture
 Reviewer invariants
 -------------------
 - optimizer modules do not build physical objectives.
-- optimizer modules do not call residual/Jacobian repair hooks.
+- optional numerical hooks are called through ``SystemEvaluator``.
 - optimizer modules return the standard ``OptimizerResult``.
 """
 
@@ -28,7 +27,11 @@ from optimizer.optimizers.cma_es import cma_es
 from optimizer.optimizers.lbfgs import lbfgs
 from optimizer.optimizers.line_search import line_search
 from optimizer.optimizers.momentum import momentum
+from optimizer.optimizers.newton_cg import newton_cg
 from optimizer.optimizers.nonlinear_cg import ncg, nonlinear_cg
+from optimizer.optimizers.projected import projected_gradient
+from optimizer.optimizers.proximal import proximal_gradient
+from optimizer.optimizers.trust_region import trust_region
 from optimizer.catalog import attach_namespace_helpers
 
 
@@ -43,7 +46,11 @@ __all__ = [
     "line_search",
     "list",
     "momentum",
+    "newton_cg",
     "ncg",
     "nonlinear_cg",
+    "projected_gradient",
+    "proximal_gradient",
     "rmsprop",
+    "trust_region",
 ]

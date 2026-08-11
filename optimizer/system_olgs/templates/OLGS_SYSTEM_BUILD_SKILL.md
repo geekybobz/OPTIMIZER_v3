@@ -44,10 +44,10 @@ the single source of truth. It is a hidden tooling shim, not an Obsidian graph n
 
 ## Environment
 
-Use the `optimizer_v3` conda environment for implementation and checks.
+Use the `optimizer_v4` conda environment for implementation and checks.
 
 Expected Python/Jupyter checks should run inside the project environment, for
-example through `conda activate optimizer_v3` rather than the system Python.
+example through `conda activate optimizer_v4` rather than the system Python.
 
 ## Reference Map
 
@@ -230,19 +230,22 @@ Every generated system must implement:
 
 ```text
 __init__(primary=None, secondary=None)
+system_spec()
 control_spec() -> ControlSpec
-forward_prop(controls)
-back_prop(controls)
 evaluate(controls) -> dict
 gradient(controls) -> Controls
 with_secondary(**updates)
-describe()
 ```
+
+`forward_prop`, `back_prop`, and `describe` are recommended lifecycle/convenience
+hooks, not part of the enforced five-hook optimizer contract.
 
 Hard requirements:
 
 ```text
 evaluate returns a finite scalar metrics["J"]
+system_spec declares every metric returned by evaluate
+system_spec declares analytical gradient provenance
 gradient is analytical
 gradient returns Controls
 gradient has the same ControlSpec as the input controls
@@ -268,18 +271,20 @@ useful for normal inspection/testing:
 
 ```text
 simulate(controls, ...)
+plot_data(controls, kind=..., **options)
 residuals(controls, name="hard")
 jacobian(controls, name="hard")
 hessian(controls)
 hvp(controls, vector)
 second_derivative(...)
-metric_schema()
-residual_schema()
 load_*_controls(...)
 plot_*(...)
 cache_reset()
 cache_status()
 ```
+
+Declare metric and constraint semantics in the mandatory `system_spec()`; do not
+create separate schema APIs for them.
 
 Ask the user before adding optional methods only when they introduce substantial
 new physics, file formats, plotting surfaces, or expensive simulation behavior.
@@ -296,14 +301,15 @@ Follow this order:
 5. Sketch the computational lifecycle and expected memory bottlenecks.
 6. Define primary and secondary dict defaults.
 7. Define ControlSpec and control channel order.
-8. Implement evaluate using the cheapest correct path when practical.
-9. Implement forward_prop for full forward data when needed.
-10. Implement back_prop.
-11. Implement analytical gradient.
-12. Add simulate when system-native simulation is useful or requested.
-13. Add optional hooks when theory, user requirements, or normal diagnostics support them.
-14. Run sanity checks.
-15. Report assumptions and any optional additions needing user approval.
+8. Define system_spec identity, metrics, derivative provenance, constraints, and data products.
+9. Implement evaluate using the cheapest correct path when practical.
+10. Implement forward_prop for full forward data when needed.
+11. Implement back_prop.
+12. Implement analytical gradient.
+13. Add simulate or plot_data when explicit system-native diagnostics are useful.
+14. Add optional hooks when theory, user requirements, or normal diagnostics support them.
+15. Run sanity checks.
+16. Report assumptions and any optional additions needing user approval.
 ```
 
 ## Sanity Checks

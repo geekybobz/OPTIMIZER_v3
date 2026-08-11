@@ -2,7 +2,7 @@
 
 Why this file exists
 --------------------
-The first optimizer in v3 should be the easiest one to audit.  Line search is that
+The first optimizer in v4 should be the easiest one to audit.  Line search is that
 method: compute the analytical gradient, try a step in the descent direction, shrink
 the step when the trial is not acceptable, and let the shared engine record the run.
 It gives the project a deterministic baseline before adding momentum and Adam memory.
@@ -49,11 +49,13 @@ from optimizer.core.engine import (
 from optimizer.optimizers._common import (
     coerce_warmstart,
     controls_from_flat_like,
+    method_api_context,
     require_finite,
     require_variant,
 )
 from optimizer.result import Evaluation, OptimizerResult
 from optimizer.state import RunState
+from optimizer.system_olgs import get_system_spec
 
 
 VALID_VARIANTS = ("fixed", "backtracking", "normalized", "armijo")
@@ -259,12 +261,17 @@ def _build_line_search_step(config: LineSearchConfig):
                 },
             )
 
-        direction_sign = -1.0 if config.accept_mode == "min" else 1.0
-        direction = direction_sign * gradient_flat.astype(float, copy=True)
+        # The engine supplies a descent direction for the system-declared
+        # objective.  Maximizing systems are converted at that common boundary.
+        direction = -gradient_flat.astype(float, copy=True)
         if config.uses_normalized_direction:
             direction /= gradient_norm
         direction_norm = float(np.linalg.norm(direction))
         directional_derivative = float(np.dot(gradient_flat, direction))
+        if config.accept_mode == "max":
+            # Armijo is expressed in the native objective derivative, whereas
+            # the shared engine gave us its negation for a maximization target.
+            directional_derivative *= -1.0
 
         base_step = _clamp_step(state.step_size or config.initial_step_size, config)
         trial_step = base_step
@@ -420,8 +427,8 @@ def line_search(
     max_backtracks: int = 12,
     normalize: bool | None = None,
     armijo_c1: float = 1.0e-4,
-    accept_metric: str = "J",
-    accept_mode: str = "min",
+    accept_metric: str | None = None,
+    accept_mode: str | None = None,
     accept_tolerance: float = 0.0,
     accept: Any | None = None,
     state: RunState | None = None,
@@ -430,6 +437,11 @@ def line_search(
 ) -> OptimizerResult:
     """Run gradient descent with one of the line-search variants."""
 
+    objective = get_system_spec(system)["objective"]
+    resolved_metric = str(objective["metric_id"]) if accept_metric is None else str(accept_metric)
+    resolved_mode = "min" if objective["direction"] == "minimize" else "max"
+    if accept_mode is not None:
+        resolved_mode = str(accept_mode)
     config = LineSearchConfig(
         variant=require_variant(variant, VALID_VARIANTS, family="line_search"),
         step_size=step_size,
@@ -440,8 +452,8 @@ def line_search(
         max_backtracks=max_backtracks,
         normalize=normalize,
         armijo_c1=armijo_c1,
-        accept_metric=accept_metric,
-        accept_mode=accept_mode,
+        accept_metric=resolved_metric,
+        accept_mode=resolved_mode,
         accept_tolerance=accept_tolerance,
     )
     return run_chunk(
@@ -454,8 +466,8 @@ def line_search(
         warmstart=coerce_warmstart(warmstart, target_optimizer="line_search"),
         step_size=step_size,
         accept=_line_search_accept(config, custom_accept=accept),
-        accept_metric=accept_metric,
-        accept_mode=accept_mode,
+        accept_metric=resolved_metric,
+        accept_mode=resolved_mode,
         accept_tolerance=accept_tolerance,
-        **engine_kwargs,
+        **method_api_context(engine_kwargs, method="line_search", config=config),
     )

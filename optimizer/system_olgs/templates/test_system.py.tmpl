@@ -1,0 +1,24 @@
+"""Initial contract checks for the generated OLGS system."""
+
+import unittest
+
+from optimizer import SYSTEM_SPEC_SCHEMA, get_system_spec, probe_system
+from system import __CLASS_NAME__
+
+
+class GeneratedSystemContractTests(unittest.TestCase):
+    def test_static_contract_and_control_layout(self):
+        system = __CLASS_NAME__()
+        spec = get_system_spec(system)
+        controls = system.control_spec()
+
+        self.assertEqual(spec["schema_version"], SYSTEM_SPEC_SCHEMA)
+        self.assertEqual(tuple(spec["controls"]["keys"]), controls.keys)
+        self.assertEqual(spec["controls"]["control_dim"], controls.control_dim)
+        self.assertTrue(probe_system(system).required_ok)
+
+    # TODO: add an analytical-gradient verification after evaluate/gradient exist.
+
+
+if __name__ == "__main__":
+    unittest.main()

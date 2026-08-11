@@ -10,7 +10,7 @@ tags:
 
 # Optimizer Methods Documentation
 
-This folder contains the optimizer method layer for OPTIMIZER v3.
+This folder contains the optimizer method layer for OPTIMIZER v4.
 
 The intent is compact documentation. Use this hub as the entry point, then open
 only the focused file needed for the current task.
@@ -28,6 +28,7 @@ trial control proposals
 variant validation
 warmstart-compatible memory for engine-based methods
 compact API references
+capability-gated residual/Jacobian, HVP, and proximal operations through SystemEvaluator
 ```
 
 The optimizer method layer does not own:
@@ -37,8 +38,7 @@ physical objectives
 system propagation
 analytical gradient derivation
 guess generation
-residual repair
-projected-gradient tools
+standalone residual repair diagnostics
 deep mathematical theory notes
 ```
 
@@ -55,6 +55,9 @@ OPTIMIZER_CONTRACT.md
 
 OPTIMIZER_METHODS.md
   Compact table of implemented optimizers.
+
+NUMERICAL_CAPABILITIES.md
+  Conditional projected, proximal, HVP, and continuation contracts.
 
 OPTIMIZER_LIFECYCLE.md
   Engine-driven proposal/evaluate/accept flow and CMA-ES exception.
@@ -82,6 +85,10 @@ ADAGRAD_RMSPROP.md
 LBFGS.md
 NONLINEAR_CG.md
 CMA_ES.md
+projected.py
+newton_cg.py
+trust_region.py
+proximal.py
 ```
 
 ## Public Entry Points
@@ -131,6 +138,10 @@ optimizer/optimizers/
   lbfgs.py
   nonlinear_cg.py
   cma_es.py
+  projected.py
+  newton_cg.py
+  trust_region.py
+  proximal.py
 ```
 
 ## Theory Map
@@ -156,6 +167,7 @@ links back to the API reference.
 
 - [Optimizer Contract](OPTIMIZER_CONTRACT.md)
 - [Optimizer Methods](OPTIMIZER_METHODS.md)
+- [Conditional Numerical Capabilities](NUMERICAL_CAPABILITIES.md)
 - [Optimizer Lifecycle](OPTIMIZER_LIFECYCLE.md)
 - [State and Warmstart](OPTIMIZER_STATE_WARMSTART.md)
 - [Theory Hub](../../Theory/optimizers/OPTIMIZER_THEORY_HUB.md)

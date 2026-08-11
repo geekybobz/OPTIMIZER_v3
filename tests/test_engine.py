@@ -7,6 +7,7 @@ from optimizer.core.engine import StepProposal, run_chunk
 from optimizer.core.evaluate import SystemEvaluator
 from optimizer.utils.parallel import ParallelConfig, parallel_map
 from optimizer.logs.trace import Trace
+from optimizer.system_olgs import basic_system_spec
 
 
 class QuadraticSystem:
@@ -23,6 +24,13 @@ class QuadraticSystem:
 
     def control_spec(self):
         return self.spec
+
+    def system_spec(self):
+        return basic_system_spec(
+            "engine-quadratic",
+            control_spec=self.spec,
+            metrics={"energy": {"label": "Energy", "role": "resource"}},
+        )
 
     def evaluate(self, controls):
         self.evaluate_calls += 1
@@ -44,6 +52,27 @@ class QuadraticSystem:
         params = dict(self.params)
         params.update(updates)
         return QuadraticSystem(target=params["target"], weight=params["weight"])
+
+
+class MaximizingQuadraticSystem(QuadraticSystem):
+    """A system whose declared analytical objective must be maximized."""
+
+    def system_spec(self):
+        return basic_system_spec(
+            "engine-maximizing-quadratic",
+            control_spec=self.spec,
+            objective_direction="maximize",
+        )
+
+    def evaluate(self, controls):
+        self.evaluate_calls += 1
+        diff = controls.as_matrix(copy=False) - self.target
+        return {"J": -self.weight * float(np.sum(diff * diff))}
+
+    def gradient(self, controls):
+        self.gradient_calls += 1
+        diff = controls.as_matrix(copy=False) - self.target
+        return Controls.from_matrix(self.spec, -2.0 * self.weight * diff, name="gradient")
 
 
 def descent_step(context):
@@ -131,6 +160,33 @@ class EngineTests(unittest.TestCase):
         np.testing.assert_allclose(result.controls.as_matrix(), controls.as_matrix())
         self.assertEqual(result.stop_reason, "maxiter")
         self.assertFalse(result.trace.iteration_records[0].accepted)
+
+    def test_declared_maximization_uses_system_objective_for_direction_and_acceptance(self):
+        system = MaximizingQuadraticSystem(target=1.0)
+        controls = Controls.constant(system.control_spec(), 0.0, name="initial")
+
+        result = run_chunk(
+            system,
+            controls,
+            step=descent_step,
+            optimizer_name="gradient_descent",
+            maxiter=2,
+            step_size=0.25,
+        )
+
+        self.assertGreater(result.J, -4.0)
+        self.assertTrue(result.trace.iteration_records[0].accepted)
+
+        targeted = run_chunk(
+            system,
+            controls,
+            step=descent_step,
+            optimizer_name="gradient_descent",
+            maxiter=10,
+            step_size=0.25,
+            target_value=-1.0,
+        )
+        self.assertEqual(targeted.stop_reason, "target")
 
     def test_nonfinite_trial_stops_chunk_cleanly(self):
         system = QuadraticSystem(target=0.0, fail_above=1.0)

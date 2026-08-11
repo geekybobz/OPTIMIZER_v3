@@ -2,7 +2,7 @@
 
 Why this file exists
 --------------------
-This is the Phase 1 foundation of OPTIMIZER v3.  Every optimizer ultimately changes
+This is the Phase 1 foundation of OPTIMIZER v4.  Every optimizer ultimately changes
 the same object: a set of time-discretized control channels.  In the downstream
 research systems those channels may be named ``omega_A``, ``ux/uy/uz``, ``uA/uB``,
 or six physical qubit axes.  Without a common container, each optimizer, guess

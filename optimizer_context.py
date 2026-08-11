@@ -5,8 +5,8 @@ The library owns optimizer, tracker, and system-contract self-description. This
 small command only combines those public payloads with workspace and Git state.
 It does not parse implementation source, evaluate a system, or modify Git state.
 
-    conda run --no-capture-output -n optimizer_v3 python optimizer_context.py
-    conda run --no-capture-output -n optimizer_v3 python optimizer_context.py --json
+    conda run --no-capture-output -n optimizer_v4 python optimizer_context.py
+    conda run --no-capture-output -n optimizer_v4 python optimizer_context.py --json
 """
 
 from __future__ import annotations
@@ -127,9 +127,9 @@ def build_snapshot() -> dict[str, Any]:
         "context": opt.context_info(),
         "inventory": _workspace_inventory(),
         "recommended_commands": [
-            "conda run --no-capture-output -n optimizer_v3 python optimizer_context.py",
-            "conda run --no-capture-output -n optimizer_v3 python optimizer_context.py --json",
-            "conda run --no-capture-output -n optimizer_v3 python -m unittest discover -s tests",
+            "conda run --no-capture-output -n optimizer_v4 python optimizer_context.py",
+            "conda run --no-capture-output -n optimizer_v4 python optimizer_context.py --json",
+            "conda run --no-capture-output -n optimizer_v4 python -m unittest discover -s tests",
         ],
     }
 

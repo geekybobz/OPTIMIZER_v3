@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build or update the conda environment used for OPTIMIZER v3, then install this
+# Build or update the conda environment used for OPTIMIZER v4, then install this
 # repository in editable mode.  Editable mode means Python imports the live source
 # tree, so code edits are visible after restarting Python without reinstalling.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGE_NAME="optimizer-v3"
+PACKAGE_NAME="optimizer-v4"
 IMPORT_NAME="optimizer"
-ENV_NAME="${OPTIMIZER_V3_ENV:-optimizer_v3}"
+ENV_NAME="${OPTIMIZER_V4_ENV:-optimizer_v4}"
 ENV_FILE="${ROOT_DIR}/environment.yml"
-STATE_FILE="${OPTIMIZER_V3_STATE_FILE:-${HOME}/.optimizer_v3/install.json}"
+STATE_FILE="${OPTIMIZER_V4_STATE_FILE:-${HOME}/.optimizer_v4/install.json}"
 RUN_TESTS=0
 
 usage() {
@@ -18,14 +18,14 @@ usage() {
 Usage: ./install.sh [options]
 
 Options:
-  --env-name NAME       Conda environment name. Default: optimizer_v3
-  --state-file PATH     Install-state JSON path. Default: ~/.optimizer_v3/install.json
+  --env-name NAME       Conda environment name. Default: optimizer_v4
+  --state-file PATH     Install-state JSON path. Default: ~/.optimizer_v4/install.json
   --run-tests           Run the unit test suite after installation.
   -h, --help            Show this help.
 
 Environment overrides:
-  OPTIMIZER_V3_ENV
-  OPTIMIZER_V3_STATE_FILE
+  OPTIMIZER_V4_ENV
+  OPTIMIZER_V4_STATE_FILE
 USAGE
 }
 
@@ -77,7 +77,7 @@ else
   conda env create -n "${ENV_NAME}" -f "${ENV_FILE}"
 fi
 
-echo "Installing OPTIMIZER v3 editable package into: ${ENV_NAME}"
+echo "Installing OPTIMIZER v4 editable package into: ${ENV_NAME}"
 conda run -n "${ENV_NAME}" python -m pip install --no-deps --no-build-isolation -e "${ROOT_DIR}"
 
 echo "Verifying import surface"

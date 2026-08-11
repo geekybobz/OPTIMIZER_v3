@@ -71,7 +71,7 @@ def context_info(
             "core": {
                 "run_chunk_parameters": run_chunk_parameters,
                 "has_live_tracking_argument": any(
-                    name in {"tracking", "tracker", "journal", "observer"}
+                    name in {"tracking", "tracker", "journal", "observer", "observers"}
                     for name in run_chunk_parameters
                 ),
             },

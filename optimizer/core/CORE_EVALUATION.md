@@ -35,6 +35,10 @@ use_cache   reuse evaluations for identical control content, default True
 ```text
 evaluate(controls)      -> Evaluation, raises on failure
 gradient(controls)      -> Controls, raises on failure
+value_and_gradient(controls) -> (Evaluation, Controls), optional combined capability
+residuals/jacobian      -> validated equality-constraint facts
+hvp                     -> validated Hessian-vector product
+smooth_gradient/prox    -> validated composite-objective operations
 try_evaluate(controls)  -> EvaluationOutcome, never raises
 try_gradient(controls)  -> GradientOutcome, never raises
 ```
@@ -82,16 +86,28 @@ gradient requests at the same controls therefore cost full price.
 ## Counters
 
 ```text
-evaluation_count   system evaluations actually performed
-gradient_count     gradient calls performed
+evaluation_count           successfully validated system evaluations
+gradient_count             successfully validated gradient calls
+evaluation_attempt_count   cache-miss system evaluation attempts, including failures
+gradient_attempt_count     gradient attempts, including failures
+value_gradient_count       successful combined value/gradient calls
+residual_count             successful hard-residual calls
+jacobian_count             successful constraint-Jacobian calls
+hvp_count                  successful Hessian-vector products
+smooth_gradient_count      successful smooth-component gradients
+prox_count                 successful proximal operations
 ```
 
-Cache hits do not increment `evaluation_count`, so the counters measure real system
-work rather than call-site traffic.  Both are copied into the `technical` payload of
-each iteration record.
+Cache hits do not increment either evaluation counter.  The attempted counters make
+failed/non-finite trials visible as real work without changing the established
+successful-call counters.  Both views are copied into the iteration evidence.
 
 `clear_cache()` drops cached evaluations without resetting the counters or replacing
 the system.
+
+`counters(compact=True)` retains the original evaluation/gradient counter keys and
+adds only nonzero conditional-capability counters. This keeps ordinary tracker
+records compact while preserving advanced-method work evidence.
 
 ## What This Layer Refuses To Do
 

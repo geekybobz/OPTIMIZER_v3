@@ -7,12 +7,11 @@ tags:
   - system
   - olgs
   - logging
-  - blackbox
 ---
 
 # OLGS Logging Boundary
 
-OLGS should not fully own cache, logs, checkpoints, or blackbox records yet.
+OLGS should not fully own cache, logs, checkpoints, or future tracker records.
 
 Those parts will be redesigned separately.
 
@@ -27,11 +26,11 @@ latest metrics placeholder
 latest state placeholder
 ```
 
-But persistent run history should belong to the logging/blackbox layer.
+Persistent run history will belong to the tracker layer.
 
 ## Future Connection Point
 
-The future blackbox/logging layer can connect to OLGS through:
+The future tracker can connect to OLGS through:
 
 ```text
 control identity
@@ -57,7 +56,7 @@ expose derivative hooks
 describe itself
 ```
 
-Keep logs/blackbox history-focused:
+Keep tracker history-focused:
 
 ```text
 record evaluations

@@ -13,8 +13,8 @@ How it fits the architecture
 - ``derivatives.get_jacobian`` supplies either the analytical hook or an explicit
   finite-difference fallback.
 - repair tools use the same Jacobian shape.
-- future projected optimizers can call ``project_gradient`` to remove hard-residual
-  changing components from a descent direction.
+- the projected optimizer uses the same nullspace calculation while this helper
+  remains available for explicit geometry inspection.
 
 What this file deliberately does not do
 ---------------------------------------

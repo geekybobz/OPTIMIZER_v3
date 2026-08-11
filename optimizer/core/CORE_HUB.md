@@ -85,7 +85,7 @@ opt.core    this package: run_chunk, StepContext, StepProposal,
             AcceptanceDecision, SystemEvaluator, StoppingConfig, metric_guard
 
 opt.base    top-level spine objects: Controls, ControlSpec, OptimizerResult,
-            WarmStartState, Trace, BlackBoxRun, evaluate, gradient, context
+            WarmStartState, Trace, evaluate, gradient, context
 ```
 
 Both are catalogued, so either can be listed at runtime:

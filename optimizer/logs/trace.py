@@ -53,6 +53,65 @@ class Trace:
     checkpoints: dict[str, Checkpoint] = field(default_factory=dict)
     labels: dict[str, list[str]] = field(default_factory=lambda: defaultdict(list))
 
+    # ------------------------------------------------------------------
+    # Passive engine-observer compatibility
+    # ------------------------------------------------------------------
+
+    def on_start(self, event: Any) -> None:
+        """Accept the shared engine start event; Trace has no start record type."""
+
+        del event
+
+    def on_iteration(self, event: Any) -> None:
+        """Project one shared engine event into the legacy trace record shape."""
+
+        self.record_iteration(
+            optimizer=event.optimizer,
+            iteration=event.iteration,
+            global_iteration=event.global_iteration,
+            metrics=event.after.metrics,
+            system_params=event.system_params,
+            technical=event.technical,
+            stage=event.stage,
+            accepted=event.accepted,
+            reason=event.reason,
+        )
+
+    def on_chunk(self, event: Any) -> None:
+        """Project one shared engine chunk event into the legacy trace shape."""
+
+        self.record_chunk(
+            optimizer=event.optimizer,
+            chunk=event.chunk,
+            start_iteration=event.start_iteration,
+            end_iteration=event.end_iteration,
+            start_metrics=event.start_metrics,
+            end_metrics=event.end_metrics,
+            system_params=event.system_params,
+            stage=event.stage,
+            accepted=event.accepted,
+            reason=event.reason,
+        )
+
+    def on_checkpoint(self, event: Any) -> None:
+        """Project a shared checkpoint event into the in-memory ledger."""
+
+        self.checkpoint(
+            event.label,
+            event.controls,
+            metrics=event.snapshot.metrics,
+            system_params=event.system_params,
+            optimizer_state=event.optimizer_state,
+            iteration=event.global_iteration,
+            stage=event.stage,
+            random_state=event.random_state,
+        )
+
+    def on_terminal(self, event: Any) -> None:
+        """Accept the shared terminal event; Trace exposes the final result separately."""
+
+        del event
+
     def record_iteration(
         self,
         *,
@@ -191,4 +250,3 @@ class Trace:
             "checkpoints": [checkpoint.to_dict() for checkpoint in self.checkpoints.values()],
             "labels": {label: list(ids) for label, ids in self.labels.items()},
         }
-

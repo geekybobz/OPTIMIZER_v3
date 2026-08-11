@@ -23,6 +23,10 @@ gradient(controls) -> Controls
 
 This is expected to be analytical.
 
+The mandatory `system_spec()` must declare the gradient target, analytical source,
+`dJ/du` convention, and an optional derivation reference. Runtime checks validate
+shape and finiteness; explicit numerical comparisons test the analytical formula.
+
 The optimizer should not silently replace missing gradient logic with numerical
 finite differences during normal optimization.
 
@@ -47,6 +51,14 @@ trust-region methods
 diagnostics
 local geometry checks
 ```
+
+`newton_cg` and `trust_region` require an analytical `hvp` capability. They do
+not silently select `finite_difference_hvp`, because one finite-difference HVP
+costs multiple gradient calls and an inner CG solve may request many HVPs.
+
+`projected_gradient` likewise requires an analytical `jacobian` capability in
+normal optimization. Explicit finite-difference tools remain available for
+small-system checks and diagnostics.
 
 ## Numerical Fallback Policy
 

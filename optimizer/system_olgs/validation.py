@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Mapping
 
 import numpy as np
 
 from optimizer.controls import ControlSpec, Controls
-from optimizer.system_olgs.contract import Metrics, OLGSystem
+from optimizer.system_olgs.contract import ControlBounds, Metrics, OLGSystem, ValueGradient
+from optimizer.system_olgs.specs import validate_declared_metrics
 
 
 def validate_control_spec(system: OLGSystem) -> ControlSpec:
@@ -34,7 +35,11 @@ def validate_controls_for_system(system: OLGSystem, controls: Controls) -> Contr
     return spec
 
 
-def validate_metrics(metrics: Metrics) -> dict[str, Any]:
+def validate_metrics(
+    metrics: Metrics,
+    *,
+    system_spec: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Validate and normalize an evaluation metrics mapping."""
 
     from collections.abc import Mapping
@@ -48,14 +53,22 @@ def validate_metrics(metrics: Metrics) -> dict[str, Any]:
         raise ValueError("metric 'J' must be finite.")
     out = dict(metrics)
     out["J"] = j_value
+    if system_spec is not None:
+        out = validate_declared_metrics(out, system_spec)
+        out["J"] = j_value
     return out
 
 
-def evaluate_system(system: OLGSystem, controls: Controls) -> dict[str, Any]:
+def evaluate_system(
+    system: OLGSystem,
+    controls: Controls,
+    *,
+    system_spec: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Validate controls, evaluate the system, and normalize metrics."""
 
     validate_controls_for_system(system, controls)
-    return validate_metrics(system.evaluate(controls))
+    return validate_metrics(system.evaluate(controls), system_spec=system_spec)
 
 
 def gradient_system(system: OLGSystem, controls: Controls) -> Controls:
@@ -70,6 +83,124 @@ def gradient_system(system: OLGSystem, controls: Controls) -> Controls:
     if not np.all(np.isfinite(gradient.as_matrix(copy=False))):
         raise ValueError("system.gradient(...) returned non-finite values.")
     return gradient
+
+
+def value_and_gradient_system(
+    system: Any,
+    controls: Controls,
+    *,
+    system_spec: dict[str, Any] | None = None,
+) -> ValueGradient:
+    """Call and validate an optional combined objective/gradient hook."""
+
+    hook = getattr(system, "value_and_gradient", None)
+    if not callable(hook):
+        raise AttributeError("system does not provide value_and_gradient(...).")
+    spec = validate_controls_for_system(system, controls)
+    raw = hook(controls)
+    if isinstance(raw, ValueGradient):
+        metrics, gradient = raw.metrics, raw.gradient
+    elif isinstance(raw, tuple) and len(raw) == 2:
+        metrics, gradient = raw
+    else:
+        raise TypeError("system.value_and_gradient(...) must return ValueGradient or (metrics, gradient).")
+    normalized = validate_metrics(metrics, system_spec=system_spec)
+    if not isinstance(gradient, Controls):
+        raise TypeError("system.value_and_gradient(...) gradient must be Controls.")
+    if gradient.spec.keys != spec.keys or gradient.spec.control_dim != spec.control_dim:
+        raise ValueError("system.value_and_gradient(...) returned gradient with the wrong layout.")
+    if not np.all(np.isfinite(gradient.as_matrix(copy=False))):
+        raise ValueError("system.value_and_gradient(...) returned non-finite gradient values.")
+    return ValueGradient(metrics=normalized, gradient=gradient)
+
+
+def optional_smooth_gradient(system: Any, controls: Controls) -> Controls:
+    """Call and validate the smooth component gradient of a composite objective."""
+
+    hook = getattr(system, "smooth_gradient", None)
+    if not callable(hook):
+        raise AttributeError("system does not provide smooth_gradient(...).")
+    spec = validate_controls_for_system(system, controls)
+    gradient = hook(controls)
+    if not isinstance(gradient, Controls):
+        raise TypeError("system.smooth_gradient(...) must return Controls.")
+    if gradient.spec.keys != spec.keys or gradient.spec.control_dim != spec.control_dim:
+        raise ValueError("system.smooth_gradient(...) returned controls with the wrong layout.")
+    if not np.all(np.isfinite(gradient.as_matrix(copy=False))):
+        raise ValueError("system.smooth_gradient(...) returned non-finite values.")
+    return gradient
+
+
+def optional_prox(system: Any, controls: Controls, step_size: float) -> Controls:
+    """Call and validate an optional proximal operator."""
+
+    hook = getattr(system, "prox", None)
+    if not callable(hook):
+        raise AttributeError("system does not provide prox(...).")
+    spec = validate_controls_for_system(system, controls)
+    alpha = float(step_size)
+    if not np.isfinite(alpha) or alpha <= 0.0:
+        raise ValueError("prox step_size must be finite and positive.")
+    result = hook(controls, alpha)
+    if not isinstance(result, Controls):
+        raise TypeError("system.prox(...) must return Controls.")
+    if result.spec.keys != spec.keys or result.spec.control_dim != spec.control_dim:
+        raise ValueError("system.prox(...) returned controls with the wrong layout.")
+    if not np.all(np.isfinite(result.as_matrix(copy=False))):
+        raise ValueError("system.prox(...) returned non-finite values.")
+    return result
+
+
+def optional_control_bounds(system: Any) -> ControlBounds:
+    """Call and validate optional elementwise bounds against the system layout."""
+
+    hook = getattr(system, "control_bounds", None)
+    if not callable(hook):
+        raise AttributeError("system does not provide control_bounds().")
+    spec = validate_control_spec(system)
+    raw = hook()
+    if isinstance(raw, ControlBounds):
+        lower, upper = raw.lower, raw.upper
+    elif isinstance(raw, tuple) and len(raw) == 2:
+        lower_raw, upper_raw = raw
+        lower = lower_raw if isinstance(lower_raw, Controls) else Controls.from_matrix(spec, lower_raw, name="lower_bounds")
+        upper = upper_raw if isinstance(upper_raw, Controls) else Controls.from_matrix(spec, upper_raw, name="upper_bounds")
+    else:
+        raise TypeError("system.control_bounds() must return ControlBounds or (lower, upper).")
+    for label, value in (("lower", lower), ("upper", upper)):
+        if value.spec.keys != spec.keys or value.spec.control_dim != spec.control_dim:
+            raise ValueError(f"system.control_bounds() {label} controls have the wrong layout.")
+    if np.any(lower.as_matrix(copy=False) > upper.as_matrix(copy=False)):
+        raise ValueError("system.control_bounds() has lower values above upper values.")
+    return ControlBounds(lower=lower, upper=upper)
+
+
+def optional_control_transfer(
+    system: Any,
+    controls: Controls,
+    *,
+    operation: str,
+    options: Mapping[str, Any] | None = None,
+) -> tuple[Controls, dict[str, Any]]:
+    """Call one explicit system-owned feasibility-preserving transfer hook."""
+
+    hook = getattr(system, "transfer_controls", None)
+    if not callable(hook):
+        raise AttributeError("system does not provide transfer_controls(...).")
+    validate_controls_for_system(system, controls)
+    if not str(operation):
+        raise ValueError("transfer operation must be non-empty.")
+    raw = hook(controls, operation=str(operation), options=dict(options or {}))
+    if isinstance(raw, tuple) and len(raw) == 2:
+        transferred, metadata = raw
+    else:
+        transferred, metadata = raw, {}
+    if not isinstance(transferred, Controls):
+        raise TypeError("system.transfer_controls(...) must return Controls or (Controls, metadata).")
+    validate_controls_for_system(system, transferred)
+    if not isinstance(metadata, Mapping):
+        raise TypeError("system.transfer_controls(...) metadata must be a mapping.")
+    return transferred, dict(metadata)
 
 
 def optional_residuals(system: Any, controls: Controls, *, name: str = "hard") -> np.ndarray:
@@ -137,3 +268,28 @@ def optional_hvp(system: Any, controls: Controls, vector: Controls | np.ndarray)
     if not np.all(np.isfinite(hvp.as_matrix(copy=False))):
         raise ValueError("system.hvp(...) returned non-finite values.")
     return hvp
+
+
+def optional_plot_data(
+    system: Any,
+    controls: Controls,
+    *,
+    kind: str,
+    **options: Any,
+) -> Any:
+    """Call and validate an explicit, system-owned visualization data product."""
+
+    hook = getattr(system, "plot_data", None)
+    if not callable(hook):
+        raise AttributeError("system does not provide plot_data(...).")
+    validate_controls_for_system(system, controls)
+    if not str(kind):
+        raise ValueError("plot_data kind must be non-empty.")
+    from optimizer.visualization.models import coerce_plot_data
+
+    result = coerce_plot_data(hook(controls, kind=str(kind), **options))
+    if result.kind != str(kind):
+        raise ValueError(
+            f"system.plot_data(...) returned kind {result.kind!r}; expected {str(kind)!r}."
+        )
+    return result

@@ -7,6 +7,7 @@ from typing import Any, Mapping
 import numpy as np
 
 from optimizer.controls import ControlSpec, Controls
+from optimizer.system_olgs import basic_system_spec
 
 
 class QuadraticVectorSystem:
@@ -43,6 +44,24 @@ class QuadraticVectorSystem:
             dtype=float,
             dt=self.dt,
             meta={"fixture": "quadratic vector system"},
+        )
+
+    def system_spec(self) -> dict[str, Any]:
+        return basic_system_spec(
+            "quadratic-vector-fixture",
+            name="Quadratic vector fixture",
+            control_spec=self.control_spec(),
+            parameters={"primary": dict(self.primary), "secondary": dict(self.secondary)},
+            metrics={
+                "objective_error": {"label": "Objective error", "role": "quality"},
+                "residual_norm2": {"label": "Squared residual norm", "role": "constraint"},
+                "energy": {"label": "Control energy", "role": "resource"},
+                "fidelity": {"label": "Fidelity", "role": "quality"},
+            },
+            derivatives={
+                "constraint_jacobian": {"hook": "jacobian", "source": "analytical"},
+            },
+            constraints={"hard": {"kind": "equality", "provider": "residuals"}},
         )
 
     def _target_matrix(self) -> np.ndarray:
@@ -137,6 +156,27 @@ class QuadraticVectorSystem:
         payload = dict(self.secondary)
         payload.update(updates)
         return self.__class__(N=self.N, tau=self.primary["tau"], **payload)
+
+    def transfer_controls(
+        self,
+        controls: Controls,
+        *,
+        operation: str,
+        options: Mapping[str, Any],
+    ) -> tuple[Controls, dict[str, Any]]:
+        """Fixture-owned conservative transfer used by constrained campaign tests.
+
+        The fixture's declared residual is a hard target residual.  This test
+        adapter has no meaningful independent feasible perturbation family, so
+        it explicitly preserves the source controls rather than pretending a
+        generic Fourier or noise transform remains feasible.
+        """
+
+        self.validate_controls(controls)
+        return (
+            controls.copy(name=f"fixture_transfer_{operation}"),
+            {"operation": str(operation), "options": dict(options), "policy": "preserve_source"},
+        )
 
     def validate_controls(self, controls: Controls) -> ControlSpec:
         spec = self.control_spec()

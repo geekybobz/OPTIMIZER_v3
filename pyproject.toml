@@ -3,8 +3,8 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "optimizer-v3"
-version = "0.1.0"
+name = "optimizer-v4"
+version = "4.0.0b1"
 description = "Vectorized optimization toolbox for system-defined control problems."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,7 +12,7 @@ dependencies = [
     "numpy>=1.23",
 ]
 authors = [
-    {name = "OPTIMIZER v3 contributors"},
+    {name = "OPTIMIZER v4 contributors"},
 ]
 
 [project.optional-dependencies]
@@ -24,5 +24,11 @@ dev = [
     "pytest>=7",
 ]
 
+[project.scripts]
+optimizer-system = "optimizer.system_olgs.scaffold:main"
+
 [tool.setuptools.packages.find]
-include = ["optimizer*"]
+include = ["optimizer", "optimizer.*", "optimizer_log", "optimizer_log.*"]
+
+[tool.setuptools.package-data]
+"optimizer.system_olgs.templates" = ["*.tmpl"]

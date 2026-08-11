@@ -53,7 +53,6 @@ accept_mode
 accept_tolerance
 trace
 create_trace
-blackbox
 stage
 use_cache
 target_value
@@ -85,8 +84,6 @@ optimizer
 state
 trace
 checkpoint_ids
-blackbox_path
-blackbox_run_id
 ```
 
 ## Gradient-Based Methods
@@ -102,6 +99,9 @@ rmsprop
 lbfgs
 nonlinear_cg
 ncg
+newton_cg
+trust_region
+projected_gradient
 ```
 
 The optimizer should not silently replace a missing analytical gradient with finite
@@ -117,6 +117,19 @@ line_search additionally flips its step direction when accept_mode="max"
 
 For the fixed-direction methods, a maximization goal belongs in the objective and
 gradient themselves; use `accept_metric`/`accept_mode` for guarded acceptance.
+
+## Conditional-Capability Methods
+
+```text
+projected_gradient  -> residuals, jacobian, optional control_bounds
+newton_cg           -> hvp
+trust_region        -> hvp; minimization only
+proximal_gradient   -> smooth_gradient and prox; evaluate returns total J
+```
+
+These hooks are conditional. They do not become mandatory on the base OLGS
+protocol. `continuation` is an outer coordinator returning `ContinuationResult`,
+not an optimizer method pretending to be one numerical iteration.
 
 ## Derivative-Free Method
 

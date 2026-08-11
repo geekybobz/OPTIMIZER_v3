@@ -118,6 +118,16 @@ extra diagnostics
 
 Optimizers should not depend on expensive simulation behavior.
 
+## `plot_data`
+
+`plot_data(controls, kind=...)` is an optional explicit data-product hook. It returns
+renderer-independent named layers, coordinates, annotations, and metadata. It may
+perform a full trajectory calculation, so optimizers and passive tracking never call
+it automatically.
+
+For a Bloch view, the qubit system owns propagation and state-to-Bloch conversion;
+`optimizer.visualization.bloch` owns only validation and rendering.
+
 ## `metrics`
 
 `metrics()` means latest valid metrics.

@@ -43,6 +43,12 @@ tests/system_check/
 /artifacts/
 /tmp/
 
+# Generated tracker/campaign inspection output beside committed system adapters
+test_contained/**/campaigns/*
+!test_contained/**/campaigns/.gitkeep
+test_contained/**/runs/
+test_contained/**/__pycache__/
+
 # Large generated numeric artifacts
 *.npy
 *.npz

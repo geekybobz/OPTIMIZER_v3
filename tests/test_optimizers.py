@@ -6,6 +6,8 @@ import numpy as np
 
 import optimizer as opt
 from fixtures.quadratic_system import QuadraticVectorSystem
+from optimizer.controls import ControlSpec, Controls
+from optimizer.system_olgs import basic_system_spec
 
 
 def vector_case():
@@ -16,6 +18,36 @@ def vector_case():
         residual_weight=0.25,
         energy_weight=1.0e-3,
     )
+
+
+class MaximizingScalarSystem:
+    """Small contract fixture used to verify system-owned maximize semantics."""
+
+    def __init__(self) -> None:
+        self.spec = ControlSpec(("u",), 4)
+
+    def control_spec(self):
+        return self.spec
+
+    def system_spec(self):
+        return basic_system_spec(
+            "maximizing-scalar-fixture",
+            control_spec=self.spec,
+            objective_direction="maximize",
+        )
+
+    def evaluate(self, controls):
+        diff = controls.as_matrix(copy=False) - 1.0
+        return {"J": -float(np.sum(diff * diff))}
+
+    def gradient(self, controls):
+        diff = controls.as_matrix(copy=False) - 1.0
+        return Controls.from_matrix(self.spec, -2.0 * diff, name="gradient")
+
+    def with_secondary(self, **updates):
+        if updates:
+            raise ValueError("fixture has no secondary parameters")
+        return self
 
 
 class OptimizerPhaseTests(unittest.TestCase):
@@ -55,6 +87,24 @@ class OptimizerPhaseTests(unittest.TestCase):
         record = result.trace.iteration_records[0]
         attempts = record.technical["proposal"]["attempts"]
         self.assertGreaterEqual(len(attempts), 1)
+
+    def test_declared_maximization_defaults_propagate_to_line_search_and_cma_es(self):
+        system = MaximizingScalarSystem()
+        controls = opt.zeros(system.control_spec(), name="zero")
+        initial = opt.evaluate(system, controls).J
+
+        line_result = opt.line_search(system, controls, variant="armijo", step_size=0.25, maxiter=2)
+        cma_result = opt.cma_es(
+            system,
+            controls,
+            population_size=12,
+            sigma=0.5,
+            maxiter=3,
+            seed=7,
+        )
+
+        self.assertGreater(line_result.J, initial)
+        self.assertGreater(cma_result.J, initial)
 
     def test_momentum_variants_move_controls_and_store_velocity(self):
         system = vector_case()

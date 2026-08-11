@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This is the design and implementation plan for the contained optimizer only.
+This is the design and implementation plan for the V4 beta optimizer only.
 It replaces the earlier tracker handoff plan.
 
 The reference lifecycle is an OLGS quantum-control run:
@@ -13,12 +13,13 @@ u^k \longrightarrow \text{forward propagation} \longrightarrow
 \longrightarrow \nabla J(u^k) \longrightarrow u^{k+1}.
 \]
 
-The design remains generic over systems satisfying the OLGS contract, but the
-HO forward--backward lifecycle is the required stress test and determines the
-first tracking API. All work remains under:
+The design is generic over systems satisfying the OLGS contract. A quantum
+forward--backward lifecycle is one validation workload, not an API definition;
+the tracker records generic already-computed scalar facts and never assumes
+physics-specific metric names. All work remains under:
 
 ~~~text
-/Users/billabobz/OPTIMIZER/contained
+/Users/billabobz/OPTIMIZER/v4
 ~~~
 
 This plan does not change stable/v3 or the HO-purification source tree.
@@ -76,7 +77,7 @@ boundaries, or immediately after a declared failure.
 
 ## 3. Numerical lifecycle for the HO/OLGS case
 
-For the current HO v3 implementation, evaluate(controls) performs a forward
+For the current HO adapter implementation, evaluate(controls) performs a forward
 propagation and produces endpoint metrics. gradient(controls) reuses the
 matching cached forward history, constructs the backward costate as needed,
 and returns the exact discrete gradient. An accepted trial's forward history
@@ -135,7 +136,7 @@ The journal's current writer methods are low-level persistence methods. They
 are not the intended public user API. A user must never pass an arbitrary
 metrics mapping to describe a real run.
 
-## 5. Planned system-owned tracking contract
+## 5. System-owned tracking contract
 
 The existing required OLGS calls remain:
 
@@ -149,7 +150,7 @@ fidelity, infidelity, purity, entropy, energy, work, trace, and other finite
 endpoint scalars that the system already computed during its normal forward
 pass.
 
-The planned optional system call is:
+The implemented optional static system call is:
 
 ~~~python
 system.tracking_spec() -> TrackingSpec
@@ -177,20 +178,19 @@ start the tracker bridge validates this specification. At each evaluation it
 extracts only declared finite scalar fields from the already-returned
 Evaluation.metrics object.
 
-The intended public optimization shape is:
+The implemented low-level public shape is:
 
 ~~~python
-result = opt.adam(
-    system,
-    initial_controls,
-    maxiter=20,
-    tracking=TrackingConfig(profile="standard"),
-)
+journal = opt.tracker.RunJournal.create(run_dir, receipt)
+observer = opt.tracker.JournalObserver(journal)
+result = opt.adam(system, initial_controls, maxiter=20, observers=[observer])
 ~~~
 
-The user chooses a profile and an allowed diagnostic budget, never numerical
-metric values. The engine supplies those values automatically from the system
-and its own existing state.
+`observers` is the single core extension point. A later ergonomic
+`TrackingConfig` may construct the journal and observer for the user, but it
+must lower to this same observer path rather than add a second tracking loop.
+The engine supplies values automatically from its existing state; the observer
+never receives a system or asks for numerical work.
 
 ## 6. Explicit diagnostics
 
@@ -245,8 +245,8 @@ is the scientific source of truth.
 | run_start | Initial evaluated state. | Initial declared scalars, method, counters. |
 | iteration | One outer optimizer transaction. | Before/trial/after scalars, proposal summary, acceptance result, counters, best-so-far. |
 | analysis | Derived reading of a declared raw window. | Window bounds, formulas/thresholds, inputs, findings, diagnostic counters. |
-| checkpoint | Pointer to a selected full control state. | ID, label, path, shape. |
-| segment_start and segment_end (planned) | One method/budget interval. | Segment ID, method/configuration, initial/final checkpoint, budget, entry/exit reason. |
+| checkpoint | Pointer to a selected full control state. | ID, label, path, shape, SHA-256 digest; artifact includes controls, metrics/counters, optimizer state, API context, reason, and resolved system facts. |
+| chunk | One method/budget interval. | Chunk ID, method/phase, initial/final metrics, resolved system parameters, entry/exit reason. |
 | decision (planned) | A manual or policy recommendation. | Authority, evidence window, permitted actions, selected/rejected directive, validator outcome. |
 | intervention | An action outside normal stepping. | Action, reason, parameters, source decision, before/after state, outcome. |
 | run_end | Selected terminal result. | Status, reason, final scalars, selected checkpoint, explicit certificate evidence. |
@@ -363,21 +363,23 @@ training in this plan.
    introduce a bounded writer buffer with explicit flushes at checkpoints,
    decisions, and terminal events. It must never silently drop evidence.
 
-## 11. Implementation phases
+## 11. Redesigned implementation phases
 
 | Phase | Deliverable | Completion condition |
 |---|---|---|
-| 0 — complete | v2 record model, reader, checkpoint artifacts, and non-live HO Trace-projection pilot. | Pilot validates the layout but is explicitly labelled non-live. |
-| 1 — next | Optional live engine observer and tracker bridge at core.run_chunk. | Enabled/disabled runs have identical controls, metrics, and evaluator counts; existing engine facts produce every raw iteration record. |
-| 2 | Reader window analysis and tiny read-only live view based on live.json. | Detects progress, stall, rejection, and insufficient evidence without system calls. |
-| 3 | Manual segment coordinator, explicit handoffs, decisions, and selected artifacts. | A method switch/restart is reproducible from its decision, checkpoint, and outcome. |
-| 4 | Deterministic policy shadow mode. | It produces replayable recommendations and cannot change any run. |
-| 5 | Deterministic active policy for approved modes/directives. | Validation rejects disallowed actions; every action has evidence, policy version, and outcome. |
-| Later if needed | Multi-start/campaign comparison. | Candidate runs are independently durable and compared on declared common settings. |
+| 0 — complete | v3 record model, atomic writer, checkpoint artifacts, and strict/tail-recovering reader format. | The storage format is passive, compact, and independently readable. |
+| 1 — complete | Core `RunObserver` event stream, `JournalObserver` adapter, and standalone `optimizer_log.reader`. | Enabled/disabled deterministic chunks have identical controls, metrics, stop reasons, and system-call counts; every attempted outer iteration is journaled live. |
+| 1b — complete | Receipt and writer-lifecycle contract: static metric descriptors, selection metric/direction, caller API context, one-writer ownership/heartbeat, strict lifecycle closure, and important checkpoint policy. | A reader can identify metric meaning, writer liveness, terminal closure, and the exact saved control/API evidence without evaluating a system. |
+| 2a — complete | Schema-validating standalone reader, generic timeline projection, byte-offset follow, and writer-liveness inspection. | Read-only consumers can follow declared metric/event fields without importing the optimizer or rereading the whole file. |
+| 2b — next | Read-only run index and minimal `optimizer_log` detail/live API surface; no graphical UI yet. | Runs can be discovered and inspected generically before any presentation modes are designed. |
+| 3 | Manual segment coordinator, explicit handoffs, decision events, and selected artifacts. | A method switch/restart is reproducible from considered evidence, selected checkpoint, action, and measured outcome. |
+| 4 | Campaign/multi-start receipt model and comparison view. | Runs group by explicit campaign/start/parent identity and comparison rejects mismatched settings. |
+| 5 | Deterministic policy shadow mode, then active policy for approved directives. | Shadow mode cannot change numerical work; active mode records validated authority, evidence, action, and outcome. |
+| Later | Selective retention/cleanup using a checkpoint reference graph. | Dry-run manifests show exact deletions; removing unreferenced files leaves selected evidence readable. |
 
 ## 12. Required validation
 
-### Phase 1
+### Phase 1 — implemented and continuously guarded
 
 1. Tracker enabled/disabled gives identical terminal controls, scalar metrics,
    stop reason, and system evaluator counts for deterministic systems.
@@ -389,8 +391,23 @@ training in this plan.
 5. live.json is always valid JSON and identifies the last complete event.
 6. Checkpoint loading reproduces the stored pulse and control specification
    without a system object.
-7. A small real HO v3 run exposes declared endpoint metrics without an
-   HO-specific tracker special case.
+7. The standalone `optimizer_log.reader` import loads neither `optimizer` nor
+   NumPy.
+
+### Phase 1b — implemented and continuously guarded
+
+1. The receipt persists validated static metric descriptors, including metric
+   ID, label, role, units, source, and direction where applicable.
+2. It declares the selection rule used for best-so-far values:
+   `{metric_id, direction, rule}`. The journal records the supplied best state;
+   it never infers one from arbitrary metrics.
+3. A journal cannot be reopened accidentally, cannot append after `run_end`,
+   and owns an exclusive writer token plus a heartbeat/closure record.
+4. A live reader distinguishes live, closed, abandoned-local, and
+   remote-or-unknown ownership without evaluating the system.
+5. Important checkpoint artifacts reproduce exact controls, scalar evidence,
+   optimizer and random state, API context, system facts, trigger reason, and
+   SHA-256 integrity evidence.
 
 ### Phases 2--5
 
@@ -424,7 +441,7 @@ campaign evidence is required for basin/global conclusions.
 
 ## 14. Explicit exclusions
 
-- no change outside contained;
+- no change outside the V4 beta worktree;
 - no automatic promotion to stable/v3;
 - no HO source-tree modifications;
 - no journal-triggered system calculations;

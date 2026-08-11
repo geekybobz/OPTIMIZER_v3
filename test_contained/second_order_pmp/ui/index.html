@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Second-order PMP tracker</title>
+  <style>
+    :root { color-scheme: dark; --bg:#101821; --card:#192735; --muted:#a9bdcb; --ink:#edf6fb; --accent:#75d6c2; --warn:#ffc46a; --bad:#ff8994; }
+    * { box-sizing:border-box; } body { margin:0; font:15px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; background:var(--bg); color:var(--ink); }
+    main { max-width:1280px; margin:auto; padding:28px 20px 42px; } h1 { margin:0 0 4px; font:600 26px/1.2 system-ui,sans-serif; } h2 { font:600 16px/1.2 system-ui,sans-serif; margin:0 0 12px; }
+    .sub, .muted { color:var(--muted); } .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(215px,1fr)); gap:12px; margin:20px 0; }
+    .card { background:var(--card); border:1px solid #294155; border-radius:9px; padding:14px; } .label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.06em; } .value { margin-top:6px; font-size:20px; overflow-wrap:anywhere; }
+    .ok { color:var(--accent); } .warn { color:var(--warn); } .bad { color:var(--bad); } table { width:100%; border-collapse:collapse; } th,td { text-align:left; padding:9px 7px; border-bottom:1px solid #294155; vertical-align:top; } th { color:var(--muted); font-weight:500; }
+    .detail { white-space:pre-wrap; overflow:auto; max-height:330px; font-size:12px; } #error { color:var(--bad); min-height:1.4em; } #plot { width:100%; height:360px; display:block; background:#111c27; border-radius:6px; } .legend { display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin:0 0 8px; } .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; } @media(max-width:620px){ main{padding:18px 12px;} table{font-size:12px;} #plot{height:300px;} }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Second-order robust state-transfer tracker</h1>
+    <div class="sub">Read-only view of journal facts. Refreshes every second; it never imports the system or triggers an evaluation.</div>
+    <p id="error"></p>
+    <section class="grid" id="summary"></section>
+    <section class="card"><h2>Live metric history</h2><div class="legend"><span><i class="dot" style="background:#75d6c2"></i>objective J</span><span><i class="dot" style="background:#ffc46a"></i>robustness penalty</span><span><i class="dot" style="background:#7ab8ff"></i>fidelity</span></div><canvas id="plot" aria-label="Live objective, robustness, and fidelity history"></canvas><div id="plot-note" class="muted">Waiting for iteration records…</div></section>
+    <section class="card"><h2>Campaign stages</h2><div id="stages" class="muted">Waiting for a campaign…</div></section>
+    <section class="card" style="margin-top:12px"><h2>Active run: recent causal events</h2><div id="events" class="muted">No active run.</div></section>
+    <section class="card" style="margin-top:12px"><h2>Current live snapshot</h2><div id="live" class="detail muted">No snapshot.</div></section>
+  </main>
+  <script>
+    const root = '../campaigns/latest.json';
+    const read = async (url) => { const response = await fetch(url + '?t=' + Date.now(), {cache:'no-store'}); if (!response.ok) throw new Error(`${url}: ${response.status}`); return response.json(); };
+    const scalar = (v) => typeof v === 'number' ? v.toPrecision(8) : (v ?? '—');
+    const statusClass = (value) => /failed|error/.test(String(value).toLowerCase()) ? 'bad' : /running|live/.test(String(value).toLowerCase()) ? 'warn' : 'ok';
+    function card(label, value, extra='') { return `<div class="card"><div class="label">${label}</div><div class="value">${value}</div><div class="muted">${extra}</div></div>`; }
+    function stageTable(stages) { if (!stages?.length) return 'No stages have been registered.'; return `<table><thead><tr><th>stage</th><th>method</th><th>state</th><th>iterations</th><th>J</th></tr></thead><tbody>${stages.map(s => `<tr><td>${s.name}</td><td>${s.method}</td><td class="${statusClass(s.status)}">${s.status}</td><td>${s.iterations ?? '—'}</td><td>${scalar(s.metrics?.J)}</td></tr>`).join('')}</tbody></table>`; }
+    function chartSeries(samples, key) { return samples.map(sample => ({x: sample.iteration, y: sample.metrics[key]})).filter(point => Number.isFinite(point.y)); }
+    function drawPanel(ctx, series, label, color, left, top, width, height) {
+      const values = series.map(point => point.y); if (!values.length) return;
+      const x0 = series[0].x, x1 = series.at(-1).x; let y0 = Math.min(...values), y1 = Math.max(...values);
+      const padding = Math.max((y1 - y0) * .08, 1e-12); y0 -= padding; y1 += padding;
+      ctx.strokeStyle = '#314b61'; ctx.lineWidth = 1; for (let i=0;i<4;i++) { const y = top + height * i / 3; ctx.beginPath(); ctx.moveTo(left,y); ctx.lineTo(left+width,y); ctx.stroke(); }
+      ctx.fillStyle = '#a9bdcb'; ctx.font = '12px ui-monospace, monospace'; ctx.fillText(label, left, top - 6); ctx.fillText(scalar(y1), left + 3, top + 12); ctx.fillText(scalar(y0), left + 3, top + height - 3);
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+      series.forEach((point, index) => { const x = left + width * (x1 === x0 ? .5 : (point.x - x0) / (x1 - x0)); const y = top + height * (1 - (point.y - y0) / (y1 - y0)); index ? ctx.lineTo(x,y) : ctx.moveTo(x,y); }); ctx.stroke();
+      return {x0, x1};
+    }
+    function drawPlot(samples) {
+      const canvas = document.querySelector('#plot'), ratio = window.devicePixelRatio || 1, width = canvas.clientWidth, height = canvas.clientHeight;
+      canvas.width = Math.round(width * ratio); canvas.height = Math.round(height * ratio); const ctx = canvas.getContext('2d'); ctx.scale(ratio, ratio); ctx.clearRect(0,0,width,height);
+      if (!samples.length) { ctx.fillStyle='#a9bdcb'; ctx.font='14px ui-monospace, monospace'; ctx.fillText('Waiting for iteration records…', 18, 34); return; }
+      const left=78, right=18, top=28, gap=26, panel=(height-top-42-gap*2)/3, usable=width-left-right;
+      const a=drawPanel(ctx, chartSeries(samples,'J'), 'J', '#75d6c2', left, top, usable, panel);
+      drawPanel(ctx, chartSeries(samples,'robustness_penalty'), 'robustness', '#ffc46a', left, top+panel+gap, usable, panel);
+      drawPanel(ctx, chartSeries(samples,'fidelity'), 'fidelity', '#7ab8ff', left, top+(panel+gap)*2, usable, panel);
+      ctx.fillStyle='#a9bdcb'; ctx.font='12px ui-monospace, monospace'; ctx.fillText(`iteration ${a?.x0 ?? '—'} → ${a?.x1 ?? '—'}`, left, height-10);
+    }
+    async function update() {
+      try {
+        const campaign = await read(root);
+        document.querySelector('#error').textContent = '';
+        const live = campaign.active_run_dir ? await read('../' + campaign.active_run_dir + '/live.json').catch(() => null) : null;
+        const current = live?.current?.metrics || campaign.active_metrics || {};
+        document.querySelector('#summary').innerHTML = [
+          card('campaign', campaign.campaign_id || '—', campaign.problem || ''),
+          card('status', `<span class="${statusClass(campaign.status)}">${campaign.status || '—'}</span>`, campaign.active_stage || ''),
+          card('iteration', live?.iteration ?? campaign.active_iteration ?? '—', live?.method || campaign.active_method || ''),
+          card('objective J', scalar(current.J), 'minimize'),
+          card('fidelity', scalar(current.fidelity), 'maximize'),
+          card('robustness penalty', scalar(current.robustness_penalty), 'minimize'),
+          card('evaluations', live?.current?.counters?.evaluation_count ?? '—', 'system-owned calls'),
+          card('gradient calls', live?.current?.counters?.gradient_count ?? '—', 'exact discrete adjoint')
+        ].join('');
+        document.querySelector('#stages').innerHTML = stageTable(campaign.stages);
+        document.querySelector('#live').textContent = live ? JSON.stringify(live, null, 2) : 'Stage setup is in progress.';
+        if (campaign.active_run_dir) {
+          const text = await fetch('../' + campaign.active_run_dir + '/timeline.jsonl?t=' + Date.now(), {cache:'no-store'}).then(r => r.ok ? r.text() : '');
+          const allEvents = text.trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
+          const samples = allEvents.filter(e => e.kind === 'iteration').map(e => ({iteration:e.payload.iteration, metrics:e.payload.after?.metrics || {}}));
+          drawPlot(samples); document.querySelector('#plot-note').textContent = `${samples.length} attempted iterations plotted from the active journal.`;
+          const events = allEvents.slice(-12);
+          document.querySelector('#events').innerHTML = events.length ? `<table><thead><tr><th>#</th><th>kind</th><th>elapsed s</th><th>reason</th></tr></thead><tbody>${events.map(e => `<tr><td>${e.sequence}</td><td>${e.kind}</td><td>${scalar(e.elapsed_s)}</td><td>${e.payload?.reason || e.payload?.iteration?.reason || '—'}</td></tr>`).join('')}</tbody></table>` : 'Waiting for the first journal event.';
+        } else { document.querySelector('#events').textContent = 'No active journal.'; drawPlot([]); document.querySelector('#plot-note').textContent = 'The campaign has no active stage.'; }
+      } catch (error) { document.querySelector('#error').textContent = `Waiting for campaign data: ${error.message}`; }
+    }
+    update(); setInterval(update, 1000);
+  </script>
+</body>
+</html>

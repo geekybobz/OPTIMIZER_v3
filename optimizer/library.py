@@ -1,4 +1,4 @@
-"""Public facade object for OPTIMIZER v3.
+"""Public facade object for OPTIMIZER v4.
 
 Why this file exists
 --------------------
@@ -41,12 +41,8 @@ from dataclasses import asdict, dataclass, is_dataclass, replace
 from typing import Any, Callable, Iterable
 from uuid import uuid4
 
-from optimizer.blackbox import analyze as _blackbox_analyze
-from optimizer.blackbox import diagnostics as _blackbox_diagnostics
-from optimizer.blackbox import prune as _blackbox_prune
-from optimizer.blackbox import reset as _blackbox_reset
-from optimizer.blackbox import start as _blackbox_start
 from optimizer.controls import ControlSpec, Controls
+from optimizer.continuation import ContinuationResult, ContinuationStage, StageGate, continuation as _continuation
 from optimizer.core.engine import StepFunction, run_chunk
 from optimizer.core.evaluate import SystemEvaluator
 from optimizer.core.guards import metric_guard as _metric_guard
@@ -73,9 +69,13 @@ from optimizer.optimizers import cma_es as _cma_es
 from optimizer.optimizers import lbfgs as _lbfgs
 from optimizer.optimizers import line_search as _line_search
 from optimizer.optimizers import momentum as _momentum
+from optimizer.optimizers import newton_cg as _newton_cg
 from optimizer.optimizers import ncg as _ncg
 from optimizer.optimizers import nonlinear_cg as _nonlinear_cg
+from optimizer.optimizers import projected_gradient as _projected_gradient
+from optimizer.optimizers import proximal_gradient as _proximal_gradient
 from optimizer.optimizers import rmsprop as _rmsprop
+from optimizer.optimizers import trust_region as _trust_region
 from optimizer.result import Evaluation, OptimizerResult
 from optimizer.schedules import AdaptiveStepSchedule, ConstantSchedule
 from optimizer.state import RunState, WarmStartState
@@ -180,6 +180,11 @@ class OptimizerContext:
 
         return self.system.control_spec()
 
+    def system_info(self) -> dict[str, Any]:
+        """Return the bound system's complete static discovery payload."""
+
+        return self.library.system_info(self.system)
+
     def zeros(self, **kwargs: Any) -> Controls:
         """Create zero controls for the bound system."""
 
@@ -199,6 +204,16 @@ class OptimizerContext:
         """Return analytical gradient from the bound system."""
 
         return self.library.gradient(self.system, controls, use_cache=use_cache)
+
+    def value_and_gradient(self, controls: Controls, *, use_cache: bool = True) -> tuple[Evaluation, Controls]:
+        """Return a combined value/gradient result when the system supports it."""
+
+        return self.library.value_and_gradient(self.system, controls, use_cache=use_cache)
+
+    def plot_data(self, controls: Controls, *, kind: str, **options: Any) -> Any:
+        """Request an explicit system-owned visualization data product."""
+
+        return self.library.plot_data(self.system, controls, kind=kind, **options)
 
     def run_chunk(
         self,
@@ -260,6 +275,27 @@ class OptimizerContext:
 
     def cma_es(self, controls: Any = None, *args: Any, **kwargs: Any) -> OptimizerResult:
         return self.library.cma_es(self.system, controls, *args, **kwargs)
+
+    def projected_gradient(self, controls: Any = None, *args: Any, **kwargs: Any) -> OptimizerResult:
+        return self.library.projected_gradient(self.system, controls, *args, **kwargs)
+
+    def newton_cg(self, controls: Any = None, *args: Any, **kwargs: Any) -> OptimizerResult:
+        return self.library.newton_cg(self.system, controls, *args, **kwargs)
+
+    def trust_region(self, controls: Any = None, *args: Any, **kwargs: Any) -> OptimizerResult:
+        return self.library.trust_region(self.system, controls, *args, **kwargs)
+
+    def proximal_gradient(self, controls: Any = None, *args: Any, **kwargs: Any) -> OptimizerResult:
+        return self.library.proximal_gradient(self.system, controls, *args, **kwargs)
+
+    def continuation(
+        self,
+        controls: Controls,
+        *,
+        stages: Iterable[ContinuationStage | dict[str, Any]],
+        **kwargs: Any,
+    ) -> ContinuationResult:
+        return self.library.continuation(self.system, controls, stages=tuple(stages), **kwargs)
 
     # ------------------------------------------------------------------
     # Bound diagnostics, repair, and training aids
@@ -407,6 +443,22 @@ class OptimizerLibrary:
 
         return SystemEvaluator(system, use_cache=use_cache).gradient(controls)
 
+    def value_and_gradient(
+        self,
+        system: Any,
+        controls: Controls,
+        *,
+        use_cache: bool = True,
+    ) -> tuple[Evaluation, Controls]:
+        """Return a validated combined value and analytical gradient."""
+
+        return SystemEvaluator(system, use_cache=use_cache).value_and_gradient(controls)
+
+    def plot_data(self, system: Any, controls: Controls, *, kind: str, **options: Any) -> Any:
+        """Return validated plot data without invoking a renderer."""
+
+        return SystemEvaluator(system).plot_data(controls, kind=kind, **options)
+
     def run_chunk(
         self,
         system: Any,
@@ -452,31 +504,6 @@ class OptimizerLibrary:
         """Map independent work through the library's local parallel interface."""
 
         return parallel_map(function, items, config=config)
-
-    def blackbox_start(self, *args: Any, **kwargs: Any) -> Any:
-        """Create a numeric blackbox run ledger."""
-
-        return _blackbox_start(*args, **kwargs)
-
-    def blackbox_analyze(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        """Analyze a blackbox run folder without extra system calls."""
-
-        return _blackbox_analyze(*args, **kwargs)
-
-    def diagnostics(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        """Return historical diagnostics from a blackbox run folder."""
-
-        return _blackbox_diagnostics(*args, **kwargs)
-
-    def blackbox_reset(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        """Reset all or part of a blackbox run folder."""
-
-        return _blackbox_reset(*args, **kwargs)
-
-    def blackbox_prune(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        """Prune transient blackbox artifacts."""
-
-        return _blackbox_prune(*args, **kwargs)
 
     def context(
         self,
@@ -563,6 +590,28 @@ class OptimizerLibrary:
         """Run compact CMA-ES style population search."""
 
         return _cma_es(*args, **kwargs)
+
+    def projected_gradient(self, *args: Any, **kwargs: Any) -> OptimizerResult:
+        return _projected_gradient(*args, **kwargs)
+
+    def newton_cg(self, *args: Any, **kwargs: Any) -> OptimizerResult:
+        return _newton_cg(*args, **kwargs)
+
+    def trust_region(self, *args: Any, **kwargs: Any) -> OptimizerResult:
+        return _trust_region(*args, **kwargs)
+
+    def proximal_gradient(self, *args: Any, **kwargs: Any) -> OptimizerResult:
+        return _proximal_gradient(*args, **kwargs)
+
+    def continuation(
+        self,
+        system: Any,
+        controls: Controls,
+        *,
+        stages: Iterable[ContinuationStage | dict[str, Any]],
+        **kwargs: Any,
+    ) -> ContinuationResult:
+        return _continuation(system, controls, stages=tuple(stages), **kwargs)
 
     # ------------------------------------------------------------------
     # Diagnostics, repair, and training aids
@@ -723,15 +772,13 @@ class OptimizerLibrary:
             "run_chunk": MethodInfo("run_chunk", "implemented", "optimizer/core/engine.py", "Phase 5"),
             "evaluate": MethodInfo("evaluate", "implemented", "optimizer/core/evaluate.py", "Phase 5"),
             "gradient": MethodInfo("gradient", "implemented", "optimizer/core/evaluate.py", "Phase 5"),
-            "trace": MethodInfo("trace", "implemented", "optimizer/logs/trace.py", "Phase 4"),
-            "blackbox_start": MethodInfo("blackbox_start", "implemented", "optimizer/blackbox/run.py", "Phase 12"),
-            "blackbox_analyze": MethodInfo(
-                "blackbox_analyze",
-                "implemented",
-                "optimizer/blackbox/analysis.py",
-                "Phase 12",
+            "value_and_gradient": MethodInfo(
+                "value_and_gradient", "implemented", "optimizer/core/evaluate.py", "Numerical capabilities"
             ),
-            "diagnostics": MethodInfo("diagnostics", "implemented", "optimizer/blackbox/analysis.py", "Phase 12"),
+            "plot_data": MethodInfo(
+                "plot_data", "implemented", "optimizer/core/evaluate.py", "System data products"
+            ),
+            "trace": MethodInfo("trace", "implemented", "optimizer/logs/trace.py", "Phase 4"),
             "warmstart": MethodInfo("warmstart", "implemented", "optimizer/state.py", "Phase 3"),
             "parallel_map": MethodInfo("parallel_map", "implemented", "optimizer/utils/parallel.py", "Phase 5"),
             "context": MethodInfo("context", "implemented", "optimizer/library.py", "Phase 6"),
@@ -767,6 +814,21 @@ class OptimizerLibrary:
             ),
             "ncg": MethodInfo("ncg", "implemented", "optimizer/optimizers/nonlinear_cg.py", "Phase 7"),
             "cma_es": MethodInfo("cma_es", "implemented", "optimizer/optimizers/cma_es.py", "Phase 7"),
+            "projected_gradient": MethodInfo(
+                "projected_gradient", "implemented", "optimizer/optimizers/projected.py", "Numerical capabilities"
+            ),
+            "newton_cg": MethodInfo(
+                "newton_cg", "implemented", "optimizer/optimizers/newton_cg.py", "Numerical capabilities"
+            ),
+            "trust_region": MethodInfo(
+                "trust_region", "implemented", "optimizer/optimizers/trust_region.py", "Numerical capabilities"
+            ),
+            "proximal_gradient": MethodInfo(
+                "proximal_gradient", "implemented", "optimizer/optimizers/proximal.py", "Numerical capabilities"
+            ),
+            "continuation": MethodInfo(
+                "continuation", "implemented", "optimizer/continuation.py", "Numerical capabilities"
+            ),
             "fourier_guess": MethodInfo(
                 "fourier_guess",
                 "implemented",

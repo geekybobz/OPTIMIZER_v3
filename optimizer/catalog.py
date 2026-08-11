@@ -1,4 +1,4 @@
-"""Programmatic catalog for exploring OPTIMIZER v3.
+"""Programmatic catalog for exploring OPTIMIZER v4.
 
 Why this file exists
 --------------------
@@ -391,6 +391,11 @@ _GROUP_MODULES = {
     "schedules": "optimizer.schedules",
     "base": "optimizer",
     "core": "optimizer.core",
+    "campaigns": "optimizer.campaigns",
+    "tracker": "optimizer.tracker",
+    "visualization": "optimizer.visualization",
+    "system_olgs": "optimizer.system_olgs",
+    "optimizer_log": "optimizer_log",
 }
 
 
@@ -634,6 +639,70 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/optimizers/cma_es.py",
                 phase="Phase 7",
                 tags=("derivative_free", "population", "random", "global_search"),
+            ),
+            _make_item(
+                "projected_gradient",
+                "optimizers",
+                "optimizer",
+                "Equality- and bound-constrained descent with restoration and projected-KKT stopping.",
+                inputs={
+                    "system": "Base OLGS plus residuals(...), jacobian(...), and optional control_bounds().",
+                    "residual_name": "Named hard residual set, default hard.",
+                    "feasibility_tolerance": "Scaled residual norm required in the feasible phase.",
+                    "stationarity_tolerance": "Projected-KKT norm stopping threshold.",
+                },
+                returns=_RESULT_RETURN,
+                requires=("system.evaluate", "system.gradient", "system.residuals", "system.jacobian", "Controls"),
+                best_for=("hard equality constraints", "box-bounded feasible polishing"),
+                watch_out=("general nonlinear inequalities are not supported", "finite-difference Jacobians are not used implicitly"),
+                related=("utils.project_gradient", "utils.repair_newton"),
+                example="result = opt.optimizers.projected_gradient(system, controls, maxiter=50)",
+                module="optimizer/optimizers/projected.py",
+                tags=("gradient", "constraints", "projected_kkt", "feasibility"),
+            ),
+            _make_item(
+                "newton_cg",
+                "optimizers",
+                "optimizer",
+                "Matrix-free Newton method using conjugate gradients and analytical Hessian-vector products.",
+                inputs={"system": "Base OLGS plus hvp(controls, vector).", "cg_maxiter": "Inner linear-solve budget."},
+                returns=_RESULT_RETURN,
+                requires=("system.evaluate", "system.gradient", "system.hvp", "Controls"),
+                best_for=("smooth deterministic objectives", "large controls with matrix-free curvature"),
+                watch_out=("a finite-difference HVP is never selected implicitly",),
+                related=("optimizers.trust_region", "optimizers.lbfgs"),
+                example="result = opt.optimizers.newton_cg(system, controls, maxiter=20)",
+                module="optimizer/optimizers/newton_cg.py",
+                tags=("gradient", "second_order", "hvp", "conjugate_gradient"),
+            ),
+            _make_item(
+                "trust_region",
+                "optimizers",
+                "optimizer",
+                "Steihaug trust-region method with model-ratio acceptance and matrix-free HVPs.",
+                inputs={"system": "Base OLGS plus hvp(controls, vector).", "initial_radius": "Initial L2 trust radius."},
+                returns=_RESULT_RETURN,
+                requires=("system.evaluate", "system.gradient", "system.hvp", "Controls"),
+                best_for=("indefinite or locally inaccurate quadratic models", "guarded second-order steps"),
+                watch_out=("currently a minimization method",),
+                related=("optimizers.newton_cg",),
+                example="result = opt.optimizers.trust_region(system, controls, initial_radius=1.0, maxiter=20)",
+                module="optimizer/optimizers/trust_region.py",
+                tags=("gradient", "second_order", "hvp", "trust_region"),
+            ),
+            _make_item(
+                "proximal_gradient",
+                "optimizers",
+                "optimizer",
+                "Composite-objective descent using a system smooth gradient and proximal operator.",
+                inputs={"system": "Base OLGS plus smooth_gradient(...) and prox(...).", "mapping_tolerance": "Proximal-gradient mapping threshold."},
+                returns=_RESULT_RETURN,
+                requires=("system.evaluate", "system.smooth_gradient", "system.prox", "Controls"),
+                best_for=("L1 regularization", "total variation or other available proximal operators"),
+                watch_out=("evaluate must return the total composite J",),
+                example="result = opt.optimizers.proximal_gradient(system, controls, step_size=0.1, maxiter=50)",
+                module="optimizer/optimizers/proximal.py",
+                tags=("composite", "proximal", "nonsmooth"),
             ),
         ),
     )
@@ -1240,7 +1309,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
 
     base_group = CatalogGroup(
         name="base",
-        summary="Base data objects and top-level entry points: Controls, results, warmstart state, trace, blackbox ledgers, and bound context utilities.",
+        summary="Base data objects and top-level entry points: Controls, results, warmstart state, trace, and bound context utilities.",
         common_inputs={
             "system": "Project physics object satisfying the optimizer contract.",
             "controls": "Named dense control matrix represented by Controls.",
@@ -1249,12 +1318,11 @@ def _build_groups() -> dict[str, CatalogGroup]:
             "Evaluation": "Single evaluate(...) snapshot.",
             "OptimizerResult": "Standard optimizer result.",
             "Trace": "In-memory run records and checkpoints.",
-            "BlackBoxRun": "Durable numeric run ledger with selected array artifacts.",
         },
         workflow=(
             "Build or receive Controls matching system.control_spec().",
             "Call evaluate/gradient or a role namespace method.",
-            "Carry OptimizerResult, WarmStartState, Trace, or BlackBoxRun across chunks.",
+            "Carry OptimizerResult, WarmStartState, or Trace across chunks.",
         ),
         items=(
             _make_item(
@@ -1313,6 +1381,19 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 tags=("gradient", "controls"),
             ),
             _make_item(
+                "value_and_gradient",
+                "base",
+                "helper",
+                "Call and validate a combined objective/analytical-gradient system capability.",
+                inputs={"system": "Must provide value_and_gradient(...).", "controls": "Compatible Controls."},
+                returns={"type": "tuple[Evaluation, Controls]"},
+                requires=("system.value_and_gradient", "Controls"),
+                best_for=("systems that reuse an expensive forward propagation",),
+                example="evaluation, gradient = opt.value_and_gradient(system, controls)",
+                module="optimizer/core/evaluate.py",
+                tags=("evaluation", "gradient", "capability"),
+            ),
+            _make_item(
                 "OptimizerResult",
                 "base",
                 "result_object",
@@ -1354,37 +1435,6 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 tags=("trace", "checkpoint", "logs"),
             ),
             _make_item(
-                "BlackBoxRun",
-                "base",
-                "data_object",
-                "Durable numeric blackbox writer for blackbox.json, ledger.jsonl, and selected arrays/*.npz artifacts.",
-                inputs={"run_dir": "Run folder.", "policy": "minimal, standard, full, or policy mapping."},
-                returns={"type": "BlackBoxRun", "methods": "record_iteration, record_chunk, snapshot, record_repair, close, records"},
-                requires=("writable run folder",),
-                best_for=("closed-loop numeric audit trails", "post-run diagnostics", "TensorBoard-like dashboard data source"),
-                related=("base.diagnostics", "optimizers.adam", "utils.repair_newton"),
-                example="box = opt.blackbox.start(run_dir); result = opt.adam(system, controls, blackbox=box)",
-                module="optimizer/blackbox/run.py",
-                phase="Phase 12",
-                aliases=("blackbox_start",),
-                tags=("blackbox", "ledger", "diagnostics", "artifacts"),
-            ),
-            _make_item(
-                "diagnostics",
-                "base",
-                "helper",
-                "Read a blackbox run folder and return structured historical diagnostics without extra system calls.",
-                inputs={"run_dir": "Folder containing blackbox.json and ledger.jsonl.", "details": "summary, gradient, decisions, repairs, or thresholds."},
-                returns={"type": "dict", "fields": "manifest, latest_iteration, analysis, optional detail tables"},
-                requires=("blackbox run folder",),
-                best_for=("closed-loop review", "gradient trend inspection", "accept/reject and repair analysis"),
-                related=("base.BlackBoxRun", "utils.diagnostic_report"),
-                example="report = opt.diagnostics(run_dir, details='gradient')",
-                module="optimizer/blackbox/analysis.py",
-                phase="Phase 12",
-                tags=("blackbox", "diagnostics", "analysis"),
-            ),
-            _make_item(
                 "context",
                 "base",
                 "helper",
@@ -1414,6 +1464,25 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 tags=("system", "api", "introspection"),
             ),
             _make_item(
+                "plot_data",
+                "base",
+                "helper",
+                "Request one explicit system-owned visualization data product without rendering it.",
+                inputs={
+                    "system": "OLGS system exposing the optional plot_data hook.",
+                    "controls": "Validated Controls.",
+                    "kind": "Declared visualization kind such as bloch.",
+                },
+                returns={"type": "PlotData", "fields": "kind, named layers, annotations, metadata"},
+                requires=("system.plot_data", "declared system_spec visualization"),
+                best_for=("explicit trajectory inspection", "renderer-independent system data"),
+                watch_out=("This can run a full trajectory and is never called automatically by tracking.",),
+                example="data = opt.plot_data(system, controls, kind='bloch')",
+                module="optimizer/core/evaluate.py",
+                phase="System data products",
+                tags=("system", "visualization", "data"),
+            ),
+            _make_item(
                 "context_info",
                 "base",
                 "helper",
@@ -1427,6 +1496,25 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/introspection.py",
                 phase="Phase 13",
                 tags=("api", "introspection", "tracker"),
+            ),
+            _make_item(
+                "continuation",
+                "base",
+                "coordinator",
+                "Run explicit system-parameter stages with safe control transfer and stage gates.",
+                inputs={
+                    "system": "Initial base OLGS system.",
+                    "controls": "Initial Controls.",
+                    "stages": "ContinuationStage objects or equivalent mappings.",
+                    "control_transfer": "Required callable when ControlSpec layout or dt changes.",
+                },
+                returns={"type": "ContinuationResult", "fields": "stages, final_result, final_system, stop_reason"},
+                requires=("system.with_secondary", "one or more optimizer stages"),
+                best_for=("penalty curricula", "homotopy stages", "explicit grid refinement"),
+                watch_out=("optimizer-private memory is reset between stages", "new-stage controls are re-evaluated"),
+                example="result = opt.continuation(system, controls, stages=[opt.ContinuationStage(...)])",
+                module="optimizer/continuation.py",
+                tags=("continuation", "curriculum", "coordinator"),
             ),
         ),
     )
@@ -1593,6 +1681,81 @@ def _build_groups() -> dict[str, CatalogGroup]:
         ),
     )
 
+    campaigns_group = CatalogGroup(
+        name="campaigns",
+        summary="Durable multi-stage coordination using objective and provenance declared by system_spec().",
+        common_inputs={"system": "OLGS system with static system_spec().", "root": "New durable campaign directory."},
+        common_returns={"type": "Campaign or ModeResult", "evidence": "per-stage tracker journals plus campaign receipt/timeline."},
+        workflow=(
+            "Create a campaign from one declared base system.",
+            "Scout or compare compatible candidates, then refine or validate the selected candidate.",
+            "Use Campaign.open(..., system_resolver=...) to reload durable evidence.",
+        ),
+        items=(
+            _make_item("Campaign", "campaigns", "coordinator", "Campaign object with durable stage, system-fingerprint, and selection evidence.", module="optimizer/campaigns/__init__.py", tags=("campaign", "provenance", "multistart")),
+            _make_item("create", "campaigns", "factory", "Create a new campaign rooted at a new directory.", inputs={"system": "Declared OLGS system.", "root": "Nonexistent campaign path."}, returns={"type": "Campaign"}, requires=("system.system_spec",), module="optimizer/campaigns/__init__.py", tags=("campaign", "create")),
+            _make_item("open", "campaigns", "factory", "Open saved campaign evidence with a caller-owned system resolver.", inputs={"root": "Existing campaign path.", "system_resolver": "Callable from saved SystemReference to matching system."}, returns={"type": "Campaign"}, requires=("system resolver", "verified checkpoint artifacts"), module="optimizer/campaigns/__init__.py", tags=("campaign", "replay", "warmstart")),
+            _make_item("MethodSpec", "campaigns", "data_object", "Declared optimizer name and bounded options for one campaign stage.", module="optimizer/campaigns/__init__.py", tags=("campaign", "method")),
+            _make_item("SelectionSpec", "campaigns", "data_object", "System-owned metric and direction used for ranking; never inferred from J.", module="optimizer/campaigns/__init__.py", tags=("campaign", "objective", "system_spec")),
+            _make_item("SystemReference", "campaigns", "data_object", "Digest of the normalized system-owned semantic specification for one stage.", module="optimizer/campaigns/__init__.py", tags=("campaign", "provenance", "system_spec")),
+        ),
+    )
+
+    tracker_group = CatalogGroup(
+        name="tracker",
+        summary="Passive durable run evidence; it records engine facts and never calls system numerics.",
+        common_inputs={"receipt": "Declared metric semantics and source references.", "run_dir": "One owned durable run directory."},
+        common_returns={"type": "RunJournal, reader records, or checkpoint data"},
+        workflow=("Create one RunJournal per run.", "Attach JournalObserver to a supported optimizer.", "Read receipt/timeline/terminal through the standalone reader APIs."),
+        items=(
+            _make_item("RunJournal", "tracker", "writer", "Append-only receipt, timeline, checkpoint, live, and terminal writer.", module="optimizer/tracker/journal.py", tags=("tracker", "journal", "durable")),
+            _make_item("JournalObserver", "tracker", "observer", "Passive bridge from already-computed core facts to a RunJournal.", module="optimizer/tracker/bridge.py", tags=("tracker", "observer", "passive")),
+            _make_item("CheckpointPolicy", "tracker", "policy", "Bound durable control artifacts while retaining every scalar iteration record.", module="optimizer/tracker/bridge.py", tags=("tracker", "checkpoint", "retention")),
+            _make_item("read_timeline", "tracker", "reader", "Validate and read append-only tracker events without optimizer imports.", module="optimizer/tracker/reader.py", tags=("tracker", "reader", "read_only")),
+            _make_item("load_checkpoint", "tracker", "reader", "Load a SHA-256 verified control artifact without a system object.", module="optimizer/tracker/artifacts.py", tags=("tracker", "checkpoint", "replay")),
+        ),
+    )
+
+    visualization_group = CatalogGroup(
+        name="visualization",
+        summary="Render explicit system-owned plot data; visualization never invents a trajectory.",
+        common_inputs={"data": "PlotData returned by a system plot_data capability."},
+        common_returns={"type": "matplotlib figure/axes or saved image path"},
+        workflow=("Request system-owned plot data explicitly.", "Validate/coerce the data.", "Render or save without rerunning the system."),
+        items=(
+            _make_item("PlotData", "visualization", "data_object", "Named layers and metadata for one explicit visualization product.", module="optimizer/visualization/models.py", tags=("visualization", "data")),
+            _make_item("plot_bloch", "visualization", "renderer", "Render validated Bloch layers without calling the system.", module="optimizer/visualization/bloch.py", tags=("visualization", "bloch", "renderer")),
+            _make_item("save_figure", "visualization", "helper", "Save a renderer-produced figure to an explicit path.", module="optimizer/visualization/render.py", tags=("visualization", "export")),
+        ),
+    )
+
+    system_group = CatalogGroup(
+        name="system_olgs",
+        summary="Mandatory static system semantics and capability-gated numerical hooks owned by each problem.",
+        common_inputs={"system": "Problem-owned OLGS system object."},
+        common_returns={"type": "validated system specification, controls, or capability result"},
+        workflow=("Declare system_spec and control_spec.", "Expose evaluate/gradient/with_secondary.", "Add optional capabilities only when the system owns their meaning."),
+        items=(
+            _make_item("get_system_spec", "system_olgs", "helper", "Return and validate the required static system semantic declaration.", module="optimizer/system_olgs/contract.py", tags=("system", "system_spec", "static")),
+            _make_item("require_system", "system_olgs", "validator", "Validate the required OLGS contract before an optimizer starts.", module="optimizer/system_olgs/contract.py", tags=("system", "contract")),
+            _make_item("with_secondary", "system_olgs", "helper", "Request a system-owned parameter-updated copy for explicit continuation.", module="optimizer/system_olgs/contract.py", tags=("system", "continuation")),
+            _make_item("optional_control_bounds", "system_olgs", "capability", "Read optional system-declared elementwise bounds.", module="optimizer/system_olgs/validation.py", tags=("system", "bounds", "capability")),
+        ),
+    )
+
+    reader_group = CatalogGroup(
+        name="optimizer_log",
+        summary="Standalone, read-only tracker reader package; it is not yet a portal UI or command-line application.",
+        common_inputs={"run_dir": "Existing tracker run directory."},
+        common_returns={"type": "validated receipt, records, live state, or terminal state"},
+        workflow=("Locate a known run directory.", "Read or follow its timeline.", "Build user interfaces only above these read-only APIs."),
+        items=(
+            _make_item("read_timeline", "optimizer_log", "reader", "Read validated tracker events without importing optimizer numerics.", module="optimizer_log/reader.py", tags=("reader", "tracker", "read_only")),
+            _make_item("follow_timeline", "optimizer_log", "reader", "Incrementally follow appended complete JSONL events.", module="optimizer_log/reader.py", tags=("reader", "tracker", "live")),
+            _make_item("inspect_writer", "optimizer_log", "reader", "Inspect writer ownership/liveness without taking ownership.", module="optimizer_log/reader.py", tags=("reader", "tracker", "liveness")),
+        ),
+    )
+
     return {
         "optimizers": optimizers_group,
         "guesses": guesses_group,
@@ -1600,6 +1763,11 @@ def _build_groups() -> dict[str, CatalogGroup]:
         "schedules": schedules_group,
         "base": base_group,
         "core": core_group,
+        "campaigns": campaigns_group,
+        "tracker": tracker_group,
+        "visualization": visualization_group,
+        "system_olgs": system_group,
+        "optimizer_log": reader_group,
     }
 
 
@@ -1844,6 +2012,11 @@ utils = CatalogGroupView("utils")
 schedules = CatalogGroupView("schedules")
 base = CatalogGroupView("base")
 core = CatalogGroupView("core")
+campaigns = CatalogGroupView("campaigns")
+tracker = CatalogGroupView("tracker")
+visualization = CatalogGroupView("visualization")
+system_olgs = CatalogGroupView("system_olgs")
+optimizer_log = CatalogGroupView("optimizer_log")
 
 
 __all__ = [
@@ -1854,6 +2027,7 @@ __all__ = [
     "attach_namespace_helpers",
     "attach_root_helpers",
     "base",
+    "campaigns",
     "core",
     "group",
     "groups",
@@ -1861,8 +2035,12 @@ __all__ = [
     "info",
     "list",
     "optimizers",
+    "optimizer_log",
     "path",
     "schedules",
     "search",
+    "system_olgs",
+    "tracker",
     "utils",
+    "visualization",
 ]

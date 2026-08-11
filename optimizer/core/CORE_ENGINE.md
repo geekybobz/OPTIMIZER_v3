@@ -97,23 +97,7 @@ See [Core Acceptance and Guards](CORE_ACCEPTANCE_GUARDS.md).
 ```text
 trace             existing Trace to append to
 create_trace      create a Trace when none was passed, default True
-blackbox          BlackBoxRun, str, bool, or None
-blackbox_policy   policy used when the engine creates the run
 ```
-
-The `blackbox` argument is deliberately permissive:
-
-```text
-BlackBoxRun   append to that run; the caller keeps ownership and closes it
-str           treated as a run target and opened by the engine
-bool          True enables a default run, False disables
-None          no blackbox recording
-```
-
-When the engine creates the run it also closes it at the end of the chunk.  When the
-caller passes a `BlackBoxRun`, the engine never closes it.
-
-See [Logs Hub](../logs/LOGS_HUB.md) and [Blackbox Hub](../blackbox/BLACKBOX_HUB.md).
 
 ## Checkpoints
 
@@ -151,13 +135,11 @@ either a mapping or an object with attributes.  It never requires a params class
 ## What Gets Recorded
 
 ```text
-trace       iteration records, chunk records, checkpoints
-blackbox    the same, plus previous controls, proposal controls,
-            gradient, and trial metrics
+trace       iteration records, chunk records, and checkpoints
 ```
 
-The blackbox payload is richer because it is the durable numeric ledger; the trace is
-the in-memory view.  Either can be absent, and the loop behaves identically.
+Trace is the in-memory technical view. A future durable tracker will receive explicit
+evidence and decisions through its own passive boundary.
 
 ## Related Notes
 

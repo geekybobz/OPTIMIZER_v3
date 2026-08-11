@@ -1,4 +1,4 @@
-"""Public API for OPTIMIZER v3.
+"""Public API for OPTIMIZER v4.
 
 Why this file exists
 --------------------
@@ -36,10 +36,10 @@ from __future__ import annotations
 
 from typing import Any, Callable, Iterable
 
-from optimizer import blackbox, catalog, core, guesses, optimizers, schedules, tracker, utils
-from optimizer.blackbox import BlackBoxPolicy, BlackBoxRun
+from optimizer import campaigns, catalog, core, guesses, optimizers, schedules, tracker, utils, visualization
 from optimizer.catalog import base
 from optimizer.controls import ControlSpec, Controls
+from optimizer.continuation import ContinuationResult, ContinuationStage, StageGate, StageResult
 from optimizer.core import (
     AcceptanceDecision,
     MetricGuard,
@@ -57,29 +57,53 @@ from optimizer.result import Evaluation, OptimizerResult
 from optimizer.schedules import AdaptiveStepSchedule, ConstantSchedule
 from optimizer.state import RunState, WarmStartState
 from optimizer.system_olgs import (
+    ControlBounds,
     OLGS,
     OLGSystem,
     OptimizerSystem,
     SystemProbe,
+    SupportsBounds,
+    SupportsControlTransfer,
+    SupportsEqualityConstraints,
+    SupportsHVP,
+    SupportsPlotData,
+    SupportsProximalObjective,
+    SupportsValueAndGradient,
     TRACKING_SPEC_SCHEMA,
+    SYSTEM_SPEC_SCHEMA,
     TrackingSpec,
+    ValueGradient,
+    basic_system_spec,
     contract_info,
     describe_system,
     evaluate_system,
     finite_difference_hessian,
     finite_difference_hvp,
     get_tracking_spec,
+    get_system_spec,
     gradient_system,
     optional_hessian,
     optional_hvp,
     optional_jacobian,
+    optional_plot_data,
+    optional_control_bounds,
+    optional_control_transfer,
+    optional_prox,
     optional_residuals,
+    optional_smooth_gradient,
     probe_system,
     require_system,
     validate_controls_for_system,
     validate_metrics,
+    validate_system_spec,
+    metric_spec,
+    value_and_gradient_system,
     with_secondary,
 )
+
+
+__version__ = "4.0.0b1"
+from optimizer.visualization import PlotData, PlotLayer
 from optimizer.utils.repairs import RepairResult
 
 
@@ -116,6 +140,21 @@ def gradient(system: Any, controls: Controls, *, use_cache: bool = True) -> Cont
     return library.gradient(system, controls, use_cache=use_cache)
 
 
+def value_and_gradient(
+    system: Any,
+    controls: Controls,
+    *,
+    use_cache: bool = True,
+) -> tuple[Evaluation, Controls]:
+    return library.value_and_gradient(system, controls, use_cache=use_cache)
+
+
+def plot_data(system: Any, controls: Controls, *, kind: str, **options: Any) -> PlotData:
+    """Return one explicit system-owned visualization data product."""
+
+    return library.plot_data(system, controls, kind=kind, **options)
+
+
 def run_chunk(
     system: Any,
     controls: Controls | None = None,
@@ -150,26 +189,6 @@ def parallel_map(
     config: ParallelConfig | None = None,
 ) -> list[Any]:
     return library.parallel_map(function, items, config=config)
-
-
-def blackbox_start(*args: Any, **kwargs: Any) -> BlackBoxRun:
-    return library.blackbox_start(*args, **kwargs)
-
-
-def blackbox_analyze(*args: Any, **kwargs: Any) -> dict[str, Any]:
-    return library.blackbox_analyze(*args, **kwargs)
-
-
-def diagnostics(*args: Any, **kwargs: Any) -> dict[str, Any]:
-    return library.diagnostics(*args, **kwargs)
-
-
-def blackbox_reset(*args: Any, **kwargs: Any) -> dict[str, Any]:
-    return library.blackbox_reset(*args, **kwargs)
-
-
-def blackbox_prune(*args: Any, **kwargs: Any) -> dict[str, Any]:
-    return library.blackbox_prune(*args, **kwargs)
 
 
 def context(system: Any, *, trace: Trace | str | None = None, **defaults: Any) -> OptimizerContext:
@@ -235,6 +254,32 @@ def ncg(*args: Any, **kwargs: Any) -> OptimizerResult:
 
 def cma_es(*args: Any, **kwargs: Any) -> OptimizerResult:
     return library.cma_es(*args, **kwargs)
+
+
+def projected_gradient(*args: Any, **kwargs: Any) -> OptimizerResult:
+    return library.projected_gradient(*args, **kwargs)
+
+
+def newton_cg(*args: Any, **kwargs: Any) -> OptimizerResult:
+    return library.newton_cg(*args, **kwargs)
+
+
+def trust_region(*args: Any, **kwargs: Any) -> OptimizerResult:
+    return library.trust_region(*args, **kwargs)
+
+
+def proximal_gradient(*args: Any, **kwargs: Any) -> OptimizerResult:
+    return library.proximal_gradient(*args, **kwargs)
+
+
+def continuation(
+    system: Any,
+    controls: Controls,
+    *,
+    stages: Iterable[ContinuationStage | dict[str, Any]],
+    **kwargs: Any,
+) -> ContinuationResult:
+    return library.continuation(system, controls, stages=stages, **kwargs)
 
 
 def metric_report(system: Any, controls: Controls) -> dict[str, Any]:
@@ -360,7 +405,8 @@ def _root_info_payload() -> dict[str, Any]:
             paths[path_name] = path_info
 
     return {
-        "name": "OPTIMIZER v3",
+        "name": "OPTIMIZER v4",
+        "version": __version__,
         "summary": "Namespace-first optimization toolbox for system-defined control problems.",
         "start_here": [
             "opt.info(h=True)",
@@ -440,12 +486,13 @@ catalog.attach_root_helpers(globals())
 __all__ = [
     "AcceptanceDecision",
     "AdaptiveStepSchedule",
-    "BlackBoxPolicy",
-    "BlackBoxRun",
     "Checkpoint",
     "ChunkRecord",
     "ControlSpec",
+    "ControlBounds",
     "Controls",
+    "ContinuationResult",
+    "ContinuationStage",
     "Evaluation",
     "EventRecord",
     "IterationRecord",
@@ -458,6 +505,8 @@ __all__ = [
     "OptimizerResult",
     "OptimizerSystem",
     "ParallelConfig",
+    "PlotData",
+    "PlotLayer",
     "RepairResult",
     "RunState",
     "StepContext",
@@ -465,24 +514,33 @@ __all__ = [
     "StoppingConfig",
     "SystemEvaluator",
     "SystemProbe",
+    "SupportsBounds",
+    "SupportsControlTransfer",
+    "SupportsEqualityConstraints",
+    "SupportsHVP",
+    "SupportsPlotData",
+    "SupportsProximalObjective",
+    "SupportsValueAndGradient",
     "TRACKING_SPEC_SCHEMA",
+    "SYSTEM_SPEC_SCHEMA",
     "TrackingSpec",
+    "StageGate",
+    "StageResult",
     "Trace",
     "WarmStartState",
+    "ValueGradient",
     "adagrad",
     "adam",
     "adaptive_step_schedule",
     "base",
+    "basic_system_spec",
     "bind",
-    "blackbox",
-    "blackbox_analyze",
-    "blackbox_prune",
-    "blackbox_reset",
-    "blackbox_start",
+    "campaigns",
     "cma_es",
     "constant",
     "constant_guess",
     "constant_schedule",
+    "continuation",
     "context",
     "context_info",
     "catalog",
@@ -494,7 +552,6 @@ __all__ = [
     "cosine_guess",
     "diagnostic_report",
     "describe_system",
-    "diagnostics",
     "evaluate",
     "evaluate_system",
     "finite_difference_hessian",
@@ -506,7 +563,10 @@ __all__ = [
     "geometry_probe",
     "gradient",
     "gradient_system",
+    "value_and_gradient",
+    "value_and_gradient_system",
     "get_tracking_spec",
+    "get_system_spec",
     "guesses",
     "info",
     "library",
@@ -515,21 +575,31 @@ __all__ = [
     "list",
     "metric_guard",
     "metric_report",
+    "metric_spec",
     "methods",
     "mix_guess",
     "momentum",
+    "newton_cg",
     "ncg",
     "nonlinear_cg",
     "nullspace_basis",
     "optimizers",
     "optional_jacobian",
+    "optional_plot_data",
+    "optional_control_bounds",
+    "optional_control_transfer",
     "optional_hessian",
     "optional_hvp",
+    "optional_prox",
     "optional_residuals",
+    "optional_smooth_gradient",
     "parallel_map",
+    "plot_data",
     "path",
     "perturb_guess",
     "project_gradient",
+    "projected_gradient",
+    "proximal_gradient",
     "probe_system",
     "ramp_guess",
     "random_fourier_guess",
@@ -547,11 +617,14 @@ __all__ = [
     "smoothness_report",
     "system_info",
     "trace",
+    "trust_region",
     "tracker",
     "util",
     "utils",
+    "visualization",
     "validate_controls_for_system",
     "validate_metrics",
+    "validate_system_spec",
     "verify_gradient",
     "verify_jacobian",
     "warmstart",

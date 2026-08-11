@@ -10,7 +10,7 @@ tags:
 
 # Guess Documentation Hub
 
-This folder contains initial-control guess generators for OPTIMIZER v3.
+This folder contains initial-control guess generators for OPTIMIZER v4.
 
 The goal is compact, traversable documentation: start here, then open only the
 method family or common API note needed for the current task.

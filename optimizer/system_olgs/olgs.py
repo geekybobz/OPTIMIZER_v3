@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from optimizer.controls import ControlSpec, Controls
-from optimizer.system_olgs.contract import get_tracking_spec, probe_system
+from optimizer.system_olgs.contract import get_system_spec, get_tracking_spec, probe_system
 from optimizer.system_olgs.validation import validate_controls_for_system
 
 
@@ -16,6 +16,10 @@ class OLGS(ABC):
     Subclassing is recommended for new systems, but not required for compatibility.
     Existing systems can satisfy the same contract structurally.
     """
+
+    @abstractmethod
+    def system_spec(self) -> dict[str, Any]:
+        """Return the complete static system specification."""
 
     @abstractmethod
     def control_spec(self) -> ControlSpec:
@@ -74,17 +78,18 @@ class OLGS(ABC):
                 "available": tracking_spec is not None,
                 "spec": tracking_spec,
             },
+            "system_spec": get_system_spec(self),
         }
 
     def cache_reset(self) -> None:
-        """Placeholder hook for future logging/blackbox cache integration."""
+        """Clear implementation-owned reusable numerical state."""
 
         for name in ("_latest_controls", "_latest_metrics", "_latest_state"):
             if hasattr(self, name):
                 delattr(self, name)
 
     def cache_status(self) -> dict[str, Any]:
-        """Placeholder cache status until logging/blackbox ownership is redesigned."""
+        """Report implementation-owned reusable numerical state."""
 
         def has_value(name: str) -> bool:
             value = getattr(self, name, None)

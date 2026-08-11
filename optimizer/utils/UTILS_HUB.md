@@ -12,7 +12,7 @@ tags:
 # Utils Documentation Hub
 
 This folder contains diagnostics, derivative checks, residual geometry, repair, and
-control-shape inspection tools for OPTIMIZER v3.
+control-shape inspection tools for OPTIMIZER v4.
 
 The goal is compact, traversable documentation: start here, then open the category
 note needed for the current debugging or analysis task.

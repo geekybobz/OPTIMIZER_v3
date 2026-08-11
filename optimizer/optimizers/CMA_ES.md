@@ -71,8 +71,6 @@ accept_mode
 accept_tolerance
 trace
 create_trace
-blackbox
-blackbox_policy
 stage
 use_cache
 ```

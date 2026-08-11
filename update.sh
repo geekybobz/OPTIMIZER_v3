@@ -6,8 +6,8 @@ set -euo pipefail
 # and diverged branches stop with an explanation instead of overwriting local work.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REMOTE="${OPTIMIZER_V3_REMOTE:-origin}"
-BRANCH="${OPTIMIZER_V3_BRANCH:-}"
+REMOTE="${OPTIMIZER_V4_REMOTE:-origin}"
+BRANCH="${OPTIMIZER_V4_BRANCH:-}"
 CHECK_ONLY=0
 ALLOW_DIRTY=0
 RUN_TESTS=0

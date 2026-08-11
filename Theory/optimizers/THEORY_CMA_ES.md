@@ -127,7 +127,7 @@ all standard CMA-ES control parameters
 research-grade restart schemes
 ```
 
-It is intended as a practical derivative-free search option inside OPTIMIZER v3.
+It is intended as a practical derivative-free search option inside OPTIMIZER v4.
 
 ## Practical Use
 

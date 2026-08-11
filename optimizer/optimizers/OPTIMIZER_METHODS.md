@@ -25,6 +25,10 @@ This is the compact lookup table for implemented optimizer methods.
 | `nonlinear_cg` | [nonlinear_cg.py](nonlinear_cg.py) | `evaluate`, `gradient` | `fletcher_reeves`, `polak_ribiere`, `polak_ribiere_plus`, `hestenes_stiefel` | low-memory deterministic runs |
 | `ncg` | [nonlinear_cg.py](nonlinear_cg.py) | `evaluate`, `gradient` | alias | short alias for `nonlinear_cg` |
 | `cma_es` | [cma_es.py](cma_es.py) | `evaluate` | `diagonal`, `isotropic` | derivative-free rough global search |
+| `projected_gradient` | [projected.py](projected.py) | `evaluate`, `gradient`, `residuals`, `jacobian`; optional bounds | none | hard equality/bound-constrained optimization |
+| `newton_cg` | [newton_cg.py](newton_cg.py) | `evaluate`, `gradient`, `hvp` | none | matrix-free second-order steps |
+| `trust_region` | [trust_region.py](trust_region.py) | `evaluate`, `gradient`, `hvp` | Steihaug CG | guarded second-order minimization |
+| `proximal_gradient` | [proximal.py](proximal.py) | `evaluate`, `smooth_gradient`, `prox` | none | nonsmooth composite objectives |
 
 ## Suggested Workflow
 
@@ -35,6 +39,7 @@ guess controls
   -> verify gradient when needed
   -> adam or cma_es for rough search
   -> line_search, nonlinear_cg, or lbfgs for deterministic improvement
+  -> projected, Newton-CG, trust-region, or proximal methods when capabilities exist
   -> inspect result.metrics and result.trace
 ```
 
@@ -62,6 +67,10 @@ reuse Adam moment vectors because Adam private state is not L-BFGS private state
 - [L-BFGS](LBFGS.md)
 - [Nonlinear CG](NONLINEAR_CG.md)
 - [CMA-ES](CMA_ES.md)
+- [Projected source](projected.py)
+- [Newton-CG source](newton_cg.py)
+- [Trust-region source](trust_region.py)
+- [Proximal-gradient source](proximal.py)
 
 ## Related Notes
 

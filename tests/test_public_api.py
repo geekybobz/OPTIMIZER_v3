@@ -44,6 +44,33 @@ class _StaticInfoSpy:
         del updates
         return self
 
+    def system_spec(self):
+        return {
+            "schema_version": opt.SYSTEM_SPEC_SCHEMA,
+            "identity": {
+                "id": "static-info-spy",
+                "name": "Static information spy",
+                "system_type": "test",
+            },
+            "controls": {"keys": ["u"], "control_dim": 1},
+            "parameters": {},
+            "objective": {"metric_id": "cost", "direction": "minimize"},
+            "metrics": {
+                "cost": {
+                    "label": "Cost",
+                    "description": "Static test cost",
+                    "role": "objective",
+                    "shape": [],
+                    "required": True,
+                }
+            },
+            "derivatives": {
+                "gradient": {"target": "cost", "source": "analytical"},
+            },
+            "constraints": {},
+            "visualizations": {},
+        }
+
     def describe(self):
         return {"kind": "static-info-spy", "label": "test system"}
 
@@ -95,12 +122,16 @@ class PublicApiTests(unittest.TestCase):
         self.assertEqual(snapshot["schema_version"], "optimizer.context/v1")
         self.assertIn("context_info", snapshot["optimizer"]["methods"])
         self.assertIn("base", snapshot["optimizer"]["catalog"]["groups"])
-        self.assertFalse(snapshot["optimizer"]["core"]["has_live_tracking_argument"])
-        self.assertEqual(snapshot["tracker"]["run_schema_version"], "optimizer.tracker/v2")
+        self.assertTrue(snapshot["optimizer"]["core"]["has_live_tracking_argument"])
+        self.assertEqual(snapshot["tracker"]["run_schema_version"], "optimizer.tracker/v3")
         self.assertTrue(snapshot["system"]["probe"]["required_ok"])
         self.assertEqual(
             snapshot["system"]["tracking_spec"]["value"]["objective"]["metric_id"],
             "cost",
+        )
+        self.assertEqual(
+            snapshot["system"]["system_spec"]["value"]["identity"]["id"],
+            "static-info-spy",
         )
         self.assertEqual(system_snapshot["description"]["value"]["kind"], "static-info-spy")
         self.assertEqual(system.evaluate_calls, 0)

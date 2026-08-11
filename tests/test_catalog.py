@@ -8,7 +8,9 @@ import optimizer as opt
 class CatalogTests(unittest.TestCase):
     def test_root_discovery_helpers_support_import_optimizer_as_opt(self):
         overview = opt.info()
-        self.assertEqual(overview["name"], "OPTIMIZER v3")
+        self.assertEqual(overview["name"], "OPTIMIZER v4")
+        self.assertEqual(overview["version"], "4.0.0b1")
+        self.assertEqual(opt.__version__, "4.0.0b1")
         self.assertIn("groups", overview)
         self.assertIn("optimizers", overview["groups"])
         self.assertIn("beginner", overview["paths"])
@@ -41,6 +43,16 @@ class CatalogTests(unittest.TestCase):
         self.assertIn("common_inputs", listing)
         self.assertIn("common_returns", listing)
         self.assertTrue(any(item["name"] == "adam" for item in listing["items"]))
+
+    def test_all_public_role_surfaces_are_discoverable(self):
+        groups = opt.catalog.groups()
+        for name in ("campaigns", "tracker", "visualization", "system_olgs", "optimizer_log"):
+            self.assertIn(name, groups)
+            self.assertGreater(groups[name]["count"], 0)
+        self.assertGreater(opt.search("campaign")["count"], 0)
+        self.assertGreater(opt.search("tracker")["count"], 0)
+        self.assertGreater(opt.search("visualization")["count"], 0)
+        self.assertEqual(opt.catalog.campaigns.open.info()["id"], "campaigns.open")
 
     def test_human_list_contains_group_context_and_item_details(self):
         text = opt.optimizers.list(h=True)

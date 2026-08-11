@@ -5,6 +5,7 @@ import numpy as np
 
 from optimizer.controls import ControlSpec, Controls
 from optimizer.system_olgs import (
+    basic_system_spec,
     evaluate_system,
     gradient_system,
     optional_jacobian,
@@ -28,6 +29,13 @@ class DummySystem:
     def control_spec(self):
         return ControlSpec(keys=("u",), control_dim=self.params.control_dim, dt=0.1)
 
+    def system_spec(self):
+        return basic_system_spec(
+            "dummy-system",
+            control_spec=self.control_spec(),
+            metrics={"energy": {"label": "Energy", "role": "resource"}},
+        )
+
     def evaluate(self, controls):
         u = controls.channel("u")
         return {"J": self.params.weight * float(np.sum(u * u)), "energy": float(np.sum(u * u))}
@@ -47,6 +55,9 @@ class DummySystem:
 
 
 class MissingGradientSystem:
+    def system_spec(self):
+        return basic_system_spec("missing-gradient", control_spec=self.control_spec())
+
     def control_spec(self):
         return ControlSpec(keys=("u",), control_dim=2)
 

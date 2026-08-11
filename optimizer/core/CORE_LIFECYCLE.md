@@ -24,7 +24,7 @@ Before the loop runs:
 ```text
 validate that step is callable
 build the SystemEvaluator
-resolve trace and blackbox
+resolve trace
 choose starting controls
 validate controls against system.control_spec()
 evaluate starting controls
@@ -118,9 +118,7 @@ Every exit path converges on the same tail:
 ```text
 set state.stop_reason
 record the chunk record on the trace
-record the chunk record on the blackbox
 build OptimizerResult from state
-close the blackbox when the engine created it
 ```
 
 Because the tail is shared, a chunk that stopped at `maxiter`, `target`, `stall`, or

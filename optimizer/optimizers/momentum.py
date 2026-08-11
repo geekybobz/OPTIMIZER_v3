@@ -4,7 +4,7 @@ Why this file exists
 --------------------
 Plain gradient descent can waste iterations by zigzagging through narrow valleys.
 Momentum adds a velocity buffer so repeated gradient directions accumulate and
-oscillatory components are smoothed.  This gives v3 a low-memory optimizer that is
+oscillatory components are smoothed.  This gives v4 a low-memory optimizer that is
 still easy to inspect before moving to Adam's adaptive moment machinery.
 
 How it fits the architecture
@@ -42,6 +42,7 @@ from optimizer.optimizers._common import (
     coerce_warmstart,
     controls_from_flat_like,
     flat_state_array,
+    method_api_context,
     require_finite,
     require_probability_like,
     require_variant,
@@ -208,8 +209,8 @@ def momentum(
     max_step_norm: float | None = None,
     state: RunState | None = None,
     warmstart: Any | None = None,
-    accept_metric: str = "J",
-    accept_mode: str = "min",
+    accept_metric: str | None = None,
+    accept_mode: str | None = None,
     accept_tolerance: float = 0.0,
     **engine_kwargs: Any,
 ) -> OptimizerResult:
@@ -233,5 +234,5 @@ def momentum(
         accept_metric=accept_metric,
         accept_mode=accept_mode,
         accept_tolerance=accept_tolerance,
-        **engine_kwargs,
+        **method_api_context(engine_kwargs, method="momentum", config=config),
     )

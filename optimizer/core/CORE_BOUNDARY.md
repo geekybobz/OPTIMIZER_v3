@@ -37,7 +37,7 @@ initial controls            -> guesses
 step-size policy            -> schedules
 diagnostics and repair      -> utils
 map-style parallelism       -> utils
-record storage and analysis -> logs, blackbox
+in-memory run records       -> logs
 derivations and intuition   -> Theory
 ```
 
@@ -72,7 +72,7 @@ opt.core    run_chunk, StepContext, StepProposal, AcceptanceDecision,
             SystemEvaluator, StoppingConfig, metric_guard
 
 opt.base    Controls, ControlSpec, OptimizerResult, WarmStartState,
-            Trace, BlackBoxRun, evaluate, gradient, context
+            Trace, evaluate, gradient, context
 ```
 
 `base` covers the top-level spine that everything shares: the data objects and the
@@ -90,4 +90,3 @@ their own contents.
 - [Util Boundary](../utils/UTIL_BOUNDARY.md)
 - [OLGS Logging Boundary](../system_olgs/LOGGING_BOUNDARY.md)
 - [Logs Hub](../logs/LOGS_HUB.md)
-- [Blackbox Hub](../blackbox/BLACKBOX_HUB.md)

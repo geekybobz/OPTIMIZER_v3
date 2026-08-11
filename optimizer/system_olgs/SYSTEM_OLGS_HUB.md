@@ -13,7 +13,7 @@ tags:
 OLGS means **Open Loop Gradient System**.
 
 This folder contains the system-facing documentation and Python implementation for
-the OLGS class format.  OLGS is the system template format for OPTIMIZER v3: a
+the OLGS class format.  OLGS is the system template format for OPTIMIZER v4: a
 project system with analytical forward propagation, backward propagation, objective
 evaluation, and gradient.
 
@@ -28,6 +28,7 @@ The system provides:
 
 ```text
 control layout
+complete static system/metric/derivative specification
 primary physical parameters
 secondary objective/curriculum parameters
 forward propagation
@@ -35,6 +36,8 @@ backward propagation
 objective metrics
 analytical gradient
 optional residuals and higher derivatives
+optional combined value/gradient, bounds, HVP, and proximal operations
+optional explicit renderer-independent plot data
 ```
 
 The optimizer library provides:
@@ -45,7 +48,7 @@ optimizer loops
 guess generators
 diagnostics and repairs
 result objects
-logging and blackbox connection
+logging boundary
 ```
 
 ## Documentation Map
@@ -95,8 +98,8 @@ Reading guide:
 - Implementing a new system: [API Contract](CONTRACT.md)
 - Defining primary/secondary dicts: [System Configuration](PARAMS.md)
 - Calling from a notebook: [Computation Lifecycle](LIFECYCLE.md)
-- Building repair/Newton tools: [Derivative Hooks](DERIVATIVES.md)
-- Connecting logs or blackbox: [Logging Boundary](LOGGING_BOUNDARY.md)
+- Building projected/Newton/trust-region capability: [Derivative Hooks](DERIVATIVES.md)
+- Connecting a future tracker: [Logging Boundary](LOGGING_BOUNDARY.md)
 
 ## Target User Shape
 
@@ -119,20 +122,41 @@ Curriculum updates should use secondary params:
 system = system.with_secondary(residual_weight=0.2, energy_weight=1.0e-3)
 ```
 
+Advanced methods are conditional rather than mandatory:
+
+```python
+capabilities = opt.system_info(system)["capabilities"]
+if capabilities["second_order"]["newton_cg_ready"]:
+    result = opt.newton_cg(system, controls, maxiter=20)
+```
+
 ## Decisions Already Fixed
 
 ```text
 Name: OLGS
 Folder: optimizer/system_olgs
 Only one system class format for now
+Require system_spec as the single semantic discovery API
 Use primary and secondary params only
 No runtime parameter group for now
 Use row-wise Controls layout: (n_controls, control_dim)
 Require analytical gradient
 Allow optional higher derivatives
 Numerical fallback only for optional advanced derivatives
-Leave cache/logging as placeholders for later blackbox redesign
+Keep system-local cache optional; the tracker owns persistent run evidence
 ```
+
+## New-System Scaffold
+
+Create a small project system and initial contract test with:
+
+```bash
+python -m optimizer.system_olgs.scaffold my_problem/system.py --profile qubit
+```
+
+Use repeated `--capability` flags for `constraints`, `second-order`, or `proximal`.
+Optional method guidance remains commented until implemented so discovery never
+reports placeholder methods as working capabilities.
 
 ## Implementation Files
 
@@ -143,9 +167,11 @@ optimizer/system_olgs/
   __init__.py
   olgs.py
   contract.py
+  specs.py
   validation.py
   derivatives.py
   results.py
+  scaffold.py
   templates/
     OLGS_SYSTEM_BUILD_SKILL.md
 ```

@@ -42,6 +42,7 @@ from optimizer.optimizers._common import (
     coerce_warmstart,
     controls_from_flat_like,
     flat_state_array,
+    method_api_context,
     require_finite,
     require_probability_like,
 )
@@ -190,8 +191,8 @@ def adagrad(
     max_step_norm: float | None = None,
     state: RunState | None = None,
     warmstart: Any | None = None,
-    accept_metric: str = "J",
-    accept_mode: str = "min",
+    accept_metric: str | None = None,
+    accept_mode: str | None = None,
     accept_tolerance: float = 0.0,
     **engine_kwargs: Any,
 ) -> OptimizerResult:
@@ -216,7 +217,7 @@ def adagrad(
         accept_metric=accept_metric,
         accept_mode=accept_mode,
         accept_tolerance=accept_tolerance,
-        **engine_kwargs,
+        **method_api_context(engine_kwargs, method="adagrad", config=config),
     )
 
 
@@ -232,8 +233,8 @@ def rmsprop(
     max_step_norm: float | None = None,
     state: RunState | None = None,
     warmstart: Any | None = None,
-    accept_metric: str = "J",
-    accept_mode: str = "min",
+    accept_metric: str | None = None,
+    accept_mode: str | None = None,
     accept_tolerance: float = 0.0,
     **engine_kwargs: Any,
 ) -> OptimizerResult:
@@ -259,5 +260,5 @@ def rmsprop(
         accept_metric=accept_metric,
         accept_mode=accept_mode,
         accept_tolerance=accept_tolerance,
-        **engine_kwargs,
+        **method_api_context(engine_kwargs, method="rmsprop", config=config),
     )

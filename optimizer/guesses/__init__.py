@@ -1,4 +1,4 @@
-"""Initial guess generators for OPTIMIZER v3.
+"""Initial guess generators for OPTIMIZER v4.
 
 Why this package exists
 -----------------------

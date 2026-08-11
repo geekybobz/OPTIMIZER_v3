@@ -8,70 +8,70 @@
   "collapse-color-groups": false,
   "colorGroups": [
     {
-      "query": "path:README.md",
+      "query": "path:README.md -path:optimizer OR path:OPTIMIZER_STATUS_AND_ROADMAP.md OR path:OPTIMIZATION_TRACKER_HANDOFF.md OR path:OPTIMIZER_LOG_PORTAL_PLAN.md",
       "color": {
         "a": 1,
-        "rgb": 16766720
+        "rgb": 16765286
       }
     },
     {
-      "query": "path:optimizer/optimizers",
+      "query": "path:optimizer/tracker",
       "color": {
         "a": 1,
-        "rgb": 14701138
+        "rgb": 10250974
       }
     },
     {
-      "query": "path:optimizer/guesses",
+      "query": "path:optimizer_log",
       "color": {
         "a": 1,
-        "rgb": 5037610
-      }
-    },
-    {
-      "query": "path:optimizer/utils",
-      "color": {
-        "a": 1,
-        "rgb": 5486770
-      }
-    },
-    {
-      "query": "path:optimizer/system_olgs",
-      "color": {
-        "a": 1,
-        "rgb": 16755200
-      }
-    },
-    {
-      "query": "path:Theory",
-      "color": {
-        "a": 1,
-        "rgb": 11229951
+        "rgb": 3128538
       }
     },
     {
       "query": "path:optimizer/core",
       "color": {
         "a": 1,
-        "rgb": 4886754
+        "rgb": 3447003
       }
     },
     {
-      "query": "path:optimizer/schedules",
+      "query": "path:optimizer/system_olgs",
       "color": {
         "a": 1,
-        "rgb": 10066329
+        "rgb": 1752220
       }
     },
     {
-      "query": "path:optimizer/logs",
+      "query": "path:optimizer/optimizers",
       "color": {
         "a": 1,
-        "rgb": 10066329
+        "rgb": 15105570
       }
     },
     {
-      "query": "path:optimizer/blackbox",
+      "query": "path:optimizer/guesses",
+      "color": {
+        "a": 1,
+        "rgb": 10181046
+      }
+    },
+    {
+      "query": "path:optimizer/utils",
+      "color": {
+        "a": 1,
+        "rgb": 3066993
+      }
+    },
+    {
+      "query": "path:Theory",
+      "color": {
+        "a": 1,
+        "rgb": 15277667
+      }
+    },
+    {
+      "query": "path:optimizer/logs OR path:optimizer/schedules",
       "color": {
         "a": 1,
         "rgb": 10066329
@@ -81,7 +81,7 @@
       "query": "path:tests",
       "color": {
         "a": 1,
-        "rgb": 10066329
+        "rgb": 15158332
       }
     }
   ],

@@ -21,11 +21,22 @@ system-specific physics.
 Every OLGS system must provide:
 
 ```text
+system_spec()
 control_spec()
 evaluate(controls)
 gradient(controls)
 with_secondary(**updates)
 ```
+
+### `system_spec()`
+
+Returns the complete static `optimizer.system-spec/v1` declaration. It exposes
+system identity, controls, parameters, objective direction, every optimizer-facing
+metric, analytical derivative provenance, constraints, and declared explicit data
+products. It must not propagate dynamics or evaluate controls.
+
+`opt.system_info(system)` combines this semantic declaration with structurally
+detected hook availability, so users and tools need one discovery call.
 
 ### `control_spec()`
 
@@ -58,6 +69,9 @@ Returns a metrics dict with mandatory finite scalar:
 ```
 
 Other metric names are system-defined.
+
+Every returned key must also be declared under `system_spec()["metrics"]`, including
+its label, meaning, role, dtype, shape, unit, and required/optional status.
 
 ### `gradient(controls)`
 
@@ -132,23 +146,45 @@ objective terms
 available optional hooks
 ```
 
+This is a legacy convenience view. `system_spec()` is the required canonical
+machine-readable source.
+
 ## Optional Methods
 
-Advanced systems may provide:
+The required five-method core does not grow when advanced numerical methods are
+added. Advanced systems opt into structural capability bundles:
 
 ```text
+value_and_gradient(controls)
 residuals(controls, name="hard")
 jacobian(controls, name="hard")
+control_bounds()
 hessian(controls)
 hvp(controls, vector)
+smooth_gradient(controls)
+prox(controls, step_size)
 second_derivative(controls, ...)
-residual_schema()
-metric_schema()
+plot_data(controls, kind=..., **options)
 cache_reset()
 cache_status()
 ```
 
 Optional methods should be discoverable and validated by OLGS helpers.
+Metric and constraint semantics belong in the mandatory `system_spec()` rather
+than separate schema hooks.
+
+| Capability | Required hooks | Consumer |
+|---|---|---|
+| Combined value/gradient | `value_and_gradient` | All ordinary gradient methods may reuse it at the initial controls |
+| Equality constraints | `residuals`, `jacobian` | `projected_gradient` |
+| Bounds | `control_bounds` | `projected_gradient` |
+| Second order | `hvp`; dense `hessian` remains optional | `newton_cg`, `trust_region` |
+| Composite/proximal | `smooth_gradient`, `prox` | `proximal_gradient` |
+| Explicit visualization data | `plot_data` | `opt.plot_data`; never automatic tracking |
+
+`probe_system()` and `system_info()` report these bundles. A method rejects a
+missing bundle before beginning numerical work. Simple Adam systems do not need
+constraint, HVP, or proximal stubs.
 
 ## Related Notes
 

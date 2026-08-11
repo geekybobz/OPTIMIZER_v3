@@ -1,0 +1,83 @@
+"""OLGS project system scaffold.
+
+Replace every TODO with the equations and conventions of the target problem.
+Do not expose optional hooks until their analytical implementation is complete.
+"""
+
+from __future__ import annotations
+
+from typing import Any, Mapping
+
+from optimizer import ControlSpec, Controls, basic_system_spec
+
+
+class __CLASS_NAME__:
+    """__SYSTEM_NAME__."""
+
+    def __init__(
+        self,
+        primary: Mapping[str, Any] | None = None,
+        secondary: Mapping[str, Any] | None = None,
+    ) -> None:
+        primary_defaults = {
+            "control_keys": ("u",),
+            "control_dim": 101,
+            "dt": 0.01,
+        }
+        secondary_defaults: dict[str, Any] = {}
+        self.primary = {**primary_defaults, **dict(primary or {})}
+        self.secondary = {**secondary_defaults, **dict(secondary or {})}
+        # TODO: reject unknown keys and validate physical/grid consistency.
+
+    def system_spec(self) -> dict[str, Any]:
+        return basic_system_spec(
+            "__SYSTEM_ID__",
+            name="__SYSTEM_NAME__",
+            system_type="__SYSTEM_TYPE__",
+            description="TODO: describe the physical system and optimization purpose.",
+            control_spec=self.control_spec(),
+            parameters={
+                "primary": dict(self.primary),
+                "secondary": dict(self.secondary),
+            },
+            metrics={
+                # TODO: declare every key returned by evaluate(...).
+            },
+            visualizations=__VISUALIZATIONS__,
+        )
+
+    def control_spec(self) -> ControlSpec:
+        return ControlSpec(
+            keys=tuple(self.primary["control_keys"]),
+            control_dim=int(self.primary["control_dim"]),
+            dt=float(self.primary["dt"]),
+        )
+
+    def evaluate(self, controls: Controls) -> dict[str, Any]:
+        """Return declared metrics including finite scalar J."""
+
+        raise NotImplementedError("TODO: implement the system-owned analytical objective.")
+
+    def gradient(self, controls: Controls) -> Controls:
+        """Return analytical dJ/du in the input control layout."""
+
+        raise NotImplementedError("TODO: implement the analytical gradient; do not use a silent fallback.")
+
+    def with_secondary(self, **updates: Any) -> "__CLASS_NAME__":
+        secondary = dict(self.secondary)
+        secondary.update(updates)
+        return type(self)(primary=self.primary, secondary=secondary)
+
+__CAPABILITY_GUIDANCE__
+
+
+def system(config: Mapping[str, Any] | None = None, **updates: Any) -> __CLASS_NAME__:
+    """Construct the project system from dict-first configuration."""
+
+    payload = dict(config or {})
+    primary = payload.pop("primary", None)
+    secondary = payload.pop("secondary", None)
+    if payload:
+        raise KeyError(f"Unknown top-level configuration keys: {sorted(payload)}")
+    secondary_payload = {**dict(secondary or {}), **updates}
+    return __CLASS_NAME__(primary=primary, secondary=secondary_payload)
