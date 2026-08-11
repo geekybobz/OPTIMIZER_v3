@@ -19,6 +19,8 @@ from optimizer.controls import ControlSpec, Controls
 
 
 Metrics = Mapping[str, Any]
+TrackingSpec = Mapping[str, Any]
+TRACKING_SPEC_SCHEMA = "optimizer.tracking-spec/v1"
 
 
 @runtime_checkable
@@ -53,6 +55,7 @@ class SystemProbe:
     has_back_prop: bool
     has_metrics: bool
     has_describe: bool
+    has_tracking_spec: bool
     has_residuals: bool
     has_jacobian: bool
     has_hessian: bool
@@ -90,6 +93,7 @@ class SystemProbe:
             "has_back_prop": self.has_back_prop,
             "has_metrics": self.has_metrics,
             "has_describe": self.has_describe,
+            "has_tracking_spec": self.has_tracking_spec,
             "has_residuals": self.has_residuals,
             "has_jacobian": self.has_jacobian,
             "has_hessian": self.has_hessian,
@@ -114,6 +118,7 @@ def probe_system(system: Any) -> SystemProbe:
         has_back_prop=callable(getattr(system, "back_prop", None)),
         has_metrics=callable(getattr(system, "metrics", None)),
         has_describe=callable(getattr(system, "describe", None)),
+        has_tracking_spec=callable(getattr(system, "tracking_spec", None)),
         has_residuals=callable(getattr(system, "residuals", None)),
         has_jacobian=callable(getattr(system, "jacobian", None)),
         has_hessian=callable(getattr(system, "hessian", None)),
@@ -123,6 +128,104 @@ def probe_system(system: Any) -> SystemProbe:
         has_cache_reset=callable(getattr(system, "cache_reset", None)),
         has_cache_status=callable(getattr(system, "cache_status", None)),
     )
+
+
+def get_tracking_spec(system: Any) -> dict[str, Any] | None:
+    """Return optional static tracking metadata declared by a system.
+
+    tracking_spec() is deliberately not part of the required OLGS protocol. When
+    present, it must return a mapping of system-chosen metric identifiers and
+    metadata. It must not evaluate controls or trigger numerical work.
+    """
+
+    hook = getattr(system, "tracking_spec", None)
+    if not callable(hook):
+        return None
+    value = hook()
+    if not isinstance(value, Mapping):
+        raise TypeError("System tracking_spec() must return a mapping.")
+    payload = dict(value)
+    if "objective" in payload and not isinstance(payload["objective"], Mapping):
+        raise TypeError("System tracking_spec()['objective'] must be a mapping when provided.")
+    if "metrics" in payload and not isinstance(payload["metrics"], Mapping):
+        raise TypeError("System tracking_spec()['metrics'] must be a mapping when provided.")
+    return payload
+
+
+def _static_mapping_hook(system: Any, name: str) -> dict[str, Any]:
+    """Capture an optional static hook without turning an invalid hook into I/O."""
+
+    hook = getattr(system, name, None)
+    if not callable(hook):
+        return {"available": False}
+    try:
+        value = get_tracking_spec(system) if name == "tracking_spec" else hook()
+        if value is not None and not isinstance(value, Mapping):
+            raise TypeError(f"System {name}() must return a mapping.")
+    except Exception as exc:
+        return {
+            "available": True,
+            "valid": False,
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+    return {
+        "available": True,
+        "valid": True,
+        "value": None if value is None else dict(value),
+    }
+
+
+def contract_info() -> dict[str, Any]:
+    """Return the generic OLGS contract without inspecting a concrete system."""
+
+    return {
+        "schema_version": "optimizer.system-contract/v1",
+        "required_hooks": [
+            "control_spec",
+            "evaluate",
+            "gradient",
+            "with_secondary",
+        ],
+        "optional_static_hooks": {
+            "describe": "Returns compact system metadata without numerical work.",
+            "tracking_spec": (
+                f"Returns optional metric metadata with schema {TRACKING_SPEC_SCHEMA}; "
+                "it must not evaluate controls."
+            ),
+        },
+        "optional_numerical_hooks": [
+            "forward_prop",
+            "back_prop",
+            "metrics",
+            "residuals",
+            "jacobian",
+            "hessian",
+            "hvp",
+            "second_derivative",
+            "simulate",
+        ],
+        "tracking_spec_schema": TRACKING_SPEC_SCHEMA,
+    }
+
+
+def describe_system(system: Any) -> dict[str, Any]:
+    """Describe declared system capabilities without evaluating controls.
+
+    The optional hooks are called only because the caller explicitly requested
+    self-description. A bad optional hook is reported as invalid rather than
+    affecting the optimizer's required OLGS contract.
+    """
+
+    return {
+        "schema_version": "optimizer.system-info/v1",
+        "type": {
+            "module": type(system).__module__,
+            "qualname": type(system).__qualname__,
+        },
+        "probe": probe_system(system).to_dict(),
+        "description": _static_mapping_hook(system, "describe"),
+        "tracking_spec": _static_mapping_hook(system, "tracking_spec"),
+    }
 
 
 def get_secondary_update_hook(system: Any) -> Any:

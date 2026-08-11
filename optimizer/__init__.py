@@ -36,7 +36,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, Iterable
 
-from optimizer import blackbox, catalog, core, guesses, optimizers, schedules, utils
+from optimizer import blackbox, catalog, core, guesses, optimizers, schedules, tracker, utils
 from optimizer.blackbox import BlackBoxPolicy, BlackBoxRun
 from optimizer.catalog import base
 from optimizer.controls import ControlSpec, Controls
@@ -61,9 +61,14 @@ from optimizer.system_olgs import (
     OLGSystem,
     OptimizerSystem,
     SystemProbe,
+    TRACKING_SPEC_SCHEMA,
+    TrackingSpec,
+    contract_info,
+    describe_system,
     evaluate_system,
     finite_difference_hessian,
     finite_difference_hvp,
+    get_tracking_spec,
     gradient_system,
     optional_hessian,
     optional_hvp,
@@ -177,6 +182,18 @@ def bind(system: Any, *, trace: Trace | str | None = None, **defaults: Any) -> O
 
 def methods() -> dict[str, MethodInfo]:
     return library.methods()
+
+
+def system_info(system: Any) -> dict[str, Any]:
+    """Return declared system capabilities without evaluating controls."""
+
+    return library.system_info(system)
+
+
+def context_info(system: Any | None = None) -> dict[str, Any]:
+    """Return registered optimizer/tracker capabilities and optional system metadata."""
+
+    return library.context_info(system=system)
 
 
 # ----------------------------------------------------------------------
@@ -448,6 +465,8 @@ __all__ = [
     "StoppingConfig",
     "SystemEvaluator",
     "SystemProbe",
+    "TRACKING_SPEC_SCHEMA",
+    "TrackingSpec",
     "Trace",
     "WarmStartState",
     "adagrad",
@@ -465,13 +484,16 @@ __all__ = [
     "constant_guess",
     "constant_schedule",
     "context",
+    "context_info",
     "catalog",
     "control_spec",
     "control_spectrum",
+    "contract_info",
     "controls",
     "core",
     "cosine_guess",
     "diagnostic_report",
+    "describe_system",
     "diagnostics",
     "evaluate",
     "evaluate_system",
@@ -484,6 +506,7 @@ __all__ = [
     "geometry_probe",
     "gradient",
     "gradient_system",
+    "get_tracking_spec",
     "guesses",
     "info",
     "library",
@@ -522,7 +545,9 @@ __all__ = [
     "sinc_guess",
     "sine_guess",
     "smoothness_report",
+    "system_info",
     "trace",
+    "tracker",
     "util",
     "utils",
     "validate_controls_for_system",

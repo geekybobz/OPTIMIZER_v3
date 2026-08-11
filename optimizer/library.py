@@ -501,6 +501,20 @@ class OptimizerLibrary:
 
         return self.context(system, trace=trace, **defaults)
 
+    def system_info(self, system: Any) -> dict[str, Any]:
+        """Return declared system metadata without evaluating controls."""
+
+        from optimizer.system_olgs import describe_system
+
+        return describe_system(system)
+
+    def context_info(self, system: Any | None = None) -> dict[str, Any]:
+        """Return current registered library capabilities and optional system metadata."""
+
+        from optimizer.introspection import context_info
+
+        return context_info(self.methods(), system=system)
+
     # ------------------------------------------------------------------
     # Direct optimizer shortcuts
     # ------------------------------------------------------------------
@@ -722,6 +736,18 @@ class OptimizerLibrary:
             "parallel_map": MethodInfo("parallel_map", "implemented", "optimizer/utils/parallel.py", "Phase 5"),
             "context": MethodInfo("context", "implemented", "optimizer/library.py", "Phase 6"),
             "bind": MethodInfo("bind", "implemented", "optimizer/library.py", "Phase 6"),
+            "system_info": MethodInfo(
+                "system_info",
+                "implemented",
+                "optimizer/library.py",
+                "Phase 13",
+            ),
+            "context_info": MethodInfo(
+                "context_info",
+                "implemented",
+                "optimizer/introspection.py",
+                "Phase 13",
+            ),
             "adam": MethodInfo("adam", "implemented", "optimizer/optimizers/adam.py", "Phase 7"),
             "momentum": MethodInfo("momentum", "implemented", "optimizer/optimizers/momentum.py", "Phase 7"),
             "line_search": MethodInfo(

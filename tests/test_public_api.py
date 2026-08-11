@@ -20,6 +20,46 @@ def square(value):
     return value * value
 
 
+class _StaticInfoSpy:
+    """Full structural OLGS surface whose numerical hooks must remain untouched."""
+
+    def __init__(self) -> None:
+        self.evaluate_calls = 0
+        self.gradient_calls = 0
+
+    def control_spec(self):
+        raise AssertionError("context inspection must not call control_spec().")
+
+    def evaluate(self, *args, **kwargs):
+        del args, kwargs
+        self.evaluate_calls += 1
+        raise AssertionError("context inspection must not call evaluate().")
+
+    def gradient(self, *args, **kwargs):
+        del args, kwargs
+        self.gradient_calls += 1
+        raise AssertionError("context inspection must not call gradient().")
+
+    def with_secondary(self, **updates):
+        del updates
+        return self
+
+    def describe(self):
+        return {"kind": "static-info-spy", "label": "test system"}
+
+    def tracking_spec(self):
+        return {
+            "schema_version": opt.TRACKING_SPEC_SCHEMA,
+            "objective": {"metric_id": "cost", "direction": "minimize"},
+            "metrics": {
+                "cost": {
+                    "label": "Cost",
+                    "role": "objective",
+                }
+            },
+        }
+
+
 class PublicApiTests(unittest.TestCase):
     def test_import_optimizer_as_opt_exposes_direct_surface(self):
         self.assertTrue(callable(opt.run_chunk))
@@ -32,6 +72,9 @@ class PublicApiTests(unittest.TestCase):
         self.assertTrue(callable(opt.list))
         self.assertTrue(callable(opt.search))
         self.assertTrue(callable(opt.path))
+        self.assertTrue(callable(opt.context_info))
+        self.assertTrue(callable(opt.system_info))
+        self.assertTrue(callable(opt.tracker.info))
         self.assertIsInstance(opt.library, opt.OptimizerLibrary)
 
         methods = opt.methods()
@@ -40,6 +83,30 @@ class PublicApiTests(unittest.TestCase):
         self.assertEqual(methods["adam"].status, "implemented")
         self.assertEqual(methods["momentum"].status, "implemented")
         self.assertEqual(methods["line_search"].status, "implemented")
+        self.assertEqual(methods["context_info"].status, "implemented")
+        self.assertEqual(methods["system_info"].status, "implemented")
+
+    def test_runtime_context_and_system_info_are_passive_and_registered(self):
+        system = _StaticInfoSpy()
+
+        snapshot = opt.context_info(system)
+        system_snapshot = opt.system_info(system)
+
+        self.assertEqual(snapshot["schema_version"], "optimizer.context/v1")
+        self.assertIn("context_info", snapshot["optimizer"]["methods"])
+        self.assertIn("base", snapshot["optimizer"]["catalog"]["groups"])
+        self.assertFalse(snapshot["optimizer"]["core"]["has_live_tracking_argument"])
+        self.assertEqual(snapshot["tracker"]["run_schema_version"], "optimizer.tracker/v2")
+        self.assertTrue(snapshot["system"]["probe"]["required_ok"])
+        self.assertEqual(
+            snapshot["system"]["tracking_spec"]["value"]["objective"]["metric_id"],
+            "cost",
+        )
+        self.assertEqual(system_snapshot["description"]["value"]["kind"], "static-info-spy")
+        self.assertEqual(system.evaluate_calls, 0)
+        self.assertEqual(system.gradient_calls, 0)
+        self.assertEqual(opt.info("context_info")["id"], "base.context_info")
+        self.assertEqual(opt.info("system_info")["id"], "base.system_info")
 
     def test_public_evaluate_gradient_and_run_chunk_with_vector_fixture(self):
         system = QuadraticVectorSystem(N=17, residual_weight=0.25)

@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from optimizer.controls import ControlSpec, Controls
-from optimizer.system_olgs.contract import probe_system
+from optimizer.system_olgs.contract import get_tracking_spec, probe_system
 from optimizer.system_olgs.validation import validate_controls_for_system
 
 
@@ -54,6 +54,7 @@ class OLGS(ABC):
         """Return compact system information suitable for notebooks and logs."""
 
         params = {}
+        tracking_spec = get_tracking_spec(self)
         for name in ("primary", "secondary", "params"):
             value = getattr(self, name, None)
             if value is not None:
@@ -69,6 +70,10 @@ class OLGS(ABC):
             "control_spec": self.control_spec().to_dict(),
             "params": params,
             "hooks": probe_system(self).to_dict(),
+            "tracking": {
+                "available": tracking_spec is not None,
+                "spec": tracking_spec,
+            },
         }
 
     def cache_reset(self) -> None:
