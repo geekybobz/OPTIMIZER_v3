@@ -54,6 +54,33 @@ class SmallQuadratic:
         return SmallQuadratic(target=self.target, scale=updates.get("scale", self.scale))
 
 
+class MaximizingSmallQuadratic(SmallQuadratic):
+    """Exact negation of SmallQuadratic used for direction-symmetry coverage."""
+
+    def system_spec(self):
+        return opt.basic_system_spec(
+            "maximizing-small-quadratic",
+            control_spec=self.control_spec(),
+            objective_direction="maximize",
+            derivatives={"hvp": {"hook": "hvp", "source": "analytical"}},
+        )
+
+    def evaluate(self, controls):
+        self.evaluate_calls += 1
+        diff = controls.flatten(copy=False) - self.scale * self.target
+        return {"J": -0.5 * float(np.dot(diff, diff))}
+
+    def gradient(self, controls):
+        self.gradient_calls += 1
+        diff = controls.flatten(copy=False) - self.scale * self.target
+        return opt.Controls.from_flat(self.control_spec(), -diff, name="gradient")
+
+    def hvp(self, controls, vector):
+        del controls
+        self.hvp_calls += 1
+        return -vector.copy(name="hvp")
+
+
 class EqualityQuadratic:
     def control_spec(self):
         return opt.ControlSpec(("u",), 2)
@@ -253,6 +280,15 @@ class NumericalCapabilityTests(unittest.TestCase):
         self.assertEqual(trust.stop_reason, "gradient_converged")
         self.assertGreater(newton.trace.iteration_records[0].technical["counters"]["hvp"], 0)
         self.assertGreater(trust.trace.iteration_records[0].technical["counters"]["hvp"], 0)
+
+    def test_newton_cg_has_minimize_maximize_hvp_symmetry(self):
+        minimizing = SmallQuadratic()
+        maximizing = MaximizingSmallQuadratic()
+        min_result = opt.newton_cg(minimizing, opt.Controls.zeros(minimizing.control_spec()), maxiter=3)
+        max_result = opt.newton_cg(maximizing, opt.Controls.zeros(maximizing.control_spec()), maxiter=3)
+
+        np.testing.assert_allclose(min_result.controls.flatten(), max_result.controls.flatten(), atol=1.0e-12)
+        self.assertFalse(max_result.trace.iteration_records[0].technical["proposal"]["negative_curvature"])
 
     def test_proximal_gradient_uses_mapping_stationarity(self):
         system = L1Composite(weight=0.25)

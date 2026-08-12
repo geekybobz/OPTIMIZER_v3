@@ -89,6 +89,16 @@ class ControlsTests(unittest.TestCase):
             matrix[0, 0] = 9.0
         np.testing.assert_allclose(controls.as_matrix(), [[1.0, 2.0]])
 
+    def test_zero_copy_flatten_is_read_only(self):
+        controls = Controls.from_dict(ControlSpec(keys=("u",), control_dim=2), {"u": [1.0, 2.0]})
+
+        flat = controls.flatten(copy=False)
+
+        self.assertFalse(flat.flags.writeable)
+        with self.assertRaises(ValueError):
+            flat[0] = 9.0
+        np.testing.assert_allclose(controls.flatten(), [1.0, 2.0])
+
     def test_vectorized_arithmetic(self):
         spec = ControlSpec(keys=("uA", "uB"), control_dim=2)
         a = Controls.from_matrix(spec, [[1.0, 2.0], [3.0, 4.0]])

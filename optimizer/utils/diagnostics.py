@@ -41,6 +41,7 @@ from optimizer.system_olgs import (
     probe_system,
     validate_controls_for_system,
 )
+from optimizer.system_olgs.contract import get_system_spec
 from optimizer.utils.derivatives import get_jacobian
 from optimizer.utils.geometry import jacobian_geometry
 
@@ -88,7 +89,7 @@ def metric_report(system: Any, controls: Controls) -> dict[str, Any]:
     """Return a JSON-friendly report of current system metrics."""
 
     validate_controls_for_system(system, controls)
-    metrics = evaluate_system(system, controls)
+    metrics = evaluate_system(system, controls, system_spec=get_system_spec(system))
     return {
         "kind": "metric_report",
         "metrics": _metric_summary(metrics),
@@ -106,7 +107,7 @@ def diagnostic_report(
     """Return metrics plus control, residual, and optional gradient summaries."""
 
     validate_controls_for_system(system, controls)
-    metrics = evaluate_system(system, controls)
+    metrics = evaluate_system(system, controls, system_spec=get_system_spec(system))
     matrix = controls.as_matrix(copy=False)
     report: dict[str, Any] = {
         "kind": "diagnostic_report",

@@ -42,7 +42,12 @@ class NewtonCGConfig:
 def _hvp_flat(context: StepContext, vector: np.ndarray, damping: float) -> np.ndarray:
     vector_controls = controls_from_flat_like(context.state.controls, vector, name="newton_cg_vector")
     product = context.evaluator.hvp(context.state.controls, vector_controls)
-    return product.flatten(copy=False).astype(float, copy=False) + float(damping) * vector
+    native = product.flatten(copy=False).astype(float, copy=False)
+    # The engine exposes ``context.gradient`` in descent convention.  HVP hooks,
+    # however, are system-native curvature, so maximizing systems need the same
+    # sign conversion used by trust_region before CG inspects curvature.
+    descent = native if context.objective_direction == "minimize" else -native
+    return descent + float(damping) * vector
 
 
 def _newton_direction(context: StepContext, config: NewtonCGConfig) -> tuple[np.ndarray, dict[str, Any]]:

@@ -61,21 +61,21 @@ class StoppingConfig:
 
     maxiter: int
     target_value: float | None = None
-    target_metric: str = "J"
-    target_mode: str = "le"
+    target_metric: str | None = None
+    target_mode: str | None = None
     stall_patience: int | None = None
     stall_tolerance: float = 0.0
-    stall_metric: str = "J"
-    stall_mode: str = "min"
+    stall_metric: str | None = None
+    stall_mode: str | None = None
     check_finite: bool = True
 
     def __post_init__(self) -> None:
         maxiter = int(self.maxiter)
         if maxiter < 0:
             raise ValueError("maxiter must be >= 0.")
-        if self.target_mode not in {"le", "ge"}:
+        if self.target_mode is not None and self.target_mode not in {"le", "ge"}:
             raise ValueError("target_mode must be 'le' or 'ge'.")
-        if self.stall_mode not in {"min", "max"}:
+        if self.stall_mode is not None and self.stall_mode not in {"min", "max"}:
             raise ValueError("stall_mode must be 'min' or 'max'.")
         if self.stall_patience is not None and int(self.stall_patience) < 1:
             raise ValueError("stall_patience must be >= 1 when provided.")
@@ -91,6 +91,14 @@ class StoppingConfig:
             if not np.isfinite(target):
                 raise ValueError("target_value must be finite when provided.")
             object.__setattr__(self, "target_value", target)
+        if self.target_metric is not None:
+            object.__setattr__(self, "target_metric", str(self.target_metric))
+        if self.target_mode is not None:
+            object.__setattr__(self, "target_mode", str(self.target_mode))
+        if self.stall_metric is not None:
+            object.__setattr__(self, "stall_metric", str(self.stall_metric))
+        if self.stall_mode is not None:
+            object.__setattr__(self, "stall_mode", str(self.stall_mode))
 
 
 def _metric_scalar(metrics: Mapping[str, Any], key: str) -> float:
@@ -143,11 +151,24 @@ class StopTracker:
         *,
         initial_metrics: Mapping[str, Any] | None = None,
     ) -> None:
-        self.config = config
+        # Direct StopTracker users have no system contract to resolve against, so
+        # retain the legacy J/minimize defaults.  run_chunk always supplies a
+        # fully resolved objective-aware config.
+        self.config = StoppingConfig(
+            maxiter=config.maxiter,
+            target_value=config.target_value,
+            target_metric="J" if config.target_metric is None else config.target_metric,
+            target_mode="le" if config.target_mode is None else config.target_mode,
+            stall_patience=config.stall_patience,
+            stall_tolerance=config.stall_tolerance,
+            stall_metric="J" if config.stall_metric is None else config.stall_metric,
+            stall_mode="min" if config.stall_mode is None else config.stall_mode,
+            check_finite=config.check_finite,
+        )
         self.best_value: float | None = None
         self.stall_count = 0
-        if initial_metrics is not None and config.stall_patience is not None:
-            self.best_value = _metric_scalar(initial_metrics, config.stall_metric)
+        if initial_metrics is not None and self.config.stall_patience is not None:
+            self.best_value = _metric_scalar(initial_metrics, self.config.stall_metric)
 
     # ------------------------------------------------------------------
     # Public checks used by the engine

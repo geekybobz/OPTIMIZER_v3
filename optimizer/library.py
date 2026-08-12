@@ -409,6 +409,34 @@ class OptimizerContext:
 class OptimizerLibrary:
     """Public direct-shortcut facade for optimizer users."""
 
+    def __init__(self) -> None:
+        # Cache evaluators by object identity so direct and bound public calls
+        # actually reuse expensive system evaluations.  The stored object guards
+        # against an ``id`` being reused after a system is released.
+        self._evaluators: dict[int, tuple[Any, SystemEvaluator]] = {}
+
+    def _evaluator(self, system: Any, *, use_cache: bool) -> SystemEvaluator:
+        if not use_cache:
+            return SystemEvaluator(system, use_cache=False)
+        key = id(system)
+        cached = self._evaluators.get(key)
+        if cached is not None and cached[0] is system:
+            return cached[1]
+        evaluator = SystemEvaluator(system, use_cache=True)
+        self._evaluators[key] = (system, evaluator)
+        return evaluator
+
+    def clear_cache(self, system: Any | None = None) -> None:
+        """Clear cached public evaluators globally or for one exact system object."""
+
+        if system is None:
+            self._evaluators.clear()
+            return
+        key = id(system)
+        cached = self._evaluators.get(key)
+        if cached is not None and cached[0] is system:
+            del self._evaluators[key]
+
     # ------------------------------------------------------------------
     # Implemented core helpers
     # ------------------------------------------------------------------
@@ -436,12 +464,12 @@ class OptimizerLibrary:
     def evaluate(self, system: Any, controls: Controls, *, use_cache: bool = True) -> Evaluation:
         """Evaluate a system through the validated public boundary."""
 
-        return SystemEvaluator(system, use_cache=use_cache).evaluate(controls)
+        return self._evaluator(system, use_cache=use_cache).evaluate(controls)
 
     def gradient(self, system: Any, controls: Controls, *, use_cache: bool = True) -> Controls:
         """Return the analytical system gradient through the public boundary."""
 
-        return SystemEvaluator(system, use_cache=use_cache).gradient(controls)
+        return self._evaluator(system, use_cache=use_cache).gradient(controls)
 
     def value_and_gradient(
         self,
@@ -452,7 +480,7 @@ class OptimizerLibrary:
     ) -> tuple[Evaluation, Controls]:
         """Return a validated combined value and analytical gradient."""
 
-        return SystemEvaluator(system, use_cache=use_cache).value_and_gradient(controls)
+        return self._evaluator(system, use_cache=use_cache).value_and_gradient(controls)
 
     def plot_data(self, system: Any, controls: Controls, *, kind: str, **options: Any) -> Any:
         """Return validated plot data without invoking a renderer."""

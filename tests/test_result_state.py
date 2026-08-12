@@ -130,6 +130,14 @@ class OptimizerResultTests(unittest.TestCase):
         self.assertEqual(payload["state"]["iteration"], 7)
         self.assertEqual(payload["checkpoint_ids"]["latest"], "ckpt-7")
 
+    def test_result_controls_do_not_alias_live_run_state_controls(self):
+        state = RunState.initial(sample_controls(), metrics={"J": 4.0}, optimizer_name="momentum")
+        result = OptimizerResult.from_state(state, stop_reason="maxiter")
+
+        result.controls.set_channel("uA", [9.0, 9.0])
+
+        np.testing.assert_allclose(state.controls.channel("uA"), [1.0, 2.0])
+
 
 if __name__ == "__main__":
     unittest.main()

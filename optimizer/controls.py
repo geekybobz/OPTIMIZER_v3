@@ -293,8 +293,11 @@ class Controls:
         return {key: self.channel(key, copy=copy) for key in self.spec.keys}
 
     def flatten(self, *, copy: bool = True) -> np.ndarray:
-        flat = self.u.reshape(-1)
-        return flat.copy() if copy else flat
+        if copy:
+            return self.u.reshape(-1).copy()
+        view = self.u.reshape(-1).view()
+        view.flags.writeable = False
+        return view
 
     def copy(
         self,

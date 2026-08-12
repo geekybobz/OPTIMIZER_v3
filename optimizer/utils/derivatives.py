@@ -44,6 +44,7 @@ from optimizer.system_olgs import (
     optional_residuals,
     validate_controls_for_system,
 )
+from optimizer.system_olgs.contract import get_system_spec
 
 
 def _controls_from_flat(reference: Controls, flat: np.ndarray, *, name: str) -> Controls:
@@ -64,6 +65,14 @@ def _scalar_metric(metrics: Mapping[str, Any], metric: str) -> float:
     if not np.isfinite(out):
         raise ValueError(f"metric {metric!r} must be finite.")
     return out
+
+
+def _metric_context(system: Any, metric: str | None) -> tuple[dict[str, Any], str]:
+    """Resolve a scalar metric against the system's declared objective contract."""
+
+    system_spec = get_system_spec(system)
+    resolved_metric = str(system_spec["objective"]["metric_id"]) if metric is None else str(metric)
+    return system_spec, resolved_metric
 
 
 def _relative_error(a: np.ndarray, b: np.ndarray, *, atol: float) -> float:
@@ -96,7 +105,7 @@ def finite_difference_gradient(
     system: Any,
     controls: Controls,
     *,
-    metric: str = "J",
+    metric: str | None = None,
     eps: float = 1.0e-6,
     method: str = "central",
 ) -> Controls:
@@ -108,6 +117,7 @@ def finite_difference_gradient(
     """
 
     validate_controls_for_system(system, controls)
+    system_spec, metric = _metric_context(system, metric)
     eps = float(eps)
     if eps <= 0.0 or not np.isfinite(eps):
         raise ValueError("eps must be finite and positive.")
@@ -118,16 +128,16 @@ def finite_difference_gradient(
     gradient = np.zeros_like(base_flat, dtype=float)
     base_value = None
     if method == "forward":
-        base_value = _scalar_metric(evaluate_system(system, controls), metric)
+        base_value = _scalar_metric(evaluate_system(system, controls, system_spec=system_spec), metric)
 
     for index in range(base_flat.size):
         direction = np.zeros_like(base_flat)
         direction[index] = 1.0
         plus = _controls_from_flat(controls, base_flat + eps * direction, name="fd_plus")
-        plus_value = _scalar_metric(evaluate_system(system, plus), metric)
+        plus_value = _scalar_metric(evaluate_system(system, plus, system_spec=system_spec), metric)
         if method == "central":
             minus = _controls_from_flat(controls, base_flat - eps * direction, name="fd_minus")
-            minus_value = _scalar_metric(evaluate_system(system, minus), metric)
+            minus_value = _scalar_metric(evaluate_system(system, minus, system_spec=system_spec), metric)
             gradient[index] = (plus_value - minus_value) / (2.0 * eps)
         else:
             assert base_value is not None
@@ -140,7 +150,7 @@ def verify_gradient(
     system: Any,
     controls: Controls,
     *,
-    metric: str = "J",
+    metric: str | None = None,
     eps: float = 1.0e-6,
     directions: int | np.ndarray = 8,
     seed: int | None = 12345,
@@ -149,6 +159,7 @@ def verify_gradient(
 ) -> dict[str, Any]:
     """Check analytical gradient against finite-difference directional derivatives."""
 
+    system_spec, metric = _metric_context(system, metric)
     analytical = gradient_system(system, controls).flatten(copy=False).astype(float, copy=False)
     dirs = _direction_set(controls.spec.size, directions, seed=seed)
     base_flat = controls.flatten(copy=True)
@@ -159,8 +170,8 @@ def verify_gradient(
     for row, direction in enumerate(dirs):
         plus = _controls_from_flat(controls, base_flat + float(eps) * direction, name="grad_check_plus")
         minus = _controls_from_flat(controls, base_flat - float(eps) * direction, name="grad_check_minus")
-        plus_value = _scalar_metric(evaluate_system(system, plus), metric)
-        minus_value = _scalar_metric(evaluate_system(system, minus), metric)
+        plus_value = _scalar_metric(evaluate_system(system, plus, system_spec=system_spec), metric)
+        minus_value = _scalar_metric(evaluate_system(system, minus, system_spec=system_spec), metric)
         finite_difference = (plus_value - minus_value) / (2.0 * float(eps))
         analytical_directional = float(np.dot(analytical, direction))
         abs_error = abs(analytical_directional - finite_difference)

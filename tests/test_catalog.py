@@ -9,8 +9,8 @@ class CatalogTests(unittest.TestCase):
     def test_root_discovery_helpers_support_import_optimizer_as_opt(self):
         overview = opt.info()
         self.assertEqual(overview["name"], "OPTIMIZER v4")
-        self.assertEqual(overview["version"], "4.0.2")
-        self.assertEqual(opt.__version__, "4.0.2")
+        self.assertEqual(overview["version"], "4.0.3")
+        self.assertEqual(opt.__version__, "4.0.3")
         self.assertIn("groups", overview)
         self.assertIn("optimizers", overview["groups"])
         self.assertIn("beginner", overview["paths"])
@@ -93,6 +93,8 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(via_catalog["id"], "guesses.random_fourier_guess")
         self.assertIn("seed", via_group["inputs"])
         self.assertEqual(opt.schedules.AdaptiveStepSchedule.info()["id"], "schedules.AdaptiveStepSchedule")
+        self.assertEqual(opt.info("optimizer_log")["group"], "optimizer_log")
+        self.assertTrue(callable(opt.optimizer_log.read_timeline))
 
     def test_filters_search_and_paths_support_recovery_when_lost(self):
         derivative_tools = opt.utils.list(kind="derivative")

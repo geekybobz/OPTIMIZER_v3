@@ -37,6 +37,7 @@ Reviewer invariants
 
 from __future__ import annotations
 
+import copy as _copy
 from dataclasses import dataclass, field
 from typing import Any, Mapping
 
@@ -123,6 +124,16 @@ class Evaluation:
             payload["system_state"] = _json_safe(self.system_state)
         return payload
 
+    def copy(self, *, name: str | None = None) -> "Evaluation":
+        """Return an independent evaluation snapshot safe for public consumers."""
+
+        return Evaluation(
+            controls=self.controls.copy(name=self.controls.name if name is None else name),
+            metrics=_copy.deepcopy(self.metrics),
+            system_state=None if self.system_state is None else _copy.deepcopy(self.system_state),
+            objective_metric=self.objective_metric,
+        )
+
 
 @dataclass
 class OptimizerResult:
@@ -155,7 +166,7 @@ class OptimizerResult:
         """Create a public result from a final run state."""
 
         return cls(
-            controls=state.controls,
+            controls=state.controls.copy(name=state.controls.name),
             metrics=validate_metrics(state.metrics, objective_metric=objective_metric),
             stop_reason=str(stop_reason),
             iterations=int(state.iteration),

@@ -1820,6 +1820,8 @@ def list(*, h: bool = False) -> dict[str, Any] | str:
 
 
 def info(name: str, *, h: bool = False) -> dict[str, Any] | str:
+    if str(name) in _catalog():
+        return group(str(name)).list(h=h)
     item = _resolve_item(name)
     return item.render_human() if h else item.to_dict()
 

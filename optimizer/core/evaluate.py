@@ -203,7 +203,7 @@ class SystemEvaluator:
 
         key = controls_cache_key(controls)
         if self.use_cache and key in self._evaluations:
-            return self._evaluations[key]
+            return self._evaluations[key].copy(name=controls.name)
 
         self.evaluation_attempt_count += 1
         metrics = evaluate_system(self.system, controls, system_spec=self.system_spec)
@@ -214,7 +214,7 @@ class SystemEvaluator:
         )
         self.evaluation_count += 1
         if self.use_cache:
-            self._evaluations[key] = evaluation
+            self._evaluations[key] = evaluation.copy(name=evaluation.controls.name)
         return evaluation
 
     def gradient(self, controls: Controls) -> Controls:
@@ -232,7 +232,7 @@ class SystemEvaluator:
         if self.use_cache and key in self._value_gradients:
             pair = self._value_gradients[key]
             evaluation = self._evaluations[key]
-            return evaluation, pair.gradient.copy(name=pair.gradient.name)
+            return evaluation.copy(name=controls.name), pair.gradient.copy(name=pair.gradient.name)
         self.value_gradient_attempt_count += 1
         pair = value_and_gradient_system(self.system, controls, system_spec=self.system_spec)
         gradient = pair.gradient.copy(name=pair.gradient.name)
@@ -246,7 +246,7 @@ class SystemEvaluator:
         self.evaluation_count += 1
         self.gradient_count += 1
         if self.use_cache:
-            self._evaluations[key] = evaluation
+            self._evaluations[key] = evaluation.copy(name=evaluation.controls.name)
             self._value_gradients[key] = ValueGradient(metrics=dict(pair.metrics), gradient=gradient.copy(name=gradient.name))
         return evaluation, gradient
 

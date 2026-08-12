@@ -82,7 +82,7 @@ cleanup() { rm -rf "${WHEEL_DIR}"; }
 trap cleanup EXIT
 
 echo "Building release wheel outside the checkout"
-"${CONDA_BIN}" run -n "${ENV_NAME}" python -m pip wheel --no-deps --no-build-isolation -w "${WHEEL_DIR}" "${ROOT_DIR}"
+"${CONDA_BIN}" run -n "${ENV_NAME}" python -B -m pip wheel --no-deps --no-build-isolation -w "${WHEEL_DIR}" "${ROOT_DIR}"
 WHEEL_PATH="$(find "${WHEEL_DIR}" -maxdepth 1 -name '*.whl' -print -quit)"
 if [[ -z "${WHEEL_PATH}" ]]; then
   echo "Wheel build produced no wheel." >&2
@@ -91,21 +91,21 @@ fi
 WHEEL_SHA256="$(shasum -a 256 "${WHEEL_PATH}" | awk '{print $1}')"
 
 echo "Installing non-editable release wheel into: ${ENV_NAME}"
-"${CONDA_BIN}" run -n "${ENV_NAME}" python -m pip install --no-deps --force-reinstall "${WHEEL_PATH}"
+"${CONDA_BIN}" run -n "${ENV_NAME}" python -B -m pip install --no-deps --force-reinstall "${WHEEL_PATH}"
 
 echo "Verifying import surface"
-"${CONDA_BIN}" run -n "${ENV_NAME}" python -c "import optimizer as opt; print('optimizer import ok'); print('public namespaces: optimizers, utils, guesses, schedules'); print('example method: ' + opt.optimizers.adam.__name__)"
+"${CONDA_BIN}" run -n "${ENV_NAME}" python -B -c "import optimizer as opt; print('optimizer import ok'); print('public namespaces: optimizers, utils, guesses, schedules'); print('example method: ' + opt.optimizers.adam.__name__)"
 
 if [[ "${RUN_TESTS}" == "1" ]]; then
   echo "Running unit tests inside ${ENV_NAME}"
-  "${CONDA_BIN}" run -n "${ENV_NAME}" python -m unittest discover -s "${ROOT_DIR}/tests"
+  "${CONDA_BIN}" run -n "${ENV_NAME}" python -B -m unittest discover -s "${ROOT_DIR}/tests"
 fi
 
 STATE_DIR="$(dirname "${STATE_FILE}")"
 mkdir -p "${STATE_DIR}"
 
 ENV_PREFIX="$(env_prefix)"
-PYTHON_EXE="$("${CONDA_BIN}" run -n "${ENV_NAME}" python -c "import sys; print(sys.executable)")"
+PYTHON_EXE="$("${CONDA_BIN}" run -n "${ENV_NAME}" python -B -c "import sys; print(sys.executable)")"
 CONDA_EXE="${CONDA_BIN}"
 GIT_REMOTE="$(git -C "${ROOT_DIR}" remote get-url origin 2>/dev/null || true)"
 GIT_BRANCH="$(git -C "${ROOT_DIR}" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
@@ -127,7 +127,7 @@ GIT_BRANCH="${GIT_BRANCH}" \
 GIT_COMMIT="${GIT_COMMIT}" \
 GIT_TAG="${GIT_TAG}" \
 WHEEL_SHA256="${WHEEL_SHA256}" \
-"${CONDA_BIN}" run -n "${ENV_NAME}" python -c "import datetime as d, json, os, pathlib; p=pathlib.Path(os.environ['STATE_FILE']); data={'schema_version':1,'package':os.environ['PACKAGE_NAME'],'import_name':os.environ['IMPORT_NAME'],'install_mode':'wheel','repo_root':os.environ['ROOT_DIR'],'environment_file':os.environ['ENV_FILE'],'env_name':os.environ['ENV_NAME'],'env_prefix':os.environ['ENV_PREFIX'],'python':os.environ['PYTHON_EXE'],'conda':os.environ['CONDA_EXE'],'wheel_sha256':os.environ['WHEEL_SHA256'],'installed_at_utc':d.datetime.now(d.UTC).isoformat().replace('+00:00','Z'),'git':{'remote_origin':os.environ['GIT_REMOTE'],'branch':os.environ['GIT_BRANCH'],'commit':os.environ['GIT_COMMIT'],'tag':os.environ['GIT_TAG']}}; p.write_text(json.dumps(data, indent=2, sort_keys=True) + '\n')"
+"${CONDA_BIN}" run -n "${ENV_NAME}" python -B -c "import datetime as d, json, os, pathlib; p=pathlib.Path(os.environ['STATE_FILE']); data={'schema_version':1,'package':os.environ['PACKAGE_NAME'],'import_name':os.environ['IMPORT_NAME'],'install_mode':'wheel','repo_root':os.environ['ROOT_DIR'],'environment_file':os.environ['ENV_FILE'],'env_name':os.environ['ENV_NAME'],'env_prefix':os.environ['ENV_PREFIX'],'python':os.environ['PYTHON_EXE'],'conda':os.environ['CONDA_EXE'],'wheel_sha256':os.environ['WHEEL_SHA256'],'installed_at_utc':d.datetime.now(d.UTC).isoformat().replace('+00:00','Z'),'git':{'remote_origin':os.environ['GIT_REMOTE'],'branch':os.environ['GIT_BRANCH'],'commit':os.environ['GIT_COMMIT'],'tag':os.environ['GIT_TAG']}}; p.write_text(json.dumps(data, indent=2, sort_keys=True) + '\n')"
 
 echo
 echo "Setup complete."

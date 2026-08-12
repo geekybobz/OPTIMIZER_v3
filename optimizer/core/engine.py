@@ -36,7 +36,7 @@ Reviewer invariants
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Callable, Iterable, Mapping
 from uuid import uuid4
 
@@ -308,10 +308,12 @@ def _start_step_size(
 def _start_optimizer_state(
     state: RunState | None,
     warmstart: WarmStartState | None,
+    *,
+    optimizer_name: str,
 ) -> dict[str, Any]:
     """Choose optimizer-private state carried into this chunk."""
 
-    if state is not None:
+    if state is not None and state.optimizer_name == str(optimizer_name):
         return dict(state.optimizer_state)
     if warmstart is not None and warmstart.optimizer_state is not None:
         return dict(warmstart.optimizer_state)
@@ -731,16 +733,28 @@ def run_chunk(
     validate_controls_for_system(evaluator.system, active_controls)
 
     params = _extract_system_params(evaluator.system, system_params)
-    stop_config = stopping or StoppingConfig(
-        maxiter=maxiter,
-        target_value=target_value,
-        target_metric=resolved_target_metric,
-        target_mode=resolved_target_mode,
-        stall_patience=stall_patience,
-        stall_tolerance=stall_tolerance,
-        stall_metric=resolved_stall_metric,
-        stall_mode=resolved_stall_mode,
-    )
+    if stopping is None:
+        stop_config = StoppingConfig(
+            maxiter=maxiter,
+            target_value=target_value,
+            target_metric=resolved_target_metric,
+            target_mode=resolved_target_mode,
+            stall_patience=stall_patience,
+            stall_tolerance=stall_tolerance,
+            stall_metric=resolved_stall_metric,
+            stall_mode=resolved_stall_mode,
+        )
+    else:
+        # A supplied config may intentionally override any of these fields, but
+        # omitted fields must inherit the declared objective rather than the
+        # legacy J/minimize convention.
+        stop_config = replace(
+            stopping,
+            target_metric=resolved_target_metric if stopping.target_metric is None else stopping.target_metric,
+            target_mode=resolved_target_mode if stopping.target_mode is None else stopping.target_mode,
+            stall_metric=resolved_stall_metric if stopping.stall_metric is None else stopping.stall_metric,
+            stall_mode=resolved_stall_mode if stopping.stall_mode is None else stopping.stall_mode,
+        )
     resolved_api_context = {
         "run_chunk": {
             "optimizer_name": str(optimizer_name),
@@ -844,7 +858,7 @@ def run_chunk(
         metrics=initial_evaluation.metrics,
         optimizer_name=optimizer_name,
         step_size=_start_step_size(step_size, state, warmstart),
-        optimizer_state=_start_optimizer_state(state, warmstart),
+        optimizer_state=_start_optimizer_state(state, warmstart, optimizer_name=optimizer_name),
         system_params=params,
         trace=active_trace,
         previous_state=state,

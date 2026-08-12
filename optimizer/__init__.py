@@ -34,9 +34,10 @@ Reviewer invariants
 
 from __future__ import annotations
 
-from typing import Any, Callable, Iterable
+from typing import Any as _Any, Callable as _Callable, Iterable as _Iterable
 
 from optimizer import campaigns, catalog, core, guesses, optimizers, schedules, tracker, utils, visualization
+import optimizer_log as optimizer_log
 from optimizer.catalog import base
 from optimizer.controls import ControlSpec, Controls
 from optimizer.continuation import ContinuationResult, ContinuationStage, StageGate, StageResult
@@ -49,7 +50,7 @@ from optimizer.core import (
     SystemEvaluator,
 )
 from optimizer.utils.parallel import ParallelConfig
-from optimizer.library import DEFAULT_LIBRARY, MethodInfo, OptimizerContext, OptimizerLibrary
+from optimizer.library import DEFAULT_LIBRARY as _DEFAULT_LIBRARY, MethodInfo, OptimizerContext, OptimizerLibrary
 from optimizer.logs.checkpoint import Checkpoint
 from optimizer.logs.records import ChunkRecord, EventRecord, IterationRecord
 from optimizer.logs.trace import Trace
@@ -102,12 +103,12 @@ from optimizer.system_olgs import (
 )
 
 
-__version__ = "4.0.2"
+__version__ = "4.0.3"
 from optimizer.visualization import PlotData, PlotLayer
 from optimizer.utils.repairs import RepairResult
 
 
-library = DEFAULT_LIBRARY
+library = _DEFAULT_LIBRARY
 util = utils
 
 
@@ -116,32 +117,32 @@ util = utils
 # ----------------------------------------------------------------------
 
 
-def control_spec(keys: Iterable[str], control_dim: int, **kwargs: Any) -> ControlSpec:
+def control_spec(keys: _Iterable[str], control_dim: int, **kwargs: _Any) -> ControlSpec:
     return library.control_spec(keys, control_dim, **kwargs)
 
 
-def controls(spec: ControlSpec, values: Any, **kwargs: Any) -> Controls:
+def controls(spec: ControlSpec, values: _Any, **kwargs: _Any) -> Controls:
     return library.controls(spec, values, **kwargs)
 
 
-def zeros(spec: ControlSpec, **kwargs: Any) -> Controls:
+def zeros(spec: ControlSpec, **kwargs: _Any) -> Controls:
     return library.zeros(spec, **kwargs)
 
 
-def constant(spec: ControlSpec, value: Any, **kwargs: Any) -> Controls:
+def constant(spec: ControlSpec, value: _Any, **kwargs: _Any) -> Controls:
     return library.constant(spec, value, **kwargs)
 
 
-def evaluate(system: Any, controls: Controls, *, use_cache: bool = True) -> Evaluation:
+def evaluate(system: _Any, controls: Controls, *, use_cache: bool = True) -> Evaluation:
     return library.evaluate(system, controls, use_cache=use_cache)
 
 
-def gradient(system: Any, controls: Controls, *, use_cache: bool = True) -> Controls:
+def gradient(system: _Any, controls: Controls, *, use_cache: bool = True) -> Controls:
     return library.gradient(system, controls, use_cache=use_cache)
 
 
 def value_and_gradient(
-    system: Any,
+    system: _Any,
     controls: Controls,
     *,
     use_cache: bool = True,
@@ -149,20 +150,20 @@ def value_and_gradient(
     return library.value_and_gradient(system, controls, use_cache=use_cache)
 
 
-def plot_data(system: Any, controls: Controls, *, kind: str, **options: Any) -> PlotData:
+def plot_data(system: _Any, controls: Controls, *, kind: str, **options: _Any) -> PlotData:
     """Return one explicit system-owned visualization data product."""
 
     return library.plot_data(system, controls, kind=kind, **options)
 
 
 def run_chunk(
-    system: Any,
+    system: _Any,
     controls: Controls | None = None,
     *,
-    step: Callable[[StepContext], StepProposal | Controls],
+    step: _Callable[[StepContext], StepProposal | Controls],
     optimizer_name: str,
     maxiter: int,
-    **kwargs: Any,
+    **kwargs: _Any,
 ) -> OptimizerResult:
     return library.run_chunk(
         system,
@@ -178,24 +179,24 @@ def trace(run_id: str | None = None) -> Trace:
     return library.trace(run_id=run_id)
 
 
-def warmstart(result_or_state: Any, *, target_optimizer: str | None = None) -> WarmStartState:
+def warmstart(result_or_state: _Any, *, target_optimizer: str | None = None) -> WarmStartState:
     return library.warmstart(result_or_state, target_optimizer=target_optimizer)
 
 
 def parallel_map(
-    function: Callable[[Any], Any],
-    items: Iterable[Any],
+    function: _Callable[[_Any], _Any],
+    items: _Iterable[_Any],
     *,
     config: ParallelConfig | None = None,
-) -> list[Any]:
+) -> list[_Any]:
     return library.parallel_map(function, items, config=config)
 
 
-def context(system: Any, *, trace: Trace | str | None = None, **defaults: Any) -> OptimizerContext:
+def context(system: _Any, *, trace: Trace | str | None = None, **defaults: _Any) -> OptimizerContext:
     return library.context(system, trace=trace, **defaults)
 
 
-def bind(system: Any, *, trace: Trace | str | None = None, **defaults: Any) -> OptimizerContext:
+def bind(system: _Any, *, trace: Trace | str | None = None, **defaults: _Any) -> OptimizerContext:
     return library.bind(system, trace=trace, **defaults)
 
 
@@ -203,13 +204,13 @@ def methods() -> dict[str, MethodInfo]:
     return library.methods()
 
 
-def system_info(system: Any) -> dict[str, Any]:
+def system_info(system: _Any) -> dict[str, _Any]:
     """Return declared system capabilities without evaluating controls."""
 
     return library.system_info(system)
 
 
-def context_info(system: Any | None = None) -> dict[str, Any]:
+def context_info(system: _Any | None = None) -> dict[str, _Any]:
     """Return registered optimizer/tracker capabilities and optional system metadata."""
 
     return library.context_info(system=system)
@@ -220,109 +221,109 @@ def context_info(system: Any | None = None) -> dict[str, Any]:
 # ----------------------------------------------------------------------
 
 
-def adam(*args: Any, **kwargs: Any) -> OptimizerResult:
+def adam(*args: _Any, **kwargs: _Any) -> OptimizerResult:
     return library.adam(*args, **kwargs)
 
 
-def momentum(*args: Any, **kwargs: Any) -> OptimizerResult:
+def momentum(*args: _Any, **kwargs: _Any) -> OptimizerResult:
     return library.momentum(*args, **kwargs)
 
 
-def line_search(*args: Any, **kwargs: Any) -> OptimizerResult:
+def line_search(*args: _Any, **kwargs: _Any) -> OptimizerResult:
     return library.line_search(*args, **kwargs)
 
 
-def adagrad(*args: Any, **kwargs: Any) -> OptimizerResult:
+def adagrad(*args: _Any, **kwargs: _Any) -> OptimizerResult:
     return library.adagrad(*args, **kwargs)
 
 
-def rmsprop(*args: Any, **kwargs: Any) -> OptimizerResult:
+def rmsprop(*args: _Any, **kwargs: _Any) -> OptimizerResult:
     return library.rmsprop(*args, **kwargs)
 
 
-def lbfgs(*args: Any, **kwargs: Any) -> OptimizerResult:
+def lbfgs(*args: _Any, **kwargs: _Any) -> OptimizerResult:
     return library.lbfgs(*args, **kwargs)
 
 
-def nonlinear_cg(*args: Any, **kwargs: Any) -> OptimizerResult:
+def nonlinear_cg(*args: _Any, **kwargs: _Any) -> OptimizerResult:
     return library.nonlinear_cg(*args, **kwargs)
 
 
-def ncg(*args: Any, **kwargs: Any) -> OptimizerResult:
+def ncg(*args: _Any, **kwargs: _Any) -> OptimizerResult:
     return library.ncg(*args, **kwargs)
 
 
-def cma_es(*args: Any, **kwargs: Any) -> OptimizerResult:
+def cma_es(*args: _Any, **kwargs: _Any) -> OptimizerResult:
     return library.cma_es(*args, **kwargs)
 
 
-def projected_gradient(*args: Any, **kwargs: Any) -> OptimizerResult:
+def projected_gradient(*args: _Any, **kwargs: _Any) -> OptimizerResult:
     return library.projected_gradient(*args, **kwargs)
 
 
-def newton_cg(*args: Any, **kwargs: Any) -> OptimizerResult:
+def newton_cg(*args: _Any, **kwargs: _Any) -> OptimizerResult:
     return library.newton_cg(*args, **kwargs)
 
 
-def trust_region(*args: Any, **kwargs: Any) -> OptimizerResult:
+def trust_region(*args: _Any, **kwargs: _Any) -> OptimizerResult:
     return library.trust_region(*args, **kwargs)
 
 
-def proximal_gradient(*args: Any, **kwargs: Any) -> OptimizerResult:
+def proximal_gradient(*args: _Any, **kwargs: _Any) -> OptimizerResult:
     return library.proximal_gradient(*args, **kwargs)
 
 
 def continuation(
-    system: Any,
+    system: _Any,
     controls: Controls,
     *,
-    stages: Iterable[ContinuationStage | dict[str, Any]],
-    **kwargs: Any,
+    stages: _Iterable[ContinuationStage | dict[str, _Any]],
+    **kwargs: _Any,
 ) -> ContinuationResult:
     return library.continuation(system, controls, stages=stages, **kwargs)
 
 
-def metric_report(system: Any, controls: Controls) -> dict[str, Any]:
+def metric_report(system: _Any, controls: Controls) -> dict[str, _Any]:
     return library.metric_report(system, controls)
 
 
-def diagnostic_report(system: Any, controls: Controls, **kwargs: Any) -> dict[str, Any]:
+def diagnostic_report(system: _Any, controls: Controls, **kwargs: _Any) -> dict[str, _Any]:
     return library.diagnostic_report(system, controls, **kwargs)
 
 
-def finite_difference_gradient(system: Any, controls: Controls, **kwargs: Any) -> Controls:
+def finite_difference_gradient(system: _Any, controls: Controls, **kwargs: _Any) -> Controls:
     return library.finite_difference_gradient(system, controls, **kwargs)
 
 
-def verify_gradient(system: Any, controls: Controls, **kwargs: Any) -> dict[str, Any]:
+def verify_gradient(system: _Any, controls: Controls, **kwargs: _Any) -> dict[str, _Any]:
     return library.verify_gradient(system, controls, **kwargs)
 
 
-def finite_difference_jacobian(system: Any, controls: Controls, **kwargs: Any) -> Any:
+def finite_difference_jacobian(system: _Any, controls: Controls, **kwargs: _Any) -> _Any:
     return library.finite_difference_jacobian(system, controls, **kwargs)
 
 
-def verify_jacobian(system: Any, controls: Controls, **kwargs: Any) -> dict[str, Any]:
+def verify_jacobian(system: _Any, controls: Controls, **kwargs: _Any) -> dict[str, _Any]:
     return library.verify_jacobian(system, controls, **kwargs)
 
 
-def repair_newton(system: Any, controls: Controls, **kwargs: Any) -> RepairResult:
+def repair_newton(system: _Any, controls: Controls, **kwargs: _Any) -> RepairResult:
     return library.repair_newton(system, controls, **kwargs)
 
 
-def project_gradient(system: Any, controls: Controls, gradient: Controls, **kwargs: Any) -> Any:
+def project_gradient(system: _Any, controls: Controls, gradient: Controls, **kwargs: _Any) -> _Any:
     return library.project_gradient(system, controls, gradient, **kwargs)
 
 
-def nullspace_basis(system: Any, controls: Controls, **kwargs: Any) -> Any:
+def nullspace_basis(system: _Any, controls: Controls, **kwargs: _Any) -> _Any:
     return library.nullspace_basis(system, controls, **kwargs)
 
 
-def metric_guard(**kwargs: Any) -> MetricGuard:
+def metric_guard(**kwargs: _Any) -> MetricGuard:
     return library.metric_guard(**kwargs)
 
 
-def control_spectrum(controls: Controls, **kwargs: Any) -> dict[str, Any]:
+def control_spectrum(controls: Controls, **kwargs: _Any) -> dict[str, _Any]:
     return library.control_spectrum(controls, **kwargs)
 
 
@@ -397,8 +398,8 @@ def geometry_probe(*args: Any, **kwargs: Any) -> dict[str, Any]:
 _DISCOVERY_PATHS = ("beginner", "debug_gradient", "repair_residuals", "optimize_then_polish")
 
 
-def _root_info_payload() -> dict[str, Any]:
-    paths: dict[str, Any] = {}
+def _root_info_payload() -> dict[str, _Any]:
+    paths: dict[str, _Any] = {}
     for path_name in _DISCOVERY_PATHS:
         path_info = catalog.path(path_name)
         if isinstance(path_info, dict):
@@ -429,7 +430,7 @@ def _root_info_payload() -> dict[str, Any]:
     }
 
 
-def _render_root_info(payload: dict[str, Any]) -> str:
+def _render_root_info(payload: dict[str, _Any]) -> str:
     lines = [payload["name"], f"Summary: {payload['summary']}"]
 
     lines.append("Start here:")
@@ -452,13 +453,13 @@ def _render_root_info(payload: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def list(*, h: bool = False) -> dict[str, Any] | str:
+def list(*, h: bool = False) -> dict[str, _Any] | str:
     """Return the full discovery catalog from the root ``opt`` namespace."""
 
     return catalog.list(h=h)
 
 
-def info(name: str | None = None, *, h: bool = False) -> dict[str, Any] | str:
+def info(name: str | None = None, *, h: bool = False) -> dict[str, _Any] | str:
     """Return root discovery help or detailed metadata for one catalog item."""
 
     if name is not None:
@@ -468,19 +469,25 @@ def info(name: str | None = None, *, h: bool = False) -> dict[str, Any] | str:
     return _render_root_info(payload) if h else payload
 
 
-def search(query: str, *, h: bool = False) -> dict[str, Any] | str:
+def search(query: str, *, h: bool = False) -> dict[str, _Any] | str:
     """Search the discovery catalog from the root ``opt`` namespace."""
 
     return catalog.search(query, h=h)
 
 
-def path(name: str, *, h: bool = False) -> dict[str, Any] | str:
+def path(name: str, *, h: bool = False) -> dict[str, _Any] | str:
     """Return a focused workflow path such as ``beginner`` or ``debug_gradient``."""
 
     return catalog.path(name, h=h)
 
 
 catalog.attach_root_helpers(globals())
+
+# Importing submodules attaches implementation-module attributes to this package.
+# Keep the root namespace limited to the explicit surface below; those modules
+# remain available through their documented role namespaces.
+for _implementation_name in ("annotations", "logs", "result", "state", "system_olgs"):
+    globals().pop(_implementation_name, None)
 
 
 __all__ = [
@@ -493,6 +500,7 @@ __all__ = [
     "Controls",
     "ContinuationResult",
     "ContinuationStage",
+    "ConstantSchedule",
     "Evaluation",
     "EventRecord",
     "IterationRecord",
@@ -584,6 +592,7 @@ __all__ = [
     "nonlinear_cg",
     "nullspace_basis",
     "optimizers",
+    "optimizer_log",
     "optional_jacobian",
     "optional_plot_data",
     "optional_control_bounds",

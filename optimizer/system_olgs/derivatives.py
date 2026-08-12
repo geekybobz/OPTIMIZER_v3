@@ -16,6 +16,7 @@ from optimizer.system_olgs.validation import (
     optional_residuals,
     validate_controls_for_system,
 )
+from optimizer.system_olgs.contract import get_system_spec
 
 
 def _controls_from_flat(reference: Controls, flat: np.ndarray, *, name: str) -> Controls:
@@ -32,6 +33,14 @@ def _scalar_metric(metrics: Mapping[str, Any], metric: str) -> float:
     if not np.isfinite(out):
         raise ValueError(f"metric {metric!r} must be finite.")
     return out
+
+
+def _metric_context(system: Any, metric: str | None) -> tuple[dict[str, Any], str]:
+    """Resolve a scalar metric against the system's declared objective contract."""
+
+    system_spec = get_system_spec(system)
+    resolved_metric = str(system_spec["objective"]["metric_id"]) if metric is None else str(metric)
+    return system_spec, resolved_metric
 
 
 def finite_difference_jacobian(
@@ -76,13 +85,14 @@ def finite_difference_hessian(
     system: Any,
     controls: Controls,
     *,
-    metric: str = "J",
+    metric: str | None = None,
     eps: float = 1.0e-5,
     method: str = "central",
 ) -> np.ndarray:
     """Return a dense finite-difference Hessian for a scalar metric."""
 
     validate_controls_for_system(system, controls)
+    system_spec, metric = _metric_context(system, metric)
     eps = float(eps)
     if eps <= 0.0 or not np.isfinite(eps):
         raise ValueError("eps must be finite and positive.")
@@ -103,16 +113,24 @@ def finite_difference_hessian(
             g_minus = gradient_system(system, minus).flatten(copy=False).astype(float, copy=False)
             hessian[:, index] = (g_plus - g_minus) / (2.0 * eps)
     else:
-        base_value = _scalar_metric(evaluate_system(system, controls), metric)
+        base_value = _scalar_metric(evaluate_system(system, controls, system_spec=system_spec), metric)
         for i in range(size):
             ei = np.zeros_like(base_flat)
             ei[i] = 1.0
             f_plus = _scalar_metric(
-                evaluate_system(system, _controls_from_flat(controls, base_flat + eps * ei, name="fd_hess_i_plus")),
+                evaluate_system(
+                    system,
+                    _controls_from_flat(controls, base_flat + eps * ei, name="fd_hess_i_plus"),
+                    system_spec=system_spec,
+                ),
                 metric,
             )
             f_minus = _scalar_metric(
-                evaluate_system(system, _controls_from_flat(controls, base_flat - eps * ei, name="fd_hess_i_minus")),
+                evaluate_system(
+                    system,
+                    _controls_from_flat(controls, base_flat - eps * ei, name="fd_hess_i_minus"),
+                    system_spec=system_spec,
+                ),
                 metric,
             )
             hessian[i, i] = (f_plus - 2.0 * base_value + f_minus) / (eps * eps)
@@ -123,6 +141,7 @@ def finite_difference_hessian(
                     evaluate_system(
                         system,
                         _controls_from_flat(controls, base_flat + eps * ei + eps * ej, name="fd_hess_pp"),
+                        system_spec=system_spec,
                     ),
                     metric,
                 )
@@ -130,6 +149,7 @@ def finite_difference_hessian(
                     evaluate_system(
                         system,
                         _controls_from_flat(controls, base_flat + eps * ei - eps * ej, name="fd_hess_pm"),
+                        system_spec=system_spec,
                     ),
                     metric,
                 )
@@ -137,6 +157,7 @@ def finite_difference_hessian(
                     evaluate_system(
                         system,
                         _controls_from_flat(controls, base_flat - eps * ei + eps * ej, name="fd_hess_mp"),
+                        system_spec=system_spec,
                     ),
                     metric,
                 )
@@ -144,6 +165,7 @@ def finite_difference_hessian(
                     evaluate_system(
                         system,
                         _controls_from_flat(controls, base_flat - eps * ei - eps * ej, name="fd_hess_mm"),
+                        system_spec=system_spec,
                     ),
                     metric,
                 )
@@ -208,7 +230,7 @@ def get_hessian(
     system: Any,
     controls: Controls,
     *,
-    metric: str = "J",
+    metric: str | None = None,
     fallback: bool = True,
     eps: float = 1.0e-5,
 ) -> tuple[np.ndarray, str]:

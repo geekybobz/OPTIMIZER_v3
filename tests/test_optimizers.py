@@ -202,6 +202,26 @@ class OptimizerPhaseTests(unittest.TestCase):
         self.assertLess(second.J, first.J)
         self.assertEqual(second.state.optimizer_state["variant"], "amsgrad")
 
+    def test_state_drops_optimizer_private_memory_when_changing_methods(self):
+        system = vector_case()
+        controls = opt.zeros(system.control_spec(), name="zero")
+        adam = opt.adam(system, controls, maxiter=2)
+
+        lbfgs = opt.lbfgs(system, state=adam.state, maxiter=1)
+
+        self.assertNotIn("m", lbfgs.state.optimizer_state)
+        self.assertNotIn("v", lbfgs.state.optimizer_state)
+        self.assertEqual(lbfgs.optimizer, "lbfgs")
+
+    def test_armijo_rejects_acceptance_contract_mismatches(self):
+        system = MaximizingScalarSystem()
+        controls = opt.zeros(system.control_spec(), name="zero")
+
+        with self.assertRaisesRegex(ValueError, "accept_metric"):
+            opt.line_search(system, controls, variant="armijo", accept_metric="other", maxiter=1)
+        with self.assertRaisesRegex(ValueError, "accept_mode"):
+            opt.line_search(system, controls, variant="armijo", accept_mode="min", maxiter=1)
+
 
 if __name__ == "__main__":
     unittest.main()

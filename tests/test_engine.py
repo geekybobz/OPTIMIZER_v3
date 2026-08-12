@@ -5,6 +5,7 @@ import numpy as np
 from optimizer.controls import ControlSpec, Controls
 from optimizer.core.engine import StepProposal, run_chunk
 from optimizer.core.evaluate import SystemEvaluator
+from optimizer.core.stopping import StoppingConfig
 from optimizer.utils.parallel import ParallelConfig, parallel_map
 from optimizer.logs.trace import Trace
 from optimizer.system_olgs import basic_system_spec
@@ -248,8 +249,58 @@ class EngineTests(unittest.TestCase):
         second = evaluator.evaluate(controls.copy(name="copy"))
 
         self.assertEqual(first.J, second.J)
+        self.assertIsNot(first, second)
         self.assertEqual(evaluator.evaluation_count, 1)
         self.assertEqual(system.evaluate_calls, 1)
+
+        first.metrics["J"] = -123.0
+        first.controls.set_channel("u", [9.0, 9.0, 9.0, 9.0])
+        restored = evaluator.evaluate(controls)
+        self.assertEqual(restored.J, 4.0)
+        np.testing.assert_allclose(restored.controls.as_matrix(), controls.as_matrix())
+
+    def test_explicit_stopping_config_inherits_maximize_objective_direction(self):
+        system = MaximizingQuadraticSystem(target=1.0)
+        controls = Controls.constant(system.control_spec(), 0.0, name="initial")
+
+        automatic = run_chunk(
+            system,
+            controls,
+            step=descent_step,
+            optimizer_name="gradient_descent",
+            maxiter=3,
+            step_size=0.25,
+            target_value=-1.0,
+        )
+        explicit = run_chunk(
+            system,
+            controls,
+            step=descent_step,
+            optimizer_name="gradient_descent",
+            maxiter=3,
+            step_size=0.25,
+            stopping=StoppingConfig(maxiter=3, target_value=-1.0),
+        )
+
+        self.assertEqual(explicit.stop_reason, automatic.stop_reason)
+        self.assertEqual(explicit.iterations, automatic.iterations)
+
+    def test_library_cache_is_effectual_on_direct_and_bound_public_calls(self):
+        system = QuadraticSystem(target=0.0)
+        controls = Controls.constant(system.control_spec(), 1.0, name="initial")
+        library = __import__("optimizer").OptimizerLibrary()
+
+        for _ in range(3):
+            library.evaluate(system, controls, use_cache=True)
+        self.assertEqual(system.evaluate_calls, 1)
+        for _ in range(3):
+            library.evaluate(system, controls, use_cache=False)
+        self.assertEqual(system.evaluate_calls, 4)
+
+        context = library.context(system)
+        for _ in range(2):
+            context.evaluate(controls, use_cache=True)
+        self.assertEqual(system.evaluate_calls, 4)
 
     def test_parallel_map_serial_and_thread_preserve_order(self):
         values = [1, 2, 3, 4]

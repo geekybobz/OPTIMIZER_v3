@@ -442,6 +442,11 @@ def line_search(
     resolved_mode = "min" if objective["direction"] == "minimize" else "max"
     if accept_mode is not None:
         resolved_mode = str(accept_mode)
+    if variant == "armijo":
+        if resolved_metric != str(objective["metric_id"]):
+            raise ValueError("Armijo line search requires accept_metric to match the declared objective metric.")
+        if resolved_mode != ("min" if objective["direction"] == "minimize" else "max"):
+            raise ValueError("Armijo line search requires accept_mode to match the declared objective direction.")
     config = LineSearchConfig(
         variant=require_variant(variant, VALID_VARIANTS, family="line_search"),
         step_size=step_size,

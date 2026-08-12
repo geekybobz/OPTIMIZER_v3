@@ -3,6 +3,8 @@ from dataclasses import dataclass, replace
 
 import numpy as np
 
+import optimizer as opt
+
 from optimizer.controls import ControlSpec, Controls
 from optimizer.system_olgs import (
     basic_system_spec,
@@ -199,6 +201,23 @@ class SystemContractTests(unittest.TestCase):
         self.assertEqual(result.objective_metric, "fidelity")
         self.assertNotIn("J", result.metrics)
         self.assertGreater(result.objective_value, -4.0)
+
+    def test_non_j_objective_supports_public_derivative_checks_and_diagnostics(self):
+        system = FidelitySystem()
+        controls = Controls.zeros(system.control_spec())
+
+        report = opt.metric_report(system, controls)
+        diagnostics = opt.diagnostic_report(system, controls, residuals=None)
+        check = opt.verify_gradient(system, controls, directions=2)
+        gradient = opt.finite_difference_gradient(system, controls)
+        hessian = opt.finite_difference_hessian(system, controls)
+
+        self.assertIn("fidelity", report["metrics"])
+        self.assertIn("fidelity", diagnostics["metrics"])
+        self.assertEqual(check["metric"], "fidelity")
+        self.assertTrue(check["passed"], check)
+        np.testing.assert_allclose(gradient.flatten(), system.gradient(controls).flatten(), atol=1.0e-6)
+        self.assertEqual(hessian.shape, (controls.spec.size, controls.spec.size))
 
     def test_optional_residuals_and_jacobian(self):
         system = DummySystem()
