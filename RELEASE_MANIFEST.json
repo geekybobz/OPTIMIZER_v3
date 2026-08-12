@@ -1,0 +1,18 @@
+{
+  "schema_version": "optimizer.release-manifest/v2",
+  "release_version": "4.0.2",
+  "tag": "v4.0.2",
+  "test_command": "MPLCONFIGDIR=/tmp/optimizer-mpl /Users/billabobz/miniconda3/bin/conda run --no-capture-output -n optimizer_v4 python -m unittest discover -s tests",
+  "test_count": 142,
+  "test_result": "passed",
+  "wheel_sha256": "17ba63744c417718e559711e9de9ac481264fc1fcb3f3f5318b338eb8852eb3d",
+  "environment_receipt": {
+    "path": "/Users/billabobz/.optimizer_v4/install.json",
+    "sha256": "7aafe9556c8301e79265224c128f5a78fbad4e2c33707ad2f5ef1bed70fabd49"
+  },
+  "release_evidence": {
+    "path": "/Users/billabobz/OPTIMIZER/stable/v4/RELEASE_EVIDENCE.md",
+    "sha256": "433ac84122753de728d74da7923fd8813e66b8fc448e986c3d782db31439915d"
+  },
+  "release_date": "2026-08-12"
+}
