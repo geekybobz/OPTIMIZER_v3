@@ -328,6 +328,8 @@ def cma_es(
     current_value = _metric(initial.metrics, config.accept_metric)
     accepted_any = False
     usable_generation_any = False
+    failed_generation_count = 0
+    first_usable_generation: int | None = None
 
     def emit_checkpoint(
         label: str,
@@ -390,6 +392,18 @@ def cma_es(
             accepted=accepted_any,
             reason=reason,
         )
+        certification: dict[str, Any] = {}
+        if failed_generation_count:
+            certification["cma_es_degeneracy"] = {
+                "status": (
+                    "all_generations_degenerate"
+                    if not usable_generation_any
+                    else "degeneracy_observed_after_usable_generation"
+                ),
+                "failed_generations": failed_generation_count,
+                "first_usable_generation": first_usable_generation,
+                "population_size": int(population),
+            }
         terminal_event = TerminalEvent(
             optimizer="cma_es",
             status=classify_terminal_status(reason, degenerate=degenerate),
@@ -401,6 +415,7 @@ def cma_es(
             stage=stage,
             chunk=int(chunk),
             system_params=dict(state.system_params),
+            certification=certification,
         )
         sinks.emit("on_chunk", chunk_event)
         sinks.emit("on_terminal", terminal_event)
@@ -441,6 +456,8 @@ def cma_es(
         )
         if successful_indices.size:
             usable_generation_any = True
+            if first_usable_generation is None:
+                first_usable_generation = generation + 1
             local_order = _rank_indices(values[successful_indices], mode=config.accept_mode)
             order = successful_indices[local_order]
             best_index: int | None = int(order[0])
@@ -457,6 +474,7 @@ def cma_es(
             best_eval = evaluations[best_index]
             best_value: float | None = float(values[best_index])
         else:
+            failed_generation_count += 1
             best_index = None
             best_eval = None
             best_value = None
@@ -546,5 +564,6 @@ def cma_es(
         optimizer="cma_es",
         trace=active_trace,
         tracking_failures=sinks.failures,
+        objective_metric=str(objective["metric_id"]),
     )
     return result

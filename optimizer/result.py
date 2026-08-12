@@ -27,7 +27,9 @@ metric acceptance.  It only standardizes public data shape and lightweight expor
 
 Reviewer invariants
 -------------------
-- ``metrics`` always contains finite scalar ``J`` when using the constructors here.
+- ``metrics`` always contains a finite scalar declared objective when using the
+  constructors here.  ``J`` remains a legacy convenience only for systems that
+  declare and return it.
 - exported dictionaries are JSON-friendly for common scalar/list/dict payloads.
 - controls export includes both spec metadata and matrix values.
 - optimizer-private run state stays in ``RunState`` and is not flattened accidentally.
@@ -79,6 +81,7 @@ class Evaluation:
     controls: Controls
     metrics: dict[str, Any]
     system_state: dict[str, Any] | None = None
+    objective_metric: str = "J"
 
     @classmethod
     def from_metrics(
@@ -87,17 +90,27 @@ class Evaluation:
         metrics: Mapping[str, Any],
         *,
         system_state: Mapping[str, Any] | None = None,
+        objective_metric: str = "J",
     ) -> "Evaluation":
         """Validate metrics and create an evaluation snapshot."""
 
         return cls(
             controls=controls,
-            metrics=validate_metrics(metrics),
+            metrics=validate_metrics(metrics, objective_metric=objective_metric),
             system_state=None if system_state is None else dict(system_state),
+            objective_metric=str(objective_metric),
         )
 
     @property
+    def objective_value(self) -> float:
+        """Return the scalar selected by this evaluation's declared objective."""
+
+        return float(self.metrics[self.objective_metric])
+
+    @property
     def J(self) -> float:
+        """Legacy accessor for a metric literally named ``J``."""
+
         return float(self.metrics["J"])
 
     def to_dict(self, *, include_controls: bool = True) -> dict[str, Any]:
@@ -120,6 +133,7 @@ class OptimizerResult:
     stop_reason: str
     iterations: int
     optimizer: str
+    objective_metric: str = "J"
     state: RunState | None = None
     trace: Any | None = None
     system_params: dict[str, Any] = field(default_factory=dict)
@@ -136,15 +150,17 @@ class OptimizerResult:
         optimizer: str | None = None,
         trace: Any | None = None,
         tracking_failures: tuple[dict[str, str], ...] = (),
+        objective_metric: str = "J",
     ) -> "OptimizerResult":
         """Create a public result from a final run state."""
 
         return cls(
             controls=state.controls,
-            metrics=validate_metrics(state.metrics),
+            metrics=validate_metrics(state.metrics, objective_metric=objective_metric),
             stop_reason=str(stop_reason),
             iterations=int(state.iteration),
             optimizer=optimizer or state.optimizer_name or "unknown",
+            objective_metric=str(objective_metric),
             state=state,
             trace=trace,
             system_params=dict(state.system_params),
@@ -155,7 +171,15 @@ class OptimizerResult:
 
     @property
     def J(self) -> float:
+        """Legacy accessor for a metric literally named ``J``."""
+
         return float(self.metrics["J"])
+
+    @property
+    def objective_value(self) -> float:
+        """Return the final value of the declared objective metric."""
+
+        return float(self.metrics[self.objective_metric])
 
     def warmstart(self, *, target_optimizer: str | None = None) -> WarmStartState:
         """Return safe warmstart state for another optimizer call."""
@@ -177,7 +201,9 @@ class OptimizerResult:
         payload: dict[str, Any] = {
             "controls": controls_to_dict(self.controls),
             "metrics": _json_safe(self.metrics),
-            "J": float(self.metrics["J"]),
+            "objective_metric": self.objective_metric,
+            "objective_value": self.objective_value,
+            "J": None if "J" not in self.metrics else float(self.metrics["J"]),
             "stop_reason": self.stop_reason,
             "iterations": int(self.iterations),
             "optimizer": self.optimizer,

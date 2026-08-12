@@ -19,7 +19,7 @@ the tracker records generic already-computed scalar facts and never assumes
 physics-specific metric names. All work remains under:
 
 ~~~text
-/Users/billabobz/OPTIMIZER/v4
+/Users/billabobz/OPTIMIZER/contained
 ~~~
 
 This plan does not change stable/v3 or the HO-purification source tree.

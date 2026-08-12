@@ -65,6 +65,12 @@ if ! git -C "${ROOT_DIR}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   exit 1
 fi
 
+if git -C "${ROOT_DIR}" describe --exact-match --tags HEAD >/dev/null 2>&1; then
+  echo "Refusing to mutate a checkout whose HEAD is an immutable release tag." >&2
+  echo "Create a contained development checkout from the release before updating." >&2
+  exit 1
+fi
+
 if ! git -C "${ROOT_DIR}" remote get-url "${REMOTE}" >/dev/null 2>&1; then
   echo "Git remote not found: ${REMOTE}" >&2
   echo "Add a remote first, for example: git remote add origin <repo-url>" >&2

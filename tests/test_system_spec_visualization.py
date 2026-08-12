@@ -7,10 +7,14 @@ from pathlib import Path
 import tempfile
 import unittest
 
-import matplotlib
 import numpy as np
 
-matplotlib.use("Agg")
+try:
+    import matplotlib
+except ModuleNotFoundError:
+    matplotlib = None
+else:
+    matplotlib.use("Agg")
 
 import optimizer as opt
 from optimizer.system_olgs.scaffold import scaffold_system
@@ -116,6 +120,7 @@ class SystemSpecVisualizationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "analytical"):
             opt.require_system(InvalidSystemSpec())
 
+    @unittest.skipUnless(matplotlib is not None, "requires the scientific matplotlib extra")
     def test_bloch_renderer_accepts_generic_named_layers(self):
         system = GenericQubitSystem()
         controls = opt.Controls.zeros(system.control_spec())

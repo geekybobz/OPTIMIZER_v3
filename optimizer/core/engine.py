@@ -901,6 +901,7 @@ def run_chunk(
             optimizer=optimizer_name,
             trace=active_trace,
             tracking_failures=active_observers.failures,
+            objective_metric=objective_metric,
         )
         return result
 
@@ -1265,5 +1266,6 @@ def run_chunk(
         optimizer=optimizer_name,
         trace=active_trace,
         tracking_failures=active_observers.failures,
+        objective_metric=objective_metric,
     )
     return result

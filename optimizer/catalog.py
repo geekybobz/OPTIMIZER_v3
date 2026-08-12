@@ -427,7 +427,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
         common_returns=_RESULT_RETURN,
         workflow=(
             "Start from opt.guesses.* or an existing Controls object.",
-            "Run short chunks and inspect result.J, result.metrics, and result.trace.",
+            "Run short chunks and inspect result.objective_value, result.metrics, and result.trace.",
             "Use result.warmstart(...) when chaining optimizers.",
         ),
         items=(

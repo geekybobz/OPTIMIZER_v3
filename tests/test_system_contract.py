@@ -13,7 +13,9 @@ from optimizer.system_olgs import (
     probe_system,
     require_system,
     validate_controls_for_system,
+    validate_system_spec,
 )
+from optimizer.optimizers import adam
 
 
 @dataclass(frozen=True)
@@ -79,6 +81,48 @@ class BadGradientSystem(DummySystem):
         return Controls.zeros(spec)
 
 
+class FidelitySystem:
+    """A legal non-``J`` objective used to guard the metric contract."""
+
+    def control_spec(self):
+        return ControlSpec(keys=("u",), control_dim=4, dt=0.1)
+
+    def system_spec(self):
+        return validate_system_spec(
+            {
+                "schema_version": "optimizer.system-spec/v1",
+                "identity": {"id": "fidelity", "name": "Fidelity", "system_type": "generic"},
+                "controls": self.control_spec().to_dict(),
+                "parameters": {},
+                "objective": {"metric_id": "fidelity", "direction": "maximize"},
+                "metrics": {"fidelity": {"label": "Fidelity", "role": "objective"}},
+                "derivatives": {
+                    "gradient": {
+                        "target": "fidelity",
+                        "hook": "gradient",
+                        "source": "analytical",
+                        "convention": "dJ/du",
+                    }
+                },
+                "constraints": {},
+                "visualizations": {},
+                "allow_additional_metrics": False,
+            }
+        )
+
+    def evaluate(self, controls):
+        u = controls.channel("u")
+        return {"fidelity": float(-np.sum((u - 1.0) ** 2))}
+
+    def gradient(self, controls):
+        u = controls.channel("u")
+        return Controls.from_dict(self.control_spec(), {"u": -2.0 * (u - 1.0)})
+
+    def with_secondary(self, **updates):
+        del updates
+        return self
+
+
 class SystemContractTests(unittest.TestCase):
     def test_probe_and_require_system(self):
         system = DummySystem()
@@ -126,6 +170,18 @@ class SystemContractTests(unittest.TestCase):
             evaluate_system(BadMetricsSystem(), controls)
         with self.assertRaises(ValueError):
             gradient_system(BadGradientSystem(), controls)
+
+    def test_declared_non_j_objective_runs_without_a_redundant_j_metric(self):
+        system = FidelitySystem()
+        controls = Controls.zeros(system.control_spec())
+
+        result = adam(system, controls, step_size=0.2, maxiter=4)
+
+        self.assertIn("fidelity", result.metrics)
+        self.assertNotIn("J", result.metrics)
+        self.assertEqual(result.objective_metric, "fidelity")
+        self.assertGreater(result.objective_value, -4.0)
+        self.assertIsNone(result.to_dict()["J"])
 
     def test_optional_residuals_and_jacobian(self):
         system = DummySystem()

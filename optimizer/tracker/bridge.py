@@ -357,6 +357,7 @@ class JournalObserver(ObserverAdapter):
                 global_iteration=event.global_iteration,
                 chunk=event.chunk,
                 system_params=_compact_mapping(event.system_params),
+                certification=_compact_mapping(event.certification),
             )
         )
         self._ended = True

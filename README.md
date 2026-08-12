@@ -257,7 +257,8 @@ optimizer/
   state.py             RunState and WarmStartState
   library.py           root facade and bound-system context
   core/                shared chunk engine, evaluation, stopping, acceptance guards
-  optimizers/          Adam, momentum, line search, AdaGrad, RMSProp, L-BFGS, NCG, CMA-ES
+  optimizers/          Adam, momentum, line search, AdaGrad, RMSProp, L-BFGS, NCG, CMA-ES,
+                       projected gradient, Newton-CG, trust region, proximal gradient
   guesses/             simple, harmonic, random, and composite initial controls
   utils/               diagnostics, derivatives, geometry, repair, spectrum, parallel tools
   visualization/       generic plot-data models and optional renderers

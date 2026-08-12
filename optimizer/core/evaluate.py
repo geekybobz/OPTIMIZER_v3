@@ -207,7 +207,11 @@ class SystemEvaluator:
 
         self.evaluation_attempt_count += 1
         metrics = evaluate_system(self.system, controls, system_spec=self.system_spec)
-        evaluation = Evaluation.from_metrics(controls.copy(name=controls.name), metrics)
+        evaluation = Evaluation.from_metrics(
+            controls.copy(name=controls.name),
+            metrics,
+            objective_metric=str(self.system_spec["objective"]["metric_id"]),
+        )
         self.evaluation_count += 1
         if self.use_cache:
             self._evaluations[key] = evaluation

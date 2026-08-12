@@ -14,6 +14,7 @@ SCRIPT = ROOT / "optimizer_context.py"
 
 
 class OptimizerContextTests(unittest.TestCase):
+    @unittest.skipUnless(SCRIPT.exists(), "requires the source checkout layout")
     def test_json_snapshot_is_runtime_derived_and_uses_contained_package(self) -> None:
         completed = subprocess.run(
             [sys.executable, str(SCRIPT), "--json"],

@@ -29,7 +29,7 @@ declares objective metric meaning and selection direction, the journal owns an
 exclusive writer token and heartbeat, and important checkpoint artifacts save
 controls, scalar evidence, optimizer state, API context, and integrity hashes.
 The remaining staged plan is in
-[`OPTIMIZATION_TRACKER_HANDOFF.md`](/Users/billabobz/OPTIMIZER/v4/OPTIMIZATION_TRACKER_HANDOFF.md).
+[`OPTIMIZATION_TRACKER_HANDOFF.md`](../../OPTIMIZATION_TRACKER_HANDOFF.md).
 
 ## Source-of-truth rule
 

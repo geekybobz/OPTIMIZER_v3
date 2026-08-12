@@ -39,23 +39,35 @@ def validate_metrics(
     metrics: Metrics,
     *,
     system_spec: dict[str, Any] | None = None,
+    objective_metric: str | None = None,
 ) -> dict[str, Any]:
-    """Validate and normalize an evaluation metrics mapping."""
+    """Validate and normalize an evaluation metrics mapping.
+
+    A bare metrics mapping retains the legacy ``J`` default.  A system-owned
+    specification takes precedence, so a system may declare (for example)
+    ``fidelity`` as its objective without manufacturing a duplicate ``J``.
+    """
 
     from collections.abc import Mapping
 
     if not isinstance(metrics, Mapping):
         raise TypeError("system.evaluate(...) must return a metrics mapping.")
-    if "J" not in metrics:
-        raise KeyError("system.evaluate(...) metrics must include key 'J'.")
-    j_value = float(metrics["J"])
-    if not np.isfinite(j_value):
-        raise ValueError("metric 'J' must be finite.")
+    declared_objective = "J" if objective_metric is None else str(objective_metric)
+    if system_spec is not None:
+        declared_objective = str(system_spec.get("objective", {}).get("metric_id", declared_objective))
+    if declared_objective not in metrics:
+        raise KeyError(
+            "system.evaluate(...) metrics must include the declared objective "
+            f"metric {declared_objective!r}."
+        )
+    objective_value = float(metrics[declared_objective])
+    if not np.isfinite(objective_value):
+        raise ValueError(f"metric {declared_objective!r} must be finite.")
     out = dict(metrics)
-    out["J"] = j_value
+    out[declared_objective] = objective_value
     if system_spec is not None:
         out = validate_declared_metrics(out, system_spec)
-        out["J"] = j_value
+        out[declared_objective] = objective_value
     return out
 
 

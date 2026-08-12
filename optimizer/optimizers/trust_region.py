@@ -12,7 +12,7 @@ from optimizer.core.engine import AcceptanceDecision, StepContext, StepProposal,
 from optimizer.optimizers._common import coerce_warmstart, controls_from_flat_like, method_api_context, require_finite
 from optimizer.result import Evaluation, OptimizerResult
 from optimizer.state import RunState
-from optimizer.system_olgs import probe_system
+from optimizer.system_olgs import get_system_spec, probe_system
 
 
 @dataclass(frozen=True)
@@ -29,6 +29,8 @@ class TrustRegionConfig:
     grow_threshold: float = 0.75
     shrink_factor: float = 0.25
     grow_factor: float = 2.0
+    objective_metric: str = "J"
+    objective_direction: str = "minimize"
 
     def __post_init__(self) -> None:
         require_finite("initial_radius", self.initial_radius, positive=True)
@@ -54,6 +56,8 @@ class TrustRegionConfig:
             raise ValueError("shrink_factor must satisfy 0 < value < 1.")
         if float(self.grow_factor) <= 1.0:
             raise ValueError("grow_factor must be > 1.")
+        if self.objective_direction not in {"minimize", "maximize"}:
+            raise ValueError("objective_direction must be 'minimize' or 'maximize'.")
 
 
 def _boundary_tau(point: np.ndarray, direction: np.ndarray, radius: float) -> float:
@@ -66,10 +70,12 @@ def _boundary_tau(point: np.ndarray, direction: np.ndarray, radius: float) -> fl
     return max(positive) if positive else 0.0
 
 
-def _hvp_flat(context: StepContext, vector: np.ndarray, damping: float) -> np.ndarray:
+def _hvp_flat(context: StepContext, vector: np.ndarray, damping: float, *, direction: str) -> np.ndarray:
     control_vector = controls_from_flat_like(context.state.controls, vector, name="trust_region_vector")
     product = context.evaluator.hvp(context.state.controls, control_vector)
-    return product.flatten(copy=False).astype(float, copy=False) + float(damping) * vector
+    native = product.flatten(copy=False).astype(float, copy=False)
+    descent_hessian = native if direction == "minimize" else -native
+    return descent_hessian + float(damping) * vector
 
 
 def _steihaug(context: StepContext, radius: float, config: TrustRegionConfig) -> tuple[np.ndarray, dict[str, Any]]:
@@ -83,7 +89,7 @@ def _steihaug(context: StepContext, radius: float, config: TrustRegionConfig) ->
     negative_curvature = False
     iterations = 0
     for iteration in range(int(config.cg_maxiter)):
-        product = _hvp_flat(context, direction, config.damping)
+        product = _hvp_flat(context, direction, config.damping, direction=config.objective_direction)
         curvature = float(np.dot(direction, product))
         if curvature <= float(config.curvature_tolerance):
             tau = _boundary_tau(point, direction, radius)
@@ -110,7 +116,7 @@ def _steihaug(context: StepContext, radius: float, config: TrustRegionConfig) ->
         direction = -residual_next + beta * direction
         residual = residual_next
         residual_sq = next_sq
-    h_point = _hvp_flat(context, point, config.damping)
+    h_point = _hvp_flat(context, point, config.damping, direction=config.objective_direction)
     predicted = -float(np.dot(gradient, point)) - 0.5 * float(np.dot(point, h_point))
     return point, {
         "cg_iterations": iterations,
@@ -158,7 +164,13 @@ def _accept(config: TrustRegionConfig):
     def accept(current: Evaluation, trial: Evaluation, proposal: StepProposal, state: RunState) -> AcceptanceDecision:
         del state
         predicted = float(proposal.technical.get("predicted_reduction", 0.0))
-        actual = float(current.J - trial.J)
+        current_value = current.objective_value
+        trial_value = trial.objective_value
+        actual = (
+            current_value - trial_value
+            if config.objective_direction == "minimize"
+            else trial_value - current_value
+        )
         rho = actual / predicted if predicted > np.finfo(float).tiny else float("-inf")
         radius = float(proposal.technical["trust_radius"])
         boundary_hit = bool(proposal.technical.get("boundary_hit", False))
@@ -174,6 +186,8 @@ def _accept(config: TrustRegionConfig):
             reason="trust_region_accepted" if accepted else "trust_region_rejected",
             technical={
                 "actual_reduction": actual,
+                "objective_metric": config.objective_metric,
+                "objective_direction": config.objective_direction,
                 "predicted_reduction": predicted,
                 "rho": rho,
                 "trust_radius_before": radius,
@@ -211,10 +225,11 @@ def trust_region(
     warmstart: Any | None = None,
     **engine_kwargs: Any,
 ) -> OptimizerResult:
-    """Run a Steihaug trust-region method for minimization."""
+    """Run a Steihaug trust-region method for the declared system objective."""
 
     if not probe_system(system).has_hvp:
         raise TypeError("trust_region requires system.hvp(controls, vector).")
+    objective = get_system_spec(system)["objective"]
     config = TrustRegionConfig(
         initial_radius=initial_radius,
         max_radius=max_radius,
@@ -228,6 +243,8 @@ def trust_region(
         grow_threshold=grow_threshold,
         shrink_factor=shrink_factor,
         grow_factor=grow_factor,
+        objective_metric=str(objective["metric_id"]),
+        objective_direction=str(objective["direction"]),
     )
     return run_chunk(
         system,
@@ -239,7 +256,7 @@ def trust_region(
         warmstart=coerce_warmstart(warmstart, target_optimizer="trust_region"),
         step_size=initial_radius,
         accept=_accept(config),
-        accept_metric="J",
-        accept_mode="min",
+        accept_metric=config.objective_metric,
+        accept_mode="min" if config.objective_direction == "minimize" else "max",
         **method_api_context(engine_kwargs, method="trust_region", config=config),
     )

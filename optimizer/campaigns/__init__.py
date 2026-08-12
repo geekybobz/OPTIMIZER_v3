@@ -289,8 +289,9 @@ class CandidateRef:
             "selection": self.selection.to_dict(),
             "checkpoint": _json_safe(self.checkpoint),
             "optimizer": self.result.optimizer,
+            "objective_metric": self.selection.metric_id,
             "objective_value": self.objective_value,
-            "J": self.result.J,
+            "J": self.result.metrics.get("J"),
             "iterations": self.result.iterations,
             "stop_reason": self.result.stop_reason,
             "metrics": _json_safe(self.result.metrics),
@@ -310,6 +311,7 @@ class CandidateRef:
             stop_reason=str(value["stop_reason"]),
             iterations=int(value["iterations"]),
             optimizer=str(value["optimizer"]),
+            objective_metric=selection.metric_id,
             state=None,
             system_params=dict(data.metadata.get("system_params", {})),
             checkpoint_ids={"selected": data.reference.checkpoint_id},
@@ -966,6 +968,12 @@ def list(*, h: bool = False) -> dict[str, Any] | str:
         + [f"- {mode}" for mode in payload["modes"]]
         + ["Parallel modes: " + ", ".join(payload["parallel_modes"])]
     )
+
+
+def __dir__() -> list[str]:
+    """Expose the deliberate campaign API in interactive discovery."""
+
+    return sorted(__all__)
 
 
 __all__ = [

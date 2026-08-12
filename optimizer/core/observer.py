@@ -122,6 +122,7 @@ class TerminalEvent:
     stage: str | None
     chunk: int = 0
     system_params: dict[str, Any] = field(default_factory=dict)
+    certification: dict[str, Any] = field(default_factory=dict)
 
 
 class RunObserver(Protocol):
