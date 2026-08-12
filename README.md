@@ -1,5 +1,5 @@
 ---
-title: OPTIMIZER_V4_0_1_ENTRY
+title: OPTIMIZER_V4_ENTRY
 type: root_hub
 module: root
 tags:
@@ -8,11 +8,11 @@ tags:
   - hub
 ---
 
-# OPTIMIZER V4.0.1 release entry
+# OPTIMIZER V4 entry
 
-V4.0.1 is an immutable release candidate promoted from a specific tested
-`contained` commit. It is a namespace-first optimization toolbox for
-system-defined control problems.
+This is the single current OPTIMIZER V4 checkout. Commits and annotated tags record
+release revisions; ordinary V4 work stays in this folder. It is a namespace-first
+optimization toolbox for system-defined control problems.
 
 A project system owns the physics:
 
