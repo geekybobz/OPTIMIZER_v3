@@ -1,25 +1,25 @@
 ---
 title: OPTIMIZER_V4_BETA_STATUS
 type: status-and-roadmap
-scope: v4-beta
-status: beta-validation
+scope: stable-v4
+status: released-baseline
 updated: 2026-08-12
 ---
 
-# OPTIMIZER v4 beta — status and release boundary
+# OPTIMIZER v4.0 — release baseline
 
 ## Release identity
 
-V4 is isolated in the `v4/` worktree on branch `v4-beta`.  Its package identity
-is `optimizer-v4` version `4.0.0b1`; the installer and environment file target
-`optimizer_v4`.  Stable V3 is not modified by this branch.
+V4.0 is isolated in `stable/v4/` on branch `v4.0`. Its package identity is
+`optimizer-v4` version `4.0.0`; the installer and environment file target
+`optimizer_v4`. Stable V3 remains unchanged.
 
 Source-level compatibility checks first used the existing `optimizer_v3`
 environment.  The final release check then bootstrapped `optimizer_v4`, installed
-this checkout editable, verified `optimizer-v4 4.0.0b1`, and reran the full
+this checkout editable, verified the V4 package metadata, and reran the full
 suite there.
 
-## What V4 adds
+## What V4.0 adds
 
 ```mermaid
 flowchart LR
@@ -73,8 +73,8 @@ flowchart LR
    result still needs the original system resolution, declared parameters,
    derivative verification, and the relevant physical validation campaign.
 
-## Final beta gate
+## Release baseline gate
 
-Before external promotion: bootstrap `optimizer_v4` from `environment.yml`,
-install the editable V4 package, rerun the full suite inside that environment,
-inspect the staged release diff, and tag only the verified commit.
+The V4.0 baseline was installed in `optimizer_v4` and tested from a clean
+environment. New changes belong in the separate `contained/` development clone;
+future releases must repeat the clean-environment test and independent audit.

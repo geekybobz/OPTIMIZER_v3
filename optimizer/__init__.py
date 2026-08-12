@@ -102,7 +102,7 @@ from optimizer.system_olgs import (
 )
 
 
-__version__ = "4.0.0b1"
+__version__ = "4.0.0"
 from optimizer.visualization import PlotData, PlotLayer
 from optimizer.utils.repairs import RepairResult
 

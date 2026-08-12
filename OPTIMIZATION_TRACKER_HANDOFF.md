@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This is the design and implementation plan for the V4 beta optimizer only.
+This is the design and implementation plan for the V4.0 optimizer baseline.
 It replaces the earlier tracker handoff plan.
 
 The reference lifecycle is an OLGS quantum-control run:
@@ -441,7 +441,7 @@ campaign evidence is required for basin/global conclusions.
 
 ## 14. Explicit exclusions
 
-- no change outside the V4 beta worktree;
+- no change outside the V4.0 baseline worktree;
 - no automatic promotion to stable/v3;
 - no HO source-tree modifications;
 - no journal-triggered system calculations;
