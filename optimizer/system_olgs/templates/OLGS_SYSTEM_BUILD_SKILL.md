@@ -44,10 +44,12 @@ the single source of truth. It is a hidden tooling shim, not an Obsidian graph n
 
 ## Environment
 
-Use the `optimizer_v4` conda environment for implementation and checks.
+Use the checkout's declared development environment for implementation and checks
+(`contained` for the mutable development checkout). A tagged release checkout is
+read-only and must not be used for implementation work.
 
 Expected Python/Jupyter checks should run inside the project environment, for
-example through `conda activate optimizer_v4` rather than the system Python.
+example through its declared environment rather than the system Python.
 
 ## Reference Map
 

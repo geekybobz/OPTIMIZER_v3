@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Remove the editable contained development checkout from its conda environment.
+# Remove the non-editable OPTIMIZER V4 release wheel from its conda environment.
 # The environment itself is kept by default. Pass --remove-env when the whole
 # environment should be deleted.
 
 PACKAGE_NAME="optimizer-v4"
-ENV_NAME="${CONTAINED_ENV:-contained}"
-STATE_FILE="${CONTAINED_STATE_FILE:-${HOME}/.contained/install.json}"
+ENV_NAME="${OPTIMIZER_V4_ENV:-optimizer_v4}"
+STATE_FILE="${OPTIMIZER_V4_STATE_FILE:-${HOME}/.optimizer_v4/install.json}"
 REMOVE_ENV=0
 
 usage() {
@@ -16,8 +16,8 @@ Usage: ./uninstall.sh [options]
 
 Options:
   --env-name NAME       Conda environment name. Defaults to install-state value,
-                        then CONTAINED_ENV, then contained.
-  --state-file PATH     Install-state JSON path. Default: ~/.contained/install.json
+                        then OPTIMIZER_V4_ENV, then optimizer_v4.
+  --state-file PATH     Install-state JSON path. Default: ~/.optimizer_v4/install.json
   --remove-env          Remove the whole conda environment after uninstalling package.
   -h, --help            Show this help.
 USAGE
@@ -84,7 +84,7 @@ fi
 if [[ -f "${STATE_FILE}" ]]; then
   STATE_ENV="$(json_value "${STATE_FILE}" env_name || true)"
   STATE_PACKAGE="$(json_value "${STATE_FILE}" package || true)"
-  if [[ -n "${STATE_ENV}" && "${ENV_NAME}" == "${CONTAINED_ENV:-contained}" ]]; then
+  if [[ -n "${STATE_ENV}" && "${ENV_NAME}" == "${OPTIMIZER_V4_ENV:-optimizer_v4}" ]]; then
     ENV_NAME="${STATE_ENV}"
   fi
   if [[ -n "${STATE_PACKAGE}" ]]; then
@@ -105,7 +105,7 @@ if [[ -z "$(env_prefix)" ]]; then
   exit 0
 fi
 
-echo "Removing contained development checkout from: ${ENV_NAME}"
+echo "Removing OPTIMIZER V4 release wheel from: ${ENV_NAME}"
 conda run -n "${ENV_NAME}" python -m pip uninstall -y "${PACKAGE_NAME}" || true
 
 if [[ "${REMOVE_ENV}" == "1" ]]; then

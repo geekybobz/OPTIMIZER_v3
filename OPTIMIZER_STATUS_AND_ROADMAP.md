@@ -1,22 +1,21 @@
 ---
-title: OPTIMIZER_CONTAINED_STATUS
+title: OPTIMIZER_V4_0_1_STATUS
 type: status-and-roadmap
-scope: contained
-status: active-development
+scope: release
+status: released-baseline
 updated: 2026-08-12
 ---
 
-# OPTIMIZER contained — development status
+# OPTIMIZER V4.0.1 — release status
 
 ## Release identity
 
-Contained is an independent clone derived from the tagged V4.0 baseline. It
-uses branch `contained`, the `contained` environment, and the canonical
-`optimizer-v4` package. Stable V3 and stable V4.0 remain unchanged.
+V4.0.1 is an independent release candidate promoted from a tested contained
+commit. It uses branch `v4.0.1`, the `optimizer_v4` environment, and a
+non-editable `optimizer-v4` wheel. Stable V3 and stable V4.0 remain unchanged.
 
-The V4.0 release checks are inherited as baseline evidence only. Every contained
-change must be retested in the independent `contained` environment before it may
-be proposed as a future release candidate.
+The V4.0.1 release manifest binds the tag, commit, wheel hash, environment receipt,
+audit report, and test evidence. Further changes belong in `contained`, not here.
 
 ## Baseline capabilities inherited from V4.0
 
@@ -72,8 +71,8 @@ flowchart LR
    result still needs the original system resolution, declared parameters,
    derivative verification, and the relevant physical validation campaign.
 
-## Contained development gate
+## Release gate
 
-This checkout is the only location for new changes. A future release must select a
-specific contained commit, create a clean candidate checkout, install it in a
-fresh release environment, and repeat the independent audit.
+This tagged checkout is immutable. A future release must select a specific contained
+commit, create a new clean candidate checkout, install a wheel in a fresh release
+environment, and repeat the independent audit.
