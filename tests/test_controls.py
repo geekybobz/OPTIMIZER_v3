@@ -79,6 +79,16 @@ class ControlsTests(unittest.TestCase):
         np.testing.assert_allclose(cloned.channel("u"), [9.0, 9.0, 9.0])
         self.assertEqual(cloned.name, "clone")
 
+    def test_zero_copy_matrix_is_read_only(self):
+        controls = Controls.from_dict(ControlSpec(keys=("u",), control_dim=2), {"u": [1.0, 2.0]})
+
+        matrix = controls.as_matrix(copy=False)
+
+        self.assertFalse(matrix.flags.writeable)
+        with self.assertRaises(ValueError):
+            matrix[0, 0] = 9.0
+        np.testing.assert_allclose(controls.as_matrix(), [[1.0, 2.0]])
+
     def test_vectorized_arithmetic(self):
         spec = ControlSpec(keys=("uA", "uB"), control_dim=2)
         a = Controls.from_matrix(spec, [[1.0, 2.0], [3.0, 4.0]])
@@ -114,4 +124,3 @@ class ControlsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

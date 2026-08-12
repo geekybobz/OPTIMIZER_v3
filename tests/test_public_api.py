@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 
 import optimizer as opt
+import optimizer.logs as logs
 from fixtures.quadratic_system import QuadraticVectorSystem
 
 
@@ -103,6 +104,11 @@ class PublicApiTests(unittest.TestCase):
         self.assertTrue(callable(opt.system_info))
         self.assertTrue(callable(opt.tracker.info))
         self.assertIsInstance(opt.library, opt.OptimizerLibrary)
+        self.assertEqual(dir(opt), sorted(opt.__all__))
+        self.assertEqual(
+            logs.__all__,
+            ["Checkpoint", "ChunkRecord", "EventRecord", "IterationRecord", "Trace", "clone_run_state"],
+        )
 
         methods = opt.methods()
         self.assertEqual(methods["run_chunk"].status, "implemented")

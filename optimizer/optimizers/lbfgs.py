@@ -152,7 +152,7 @@ def _build_lbfgs_step(config: LBFGSConfig):
         update, raw_step_norm, clipped = clip_vector(raw_update, config.max_step_norm)
         candidate = controls_from_flat_like(controls, current_flat + update, name="lbfgs_trial")
 
-        outcome = context.evaluator.try_gradient(candidate)
+        outcome = context.try_descent_gradient(candidate)
         if not outcome.ok or outcome.gradient is None:
             raise ValueError(f"L-BFGS candidate gradient failed: {outcome.error}")
         next_gradient = outcome.gradient.flatten(copy=False).astype(float, copy=False)

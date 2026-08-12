@@ -133,7 +133,7 @@ def _build_momentum_step(config: MomentumConfig):
                 lookahead_flat,
                 name="momentum_lookahead",
             )
-            outcome = context.evaluator.try_gradient(lookahead)
+            outcome = context.try_descent_gradient(lookahead)
             if not outcome.ok or outcome.gradient is None:
                 raise ValueError(f"Nesterov lookahead gradient failed: {outcome.error}")
             gradient = outcome.gradient

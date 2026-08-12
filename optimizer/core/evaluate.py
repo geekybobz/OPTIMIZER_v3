@@ -236,7 +236,12 @@ class SystemEvaluator:
         self.value_gradient_attempt_count += 1
         pair = value_and_gradient_system(self.system, controls, system_spec=self.system_spec)
         gradient = pair.gradient.copy(name=pair.gradient.name)
-        evaluation = Evaluation.from_metrics(controls.copy(name=controls.name), pair.metrics)
+        objective_metric = str(self.system_spec["objective"]["metric_id"])
+        evaluation = Evaluation.from_metrics(
+            controls.copy(name=controls.name),
+            pair.metrics,
+            objective_metric=objective_metric,
+        )
         self.value_gradient_count += 1
         self.evaluation_count += 1
         self.gradient_count += 1

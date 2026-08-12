@@ -127,6 +127,22 @@ class OptimizerPhaseTests(unittest.TestCase):
                 self.assertEqual(velocity.shape, (system.control_spec().size,))
                 self.assertTrue(np.all(np.isfinite(velocity)))
 
+    def test_nesterov_respects_declared_maximization_direction(self):
+        system = MaximizingScalarSystem()
+        controls = opt.zeros(system.control_spec(), name="zero")
+        initial = opt.evaluate(system, controls).J
+
+        result = opt.momentum(
+            system,
+            controls,
+            variant="nesterov",
+            step_size=0.1,
+            maxiter=4,
+        )
+
+        self.assertGreater(result.J, initial)
+        self.assertGreater(result.state.optimizer_state["accept_count"], 0)
+
     def test_momentum_restart_resets_velocity_on_rejected_step(self):
         system = vector_case()
         controls = opt.zeros(system.control_spec(), name="zero")

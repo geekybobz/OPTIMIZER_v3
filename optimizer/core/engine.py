@@ -73,8 +73,28 @@ class StepContext:
     state: RunState
     evaluation: Evaluation
     gradient: Controls
+    objective_direction: str
     iteration: int
     stage: str | None = None
+
+    def try_descent_gradient(self, controls: Controls) -> GradientOutcome:
+        """Return a trial gradient in this method's descent convention.
+
+        ``SystemEvaluator`` exposes the native derivative of the system-owned
+        objective.  Step functions are implemented as minimizers, so methods
+        that need a gradient away from the current controls must use this
+        helper instead of bypassing the engine's declared-direction conversion.
+        """
+
+        outcome = self.evaluator.try_gradient(controls)
+        if not outcome.ok or outcome.gradient is None:
+            return outcome
+        return GradientOutcome(
+            gradient=_descent_gradient(outcome.gradient, objective_direction=self.objective_direction),
+            ok=True,
+            reason=outcome.reason,
+            error=outcome.error,
+        )
 
 
 @dataclass(frozen=True)
@@ -793,6 +813,7 @@ def run_chunk(
             initial_evaluation = Evaluation.from_metrics(
                 active_controls.copy(name=active_controls.name),
                 combined_outcome.value_gradient.metrics,
+                objective_metric=objective_metric,
             )
             # Keep the system derivative in its native convention here.  The
             # common conversion to a descent direction happens immediately
@@ -1040,6 +1061,7 @@ def run_chunk(
             state=run_state,
             evaluation=current_eval,
             gradient=gradient_outcome.gradient,
+            objective_direction=objective_direction,
             iteration=run_state.iteration,
             stage=stage,
         )

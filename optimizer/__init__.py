@@ -102,7 +102,7 @@ from optimizer.system_olgs import (
 )
 
 
-__version__ = "4.0.1"
+__version__ = "4.0.2"
 from optimizer.visualization import PlotData, PlotLayer
 from optimizer.utils.repairs import RepairResult
 
@@ -631,3 +631,9 @@ __all__ = [
     "with_secondary",
     "zeros",
 ]
+
+
+def __dir__() -> list[str]:
+    """Expose only the deliberate package surface in interactive discovery."""
+
+    return sorted(__all__)

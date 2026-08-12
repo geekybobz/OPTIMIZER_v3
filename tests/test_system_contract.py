@@ -123,6 +123,13 @@ class FidelitySystem:
         return self
 
 
+class CombinedFidelitySystem(FidelitySystem):
+    """Non-``J`` system that uses the optional combined evaluator capability."""
+
+    def value_and_gradient(self, controls):
+        return self.evaluate(controls), self.gradient(controls)
+
+
 class SystemContractTests(unittest.TestCase):
     def test_probe_and_require_system(self):
         system = DummySystem()
@@ -182,6 +189,16 @@ class SystemContractTests(unittest.TestCase):
         self.assertEqual(result.objective_metric, "fidelity")
         self.assertGreater(result.objective_value, -4.0)
         self.assertIsNone(result.to_dict()["J"])
+
+    def test_combined_non_j_objective_preserves_declared_metric(self):
+        system = CombinedFidelitySystem()
+        controls = Controls.zeros(system.control_spec())
+
+        result = adam(system, controls, step_size=0.2, maxiter=4)
+
+        self.assertEqual(result.objective_metric, "fidelity")
+        self.assertNotIn("J", result.metrics)
+        self.assertGreater(result.objective_value, -4.0)
 
     def test_optional_residuals_and_jacobian(self):
         system = DummySystem()

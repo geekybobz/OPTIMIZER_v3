@@ -276,7 +276,18 @@ class Controls:
         self.u[row, :] = arr
 
     def as_matrix(self, *, copy: bool = True) -> np.ndarray:
-        return self.u.copy() if copy else self.u
+        """Return an isolated matrix or a read-only zero-copy view.
+
+        ``copy=False`` is for numerical consumers that inspect controls.  A
+        read-only view prevents accidental mutation of a ``Controls`` instance
+        through an accessor-style API.
+        """
+
+        if copy:
+            return self.u.copy()
+        view = self.u.view()
+        view.flags.writeable = False
+        return view
 
     def as_dict(self, *, copy: bool = True) -> dict[str, np.ndarray]:
         return {key: self.channel(key, copy=copy) for key in self.spec.keys}

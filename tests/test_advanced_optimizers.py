@@ -6,6 +6,7 @@ import numpy as np
 
 import optimizer as opt
 from fixtures.quadratic_system import QuadraticVectorSystem
+from test_optimizers import MaximizingScalarSystem
 
 
 def advanced_system():
@@ -49,6 +50,18 @@ class AdvancedOptimizerTests(unittest.TestCase):
         self.assertLess(result.J, initial)
         self.assertLessEqual(len(result.state.optimizer_state["s_history"]), 4)
         self.assertEqual(result.optimizer, "lbfgs")
+
+    def test_lbfgs_maximization_uses_consistent_descent_curvature(self):
+        system = MaximizingScalarSystem()
+        controls = opt.zeros(system.control_spec(), name="zero")
+        initial = opt.evaluate(system, controls).J
+
+        result = opt.lbfgs(system, controls, step_size=0.2, maxiter=8)
+
+        self.assertGreater(result.J, initial)
+        self.assertGreater(result.state.optimizer_state["accept_count"], 0)
+        self.assertTrue(result.state.optimizer_state["last_pair_accepted"])
+        self.assertGreater(result.state.optimizer_state["last_curvature"], 0.0)
 
     def test_nonlinear_cg_variants_decrease_fixture_objective(self):
         system = advanced_system()
