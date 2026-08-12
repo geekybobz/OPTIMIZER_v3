@@ -646,6 +646,7 @@ class TrackerBridgeTests(unittest.TestCase):
         completed = subprocess.run(
             [
                 sys.executable,
+                "-B",
                 "-c",
                 (
                     "import sys; import optimizer_log.reader; "

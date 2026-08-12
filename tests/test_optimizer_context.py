@@ -17,7 +17,7 @@ class OptimizerContextTests(unittest.TestCase):
     @unittest.skipUnless(SCRIPT.exists(), "requires the source checkout layout")
     def test_json_snapshot_is_runtime_derived_and_uses_contained_package(self) -> None:
         completed = subprocess.run(
-            [sys.executable, str(SCRIPT), "--json"],
+            [sys.executable, "-B", str(SCRIPT), "--json"],
             cwd=ROOT.parent,
             text=True,
             stdout=subprocess.PIPE,
