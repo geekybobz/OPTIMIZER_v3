@@ -6,8 +6,8 @@ set -euo pipefail
 # and diverged branches stop with an explanation instead of overwriting local work.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REMOTE="${OPTIMIZER_V4_REMOTE:-origin}"
-BRANCH="${OPTIMIZER_V4_BRANCH:-}"
+REMOTE="${CONTAINED_REMOTE:-origin}"
+BRANCH="${CONTAINED_BRANCH:-}"
 CHECK_ONLY=0
 ALLOW_DIRTY=0
 RUN_TESTS=0
@@ -128,4 +128,3 @@ if [[ "${RUN_TESTS}" == "1" ]]; then
 fi
 
 "${ROOT_DIR}/install.sh" "${INSTALL_ARGS[@]}"
-

@@ -1,5 +1,5 @@
 ---
-title: OPTIMIZER_V4_ENTRY
+title: OPTIMIZER_CONTAINED_ENTRY
 type: root_hub
 module: root
 tags:
@@ -8,10 +8,11 @@ tags:
   - hub
 ---
 
-# OPTIMIZER v4 Entry
+# OPTIMIZER contained development entry
 
-OPTIMIZER v4 is a namespace-first optimization toolbox for system-defined control
-problems.
+`contained` is the mutable development checkout derived from the frozen
+OPTIMIZER v4.0 baseline. It is a namespace-first optimization toolbox for
+system-defined control problems.
 
 A project system owns the physics:
 
@@ -320,7 +321,7 @@ library:
 
 ```bash
 ./install.sh
-conda activate optimizer_v4
+conda activate contained
 ```
 
 After activation, this works from any folder:
@@ -333,7 +334,7 @@ Editable install means source edits in this checkout are visible after restartin
 Python. The installer records the live paths in:
 
 ```text
-~/.optimizer_v4/install.json
+~/.contained/install.json
 ```
 
 Useful commands:
@@ -356,7 +357,7 @@ python -m unittest discover -s tests
 Inside the standard environment:
 
 ```bash
-conda run -n optimizer_v4 python -m unittest discover -s tests
+conda run -n contained python -m unittest discover -s tests
 ```
 
 ## Repository Hygiene

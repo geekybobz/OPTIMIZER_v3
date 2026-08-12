@@ -1,25 +1,24 @@
 ---
-title: OPTIMIZER_V4_BETA_STATUS
+title: OPTIMIZER_CONTAINED_STATUS
 type: status-and-roadmap
-scope: stable-v4
-status: released-baseline
+scope: contained
+status: active-development
 updated: 2026-08-12
 ---
 
-# OPTIMIZER v4.0 — release baseline
+# OPTIMIZER contained — development status
 
 ## Release identity
 
-V4.0 is isolated in `stable/v4/` on branch `v4.0`. Its package identity is
-`optimizer-v4` version `4.0.0`; the installer and environment file target
-`optimizer_v4`. Stable V3 remains unchanged.
+Contained is an independent clone derived from the tagged V4.0 baseline. It
+uses branch `contained`, the `contained` environment, and the canonical
+`optimizer-v4` package. Stable V3 and stable V4.0 remain unchanged.
 
-Source-level compatibility checks first used the existing `optimizer_v3`
-environment.  The final release check then bootstrapped `optimizer_v4`, installed
-this checkout editable, verified the V4 package metadata, and reran the full
-suite there.
+The V4.0 release checks are inherited as baseline evidence only. Every contained
+change must be retested in the independent `contained` environment before it may
+be proposed as a future release candidate.
 
-## What V4.0 adds
+## Baseline capabilities inherited from V4.0
 
 ```mermaid
 flowchart LR
@@ -73,8 +72,8 @@ flowchart LR
    result still needs the original system resolution, declared parameters,
    derivative verification, and the relevant physical validation campaign.
 
-## Release baseline gate
+## Contained development gate
 
-The V4.0 baseline was installed in `optimizer_v4` and tested from a clean
-environment. New changes belong in the separate `contained/` development clone;
-future releases must repeat the clean-environment test and independent audit.
+This checkout is the only location for new changes. A future release must select a
+specific contained commit, create a clean candidate checkout, install it in a
+fresh release environment, and repeat the independent audit.
