@@ -18,6 +18,10 @@ build/
 dist/
 *.egg-info/
 
+# Release manifest is generated after the immutable source commit is tagged.
+# Its digest is bound by the registry release record and the remote tag.
+RELEASE_MANIFEST.json
+
 # Local editor/system files
 .DS_Store
 .idea/
