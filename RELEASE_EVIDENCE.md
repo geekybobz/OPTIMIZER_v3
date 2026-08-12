@@ -5,13 +5,14 @@ Earlier candidate reports are superseded and are not release inputs.
 
 | Item | Evidence |
 |---|---|
-| Intended tag | `v4.0.2` |
-| Source revision | `a876e7d35c0403d85df9d17e7f8d1cbe50b87460` |
-| Package | `optimizer-v4` 4.0.2 |
+| Intended tag | `v4.0.3` |
+| Release implementation revision | `9b15ecc08a75e85e3fee5dafd850585dfcb0f0cd` |
+| Package | `optimizer-v4` 4.0.3 |
 | Runtime | non-editable wheel in Conda environment `optimizer_v4` |
-| Source tests | 142 passed: `MPLCONFIGDIR=/tmp/optimizer-mpl conda run --no-capture-output -n optimizer_v4 python -m unittest discover -s tests` |
-| Installed-wheel tests | 142 passed through `install.sh --run-tests` |
-| Numerical regressions | L-BFGS and Nesterov maximize paths; native/descent conversion; ordinary and combined non-`J` objectives |
+| Source tests | 150 passed: `MPLCONFIGDIR=/tmp/optimizer-mpl conda run --no-capture-output -n optimizer_v4 python -B -m unittest discover -s tests` |
+| Installed-wheel tests | 150 passed through `install.sh --run-tests` |
+| Numerical regressions | maximize/minimize HVP symmetry for Newton-CG; objective-aware non-`J` diagnostics/finite differences; explicit stopping resolution; public evaluator caching; defensive result/cache/control boundaries |
+| Release hygiene | preflight import and all checkout subprocess tests use `-B`; clean repeated preflight is required |
 
 The annotated Git tag is the immutable binding between this tracked evidence and the
 release revision. The manifest intentionally does not try to embed the SHA of the
