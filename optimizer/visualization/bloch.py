@@ -6,6 +6,7 @@ conventions, and conversion of its state representation to Bloch coordinates.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from contextlib import contextmanager
 from typing import Any, Iterator
 
@@ -27,7 +28,7 @@ def _matplotlib() -> tuple[Any, Any, Any]:
         from mpl_toolkits.mplot3d.art3d import Line3DCollection
     except ImportError as exc:  # pragma: no cover - environment dependent.
         raise ImportError(
-            "Bloch rendering requires matplotlib; install optimizer-v4[scientific]."
+            "Visualization rendering requires matplotlib; install optimizer-v4[scientific]."
         ) from exc
     return plt, Line2D, Line3DCollection
 
@@ -127,6 +128,15 @@ def _draw_layer(ax: Any, layer: Any, index: int) -> Any:
         if np.isclose(parameter_min, parameter_max):
             parameter_max = parameter_min + 1.0
         segments = np.concatenate((points[:-1, None, :], points[1:, None, :]), axis=1)
+        # Rasterized by default: mplot3d exports a Line3DCollection to vector
+        # PDF as many small overlapping path patches, and different PDF
+        # renderers z-sort those patches differently -- the same trajectory
+        # can render as a clean arc in one viewer and show a spurious gap in
+        # another (poppler/Ghostscript vs. macOS Preview/Quartz, confirmed).
+        # Rasterizing removes that fragile vector code path entirely; a
+        # caller that genuinely wants pure vector output can opt back out
+        # via style={"rasterized": False}.
+        rasterized = bool(style.pop("rasterized", True))
         collection = Line3DCollection(
             segments,
             cmap=style.pop("cmap", "Blues"),
@@ -135,6 +145,7 @@ def _draw_layer(ax: Any, layer: Any, index: int) -> Any:
             **style,
         )
         collection.set_array(parameter_values[:-1])
+        collection.set_rasterized(rasterized)
         ax.add_collection3d(collection)
         return collection
     color = style.pop("color", LAYER_COLORS[index % len(LAYER_COLORS)])
@@ -163,27 +174,59 @@ def _draw_annotations(ax: Any, annotations: dict[str, Any]) -> None:
             ax.text(point[0], point[1], point[2] + float(raw.get("z_offset", 0.12)), str(label), ha="center")
 
 
-def _draw_projections(ax: Any, data: PlotData) -> None:
+def draw_timeseries(
+    ax: Any,
+    data: PlotData,
+    *,
+    palette: Sequence[str] = COMPONENT_COLORS,
+    component_labels: Sequence[str] = ("x", "y", "z"),
+    ylabel: str = "Bloch components",
+    xlim: tuple[float, float] | None = None,
+    ylim: tuple[float, float] | None = (-1.14, 1.14),
+    prefix_labels: bool = True,
+    legend_ncols: int = 2,
+) -> None:
+    """Draw named per-component channels vs. a scalar parameter on a 2D axis.
+
+    Generalizes the panel this module has always drawn as the right-hand
+    side of ``plot_bloch(..., projections=True)`` into a public, reusable
+    primitive: ``plot_bloch`` itself now calls this with its historical
+    defaults, and ``optimizer.visualization.panels`` builds standalone
+    single-panel figures (Bloch-component or control-amplitude) on top of
+    it with a different palette/validation per panel kind.
+
+    Components beyond ``min(points.shape[1], len(palette), len(component_labels))``
+    are not drawn.
+    """
+
     line_styles = ("-", "--", ":", "-.")
     for layer_index, layer in enumerate(data.layers):
         points = np.asarray(layer.coordinates["points"], dtype=float)
         parameter = layer.coordinates.get("parameter")
         x = np.arange(len(points), dtype=float) if parameter is None else np.asarray(parameter, dtype=float)
-        for component, color in enumerate(COMPONENT_COLORS):
-            label = f"{layer.label or layer.name}:{'xyz'[component]}"
+        n_components = min(points.shape[1], len(palette), len(component_labels))
+        for component in range(n_components):
+            label = (
+                f"{layer.label or layer.name}:{component_labels[component]}"
+                if prefix_labels
+                else component_labels[component]
+            )
             ax.plot(
                 x,
                 points[:, component],
-                color=color,
+                color=palette[component],
                 ls=line_styles[layer_index % len(line_styles)],
                 lw=1.4,
                 label=label,
             )
     ax.axhline(0.0, color="#bbbbbb", lw=0.6, zorder=0)
-    ax.set_ylim(-1.14, 1.14)
+    if xlim is not None:
+        ax.set_xlim(*xlim)
+    if ylim is not None:
+        ax.set_ylim(*ylim)
     ax.set_xlabel(str(data.metadata.get("parameter_label", "parameter")))
-    ax.set_ylabel("Bloch components")
-    ax.legend(ncols=2, loc="best")
+    ax.set_ylabel(ylabel)
+    ax.legend(ncols=legend_ncols, loc="best")
 
 
 def plot_bloch(
@@ -217,12 +260,12 @@ def plot_bloch(
         _draw_layer(sphere_axis, layer, index)
     _draw_annotations(sphere_axis, dict(data.annotations))
     if projection_axis is not None:
-        _draw_projections(projection_axis, data)
+        draw_timeseries(projection_axis, data)
         return figure, sphere_axis, projection_axis
     return figure, sphere_axis
 
 
-def save_figure(figure: Any, path: Any, *, dpi: int = 300, close: bool = False) -> None:
+def save_figure(figure: Any, path: Any, *, dpi: int = 400, close: bool = False) -> None:
     """Save a rendered figure; closing remains an explicit caller choice."""
 
     plt, _line2d, _collection = _matplotlib()

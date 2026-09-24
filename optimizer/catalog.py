@@ -1725,7 +1725,16 @@ def _build_groups() -> dict[str, CatalogGroup]:
         items=(
             _make_item("PlotData", "visualization", "data_object", "Named layers and metadata for one explicit visualization product.", module="optimizer/visualization/models.py", tags=("visualization", "data")),
             _make_item("plot_bloch", "visualization", "renderer", "Render validated Bloch layers without calling the system.", module="optimizer/visualization/bloch.py", tags=("visualization", "bloch", "renderer")),
-            _make_item("save_figure", "visualization", "helper", "Save a renderer-produced figure to an explicit path.", module="optimizer/visualization/render.py", tags=("visualization", "export")),
+            _make_item("draw_timeseries", "visualization", "renderer", "Draw named per-component channels vs a scalar parameter onto an existing 2D axis; shared by plot_bloch's projections subplot and the standalone panel functions.", module="optimizer/visualization/bloch.py", tags=("visualization", "timeseries", "renderer")),
+            _make_item("draw_sphere", "visualization", "renderer", "Draw a light unit-sphere scaffold on an existing 3D axis.", module="optimizer/visualization/bloch.py", tags=("visualization", "bloch", "renderer")),
+            _make_item("style_context", "visualization", "helper", "Apply the compact serif plotting style without mutating global rcParams.", module="optimizer/visualization/bloch.py", tags=("visualization", "style")),
+            _make_item("validate_bloch_data", "visualization", "validator", "Validate generic plot data for rendering inside the Bloch ball.", module="optimizer/visualization/bloch.py", tags=("visualization", "bloch", "validation")),
+            _make_item("plot_bloch_panel", "visualization", "renderer", "Render one standalone Bloch-sphere panel (single figure, no projections subplot).", module="optimizer/visualization/panels.py", tags=("visualization", "bloch", "panel")),
+            _make_item("plot_projection_panel", "visualization", "renderer", "Render one standalone Bloch-component-vs-parameter panel from validated Bloch trajectory data.", module="optimizer/visualization/panels.py", tags=("visualization", "bloch", "panel")),
+            _make_item("plot_controls_panel", "visualization", "renderer", "Render one standalone control-amplitude-vs-parameter panel; uses CONTROL_COLORS and skips the Bloch-ball check.", module="optimizer/visualization/panels.py", tags=("visualization", "controls", "panel")),
+            _make_item("validate_controls_data", "visualization", "validator", "Validate generic plot data for a control-amplitude-vs-parameter panel (no Bloch-ball check).", module="optimizer/visualization/panels.py", tags=("visualization", "controls", "validation")),
+            _make_item("save_figure", "visualization", "helper", "Save a renderer-produced figure to an explicit path.", module="optimizer/visualization/bloch.py", tags=("visualization", "export")),
+            _make_item("save_panel", "visualization", "helper", "Save one panel figure as .pdf and .png from a shared path stem at one dpi.", module="optimizer/visualization/panels.py", tags=("visualization", "export", "panel")),
         ),
     )
 

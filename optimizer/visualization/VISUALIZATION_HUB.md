@@ -33,3 +33,26 @@ with opt.visualization.style_context():
 
 Plot-data calls are explicit and may be expensive. Optimizers and passive tracking
 do not invoke them automatically.
+
+## Standalone single-panel figures
+
+For a verification figure made of several independently sized/positioned panels
+(e.g. controls | Bloch-component projections | Bloch sphere, arranged in a document
+by the caller rather than baked into one composite), use the one-figure-per-panel
+functions in `optimizer.visualization.panels` instead of `plot_bloch`'s combined
+figure: `plot_bloch_panel` (sphere only), `plot_projection_panel` (Bloch components
+vs. parameter, same palette and Bloch-ball validation as `plot_bloch`), and
+`plot_controls_panel` (control amplitudes vs. parameter — a different, established
+palette, and no Bloch-ball check, since controls are not unit vectors). `save_panel`
+writes a finished panel figure as both `.pdf` and `.png` from one path stem.
+
+```python
+fig, sphere = opt.visualization.plot_bloch_panel(data)
+opt.visualization.save_panel(fig, "out/trajectory_bloch")
+```
+
+Trajectories colored by parameter (`color_by="parameter"`, the default whenever a
+layer has a `parameter`) are rasterized by default before saving, since a `Line3DCollection`
+exported as pure vector PDF renders inconsistently across PDF viewers (confirmed:
+poppler/Ghostscript vs. macOS Preview/Quartz can disagree on the same file). Opt out
+per layer with `style={"rasterized": False}` if pure vector output is required.

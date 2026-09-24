@@ -132,6 +132,101 @@ class SystemSpecVisualizationTests(unittest.TestCase):
         self.assertIsNotNone(projections)
         matplotlib.pyplot.close(figure)
 
+    @unittest.skipUnless(matplotlib is not None, "requires the scientific matplotlib extra")
+    def test_parameter_colored_layer_is_rasterized_by_default(self):
+        from optimizer.visualization.bloch import _draw_layer
+
+        parameter = np.linspace(0.0, 1.0, 5)
+        points = np.column_stack((np.sin(parameter), np.zeros(5), np.cos(parameter)))
+        layer = opt.PlotLayer("trajectory", {"points": points, "parameter": parameter})
+
+        figure = matplotlib.pyplot.figure()
+        axis = figure.add_subplot(projection="3d")
+        artist = _draw_layer(axis, layer, 0)
+
+        self.assertTrue(artist.get_rasterized())
+        matplotlib.pyplot.close(figure)
+
+    @unittest.skipUnless(matplotlib is not None, "requires the scientific matplotlib extra")
+    def test_parameter_colored_layer_can_opt_out_of_rasterization(self):
+        from optimizer.visualization.bloch import _draw_layer
+
+        parameter = np.linspace(0.0, 1.0, 5)
+        points = np.column_stack((np.sin(parameter), np.zeros(5), np.cos(parameter)))
+        layer = opt.PlotLayer(
+            "trajectory", {"points": points, "parameter": parameter}, style={"rasterized": False}
+        )
+
+        figure = matplotlib.pyplot.figure()
+        axis = figure.add_subplot(projection="3d")
+        artist = _draw_layer(axis, layer, 0)
+
+        self.assertFalse(artist.get_rasterized())
+        matplotlib.pyplot.close(figure)
+
+    @unittest.skipUnless(matplotlib is not None, "requires the scientific matplotlib extra")
+    def test_plot_bloch_panel_returns_two_tuple(self):
+        system = GenericQubitSystem()
+        controls = opt.Controls.zeros(system.control_spec())
+        data = opt.plot_data(system, controls, kind="bloch")
+
+        with opt.visualization.style_context():
+            figure, sphere = opt.visualization.plot_bloch_panel(data)
+        self.assertIsNotNone(sphere)
+        matplotlib.pyplot.close(figure)
+
+    @unittest.skipUnless(matplotlib is not None, "requires the scientific matplotlib extra")
+    def test_plot_projection_panel_runs_and_returns_single_axis(self):
+        system = GenericQubitSystem()
+        controls = opt.Controls.zeros(system.control_spec())
+        data = opt.plot_data(system, controls, kind="bloch")
+
+        with opt.visualization.style_context():
+            figure, axis = opt.visualization.plot_projection_panel(data)
+        self.assertIsNotNone(axis)
+        matplotlib.pyplot.close(figure)
+
+    @unittest.skipUnless(matplotlib is not None, "requires the scientific matplotlib extra")
+    def test_plot_controls_panel_uses_control_palette_and_skips_bloch_validation(self):
+        from optimizer.visualization.panels import CONTROL_COLORS
+
+        parameter = np.linspace(0.0, 1.0, 5)
+        # deliberately outside the Bloch unit ball: validate_bloch_data would reject this
+        amplitudes = np.column_stack((np.full(5, 2.0), np.zeros(5), np.full(5, -3.0)))
+        controls_data = opt.PlotData(
+            kind="controls",
+            layers=(opt.PlotLayer("u", {"points": amplitudes, "parameter": parameter}),),
+        )
+
+        with opt.visualization.style_context():
+            figure, axis = opt.visualization.plot_controls_panel(controls_data)
+        self.assertIsNotNone(axis)
+        self.assertEqual(axis.get_lines()[0].get_color(), CONTROL_COLORS[0])
+        matplotlib.pyplot.close(figure)
+
+    def test_plot_controls_panel_rejects_bloch_kind_data(self):
+        bloch_shaped = opt.PlotData(
+            kind="bloch",
+            layers=(opt.PlotLayer("r", {"points": np.zeros((3, 3))}),),
+        )
+        with self.assertRaisesRegex(ValueError, "kind 'controls'"):
+            opt.visualization.validate_controls_data(bloch_shaped)
+
+    @unittest.skipUnless(matplotlib is not None, "requires the scientific matplotlib extra")
+    def test_save_panel_writes_pdf_and_png(self):
+        system = GenericQubitSystem()
+        controls = opt.Controls.zeros(system.control_spec())
+        data = opt.plot_data(system, controls, kind="bloch")
+
+        with tempfile.TemporaryDirectory() as directory:
+            with opt.visualization.style_context():
+                figure, _sphere = opt.visualization.plot_bloch_panel(data)
+            written = opt.visualization.save_panel(figure, Path(directory) / "panel")
+            self.assertEqual({p.suffix for p in written}, {".pdf", ".png"})
+            for path in written:
+                self.assertTrue(path.exists())
+                self.assertGreater(path.stat().st_size, 0)
+
     def test_scaffold_is_capability_selected_and_refuses_overwrite(self):
         with tempfile.TemporaryDirectory() as directory:
             system_path = Path(directory) / "example" / "system.py"
