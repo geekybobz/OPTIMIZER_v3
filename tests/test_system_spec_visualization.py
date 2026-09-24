@@ -133,6 +133,22 @@ class SystemSpecVisualizationTests(unittest.TestCase):
         matplotlib.pyplot.close(figure)
 
     @unittest.skipUnless(matplotlib is not None, "requires the scientific matplotlib extra")
+    def test_plot_bloch_adds_colorbar_for_parameter_colored_layer_by_default(self):
+        system = GenericQubitSystem()
+        controls = opt.Controls.zeros(system.control_spec())
+        data = opt.plot_data(system, controls, kind="bloch")
+
+        with opt.visualization.style_context():
+            figure, _sphere, _projections = opt.visualization.plot_bloch(data, projections=True)
+        self.assertEqual(len(figure.axes), 3)  # sphere + projections + colorbar
+        matplotlib.pyplot.close(figure)
+
+        with opt.visualization.style_context():
+            figure, _sphere, _projections = opt.visualization.plot_bloch(data, projections=True, colorbar=False)
+        self.assertEqual(len(figure.axes), 2)  # sphere + projections, no colorbar
+        matplotlib.pyplot.close(figure)
+
+    @unittest.skipUnless(matplotlib is not None, "requires the scientific matplotlib extra")
     def test_parameter_colored_layer_is_rasterized_by_default(self):
         from optimizer.visualization.bloch import _draw_layer
 

@@ -72,6 +72,7 @@ def plot_bloch_panel(
     elevation: float = DEFAULT_ELEVATION,
     azimuth: float = DEFAULT_AZIMUTH,
     figsize: tuple[float, float] = (3.3, 3.3),
+    colorbar: bool = True,
 ) -> tuple[Any, Any]:
     """Standalone single-panel Bloch-sphere figure.
 
@@ -80,7 +81,13 @@ def plot_bloch_panel(
     """
 
     return plot_bloch(
-        value, projections=False, equator=equator, elevation=elevation, azimuth=azimuth, figsize=figsize
+        value,
+        projections=False,
+        equator=equator,
+        elevation=elevation,
+        azimuth=azimuth,
+        figsize=figsize,
+        colorbar=colorbar,
     )
 
 

@@ -237,8 +237,14 @@ def plot_bloch(
     elevation: float = DEFAULT_ELEVATION,
     azimuth: float = DEFAULT_AZIMUTH,
     figsize: tuple[float, float] | None = None,
+    colorbar: bool = True,
 ) -> tuple[Any, ...]:
-    """Render all generic layers and return the figure plus created axes."""
+    """Render all generic layers and return the figure plus created axes.
+
+    When at least one layer is colored by its parameter (the default
+    whenever a layer provides one), a colorbar for that parameter is added
+    next to the sphere -- set colorbar=False to omit it.
+    """
 
     data = validate_bloch_data(value)
     plt, _line2d, _collection = _matplotlib()
@@ -256,9 +262,15 @@ def plot_bloch(
         elevation=elevation,
         azimuth=azimuth,
     )
+    mappable = None
     for index, layer in enumerate(data.layers):
-        _draw_layer(sphere_axis, layer, index)
+        artist = _draw_layer(sphere_axis, layer, index)
+        if mappable is None and hasattr(artist, "get_array") and artist.get_array() is not None:
+            mappable = artist
     _draw_annotations(sphere_axis, dict(data.annotations))
+    if colorbar and mappable is not None:
+        cbar = figure.colorbar(mappable, ax=sphere_axis, shrink=0.62, pad=0.02)
+        cbar.set_label(str(data.metadata.get("parameter_label", "parameter")))
     if projection_axis is not None:
         draw_timeseries(projection_axis, data)
         return figure, sphere_axis, projection_axis
