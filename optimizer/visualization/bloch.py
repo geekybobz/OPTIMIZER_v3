@@ -82,6 +82,27 @@ def validate_bloch_data(value: PlotData | dict[str, Any], *, tolerance: float = 
     return data
 
 
+DEFAULT_AXES_COLOR = "#555555"
+
+
+def _draw_reference_axes(
+    ax: Any, *, inner: float = 1.0, outer: float = 1.32, color: str = DEFAULT_AXES_COLOR, fontsize: float = 9
+) -> None:
+    """Small x/y/z stub indicators so orientation stays legible under any
+    rotation (view_init elevation/azimuth) -- deliberately short and
+    unobtrusive rather than full axis lines through the sphere."""
+
+    for label, (dx, dy, dz) in (("x", (1, 0, 0)), ("y", (0, 1, 0)), ("z", (0, 0, 1))):
+        ax.plot(
+            [inner * dx, outer * dx], [inner * dy, outer * dy], [inner * dz, outer * dz],
+            color=color, lw=1.1, zorder=8,
+        )
+        ax.text(
+            outer * dx * 1.12, outer * dy * 1.12, outer * dz * 1.12, label,
+            color=color, fontsize=fontsize, style="italic", ha="center", va="center", zorder=8,
+        )
+
+
 def draw_sphere(
     ax: Any,
     *,
@@ -90,8 +111,16 @@ def draw_sphere(
     azimuth: float = DEFAULT_AZIMUTH,
     nu: int = 25,
     nv: int = 13,
+    axes: bool = False,
+    axes_color: str = DEFAULT_AXES_COLOR,
 ) -> Any:
-    """Draw a light unit-sphere scaffold on an existing 3D axis."""
+    """Draw a light unit-sphere scaffold on an existing 3D axis.
+
+    axes=True adds small x/y/z reference-axis stubs (see
+    _draw_reference_axes) -- useful whenever the view is rotated away from
+    the default elevation/azimuth and orientation would otherwise be
+    ambiguous. Off by default to keep existing figures unchanged.
+    """
 
     uu, vv = np.meshgrid(np.linspace(0.0, 2.0 * np.pi, int(nu)), np.linspace(0.0, np.pi, int(nv)))
     ax.plot_wireframe(
@@ -105,6 +134,8 @@ def draw_sphere(
     if equator:
         angle = np.linspace(0.0, 2.0 * np.pi, 120)
         ax.plot(np.cos(angle), np.sin(angle), np.zeros_like(angle), color="#999999", lw=0.9, ls=(0, (4, 3)))
+    if axes:
+        _draw_reference_axes(ax, color=axes_color)
     ax.set_box_aspect([1, 1, 1])
     ax.set_axis_off()
     ax.view_init(elev=float(elevation), azim=float(azimuth))
@@ -238,12 +269,15 @@ def plot_bloch(
     azimuth: float = DEFAULT_AZIMUTH,
     figsize: tuple[float, float] | None = None,
     colorbar: bool = True,
+    axes: bool = False,
 ) -> tuple[Any, ...]:
     """Render all generic layers and return the figure plus created axes.
 
     When at least one layer is colored by its parameter (the default
     whenever a layer provides one), a colorbar for that parameter is added
-    next to the sphere -- set colorbar=False to omit it.
+    next to the sphere -- set colorbar=False to omit it. axes=True adds
+    small x/y/z reference-axis stubs (see draw_sphere), useful whenever
+    elevation/azimuth is rotated away from the default view.
     """
 
     data = validate_bloch_data(value)
@@ -261,6 +295,7 @@ def plot_bloch(
         equator=equator,
         elevation=elevation,
         azimuth=azimuth,
+        axes=axes,
     )
     mappable = None
     for index, layer in enumerate(data.layers):

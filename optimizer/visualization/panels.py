@@ -73,11 +73,14 @@ def plot_bloch_panel(
     azimuth: float = DEFAULT_AZIMUTH,
     figsize: tuple[float, float] = (3.3, 3.3),
     colorbar: bool = True,
+    axes: bool = False,
 ) -> tuple[Any, Any]:
     """Standalone single-panel Bloch-sphere figure.
 
     Thin, discoverability-only alias for ``plot_bloch(..., projections=False)``
-    -- that call already produces exactly this panel.
+    -- that call already produces exactly this panel. axes=True adds small
+    x/y/z reference-axis stubs, useful whenever elevation/azimuth is rotated
+    away from the default view.
     """
 
     return plot_bloch(
@@ -88,6 +91,7 @@ def plot_bloch_panel(
         azimuth=azimuth,
         figsize=figsize,
         colorbar=colorbar,
+        axes=axes,
     )
 
 

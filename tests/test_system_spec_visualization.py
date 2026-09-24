@@ -149,6 +149,21 @@ class SystemSpecVisualizationTests(unittest.TestCase):
         matplotlib.pyplot.close(figure)
 
     @unittest.skipUnless(matplotlib is not None, "requires the scientific matplotlib extra")
+    def test_draw_sphere_axes_option_adds_reference_stubs(self):
+        figure = matplotlib.pyplot.figure()
+        axis = figure.add_subplot(projection="3d")
+        n_lines_before = len(axis.lines)
+        n_texts_before = len(axis.texts)
+
+        from optimizer.visualization.bloch import draw_sphere
+
+        draw_sphere(axis, axes=True)
+
+        self.assertEqual(len(axis.lines), n_lines_before + 1 + 3)  # equator + 3 axis stubs
+        self.assertEqual(len(axis.texts), n_texts_before + 3)  # x, y, z labels
+        matplotlib.pyplot.close(figure)
+
+    @unittest.skipUnless(matplotlib is not None, "requires the scientific matplotlib extra")
     def test_parameter_colored_layer_is_rasterized_by_default(self):
         from optimizer.visualization.bloch import _draw_layer
 
