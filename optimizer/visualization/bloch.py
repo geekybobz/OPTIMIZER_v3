@@ -287,7 +287,13 @@ def plot_bloch(
         sphere_axis = figure.add_subplot(1, 2, 1, projection="3d")
         projection_axis = figure.add_subplot(1, 2, 2)
     else:
-        figure = plt.figure(figsize=figsize or (3.3, 3.3))
+        # fig.colorbar() shrinks the 3D axes to make room for itself, and a
+        # box_aspect=(1,1,1) sphere shrinks with it -- widen the default
+        # canvas so the sphere still gets a roughly-square area instead of
+        # padding out with dead vertical space. Only matters for the
+        # default figsize; an explicit figsize is always honored as given.
+        default_figsize = (4.0, 3.3) if colorbar else (3.3, 3.3)
+        figure = plt.figure(figsize=figsize or default_figsize)
         sphere_axis = figure.add_subplot(projection="3d")
         projection_axis = None
     draw_sphere(
