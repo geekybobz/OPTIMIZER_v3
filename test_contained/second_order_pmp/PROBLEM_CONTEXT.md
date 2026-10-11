@@ -22,3 +22,7 @@ Finite-\(\alpha\) directional robustness is a post-run diagnostic, never a
 hidden per-iteration tracker calculation.  This short run checks system and
 tracker plumbing only; it is not a certificate of robust transfer, constrained
 stationarity, or global optimality.
+
+---
+
+[⌂ Home](../../tests/TESTING_HUB.md)

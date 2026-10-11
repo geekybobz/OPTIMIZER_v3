@@ -147,3 +147,7 @@ What carries across a chunk boundary is described in
 - [Optimizer Lifecycle](../optimizers/OPTIMIZER_LIFECYCLE.md)
 - [Optimizer State and Warmstart](../optimizers/OPTIMIZER_STATE_WARMSTART.md)
 - [Core Engine Source](engine.py)
+
+---
+
+[⌂ Home](CORE_HUB.md)

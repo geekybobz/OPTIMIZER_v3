@@ -164,3 +164,7 @@ Boyd & Vandenberghe, Convex Optimization, sec. 9.2-9.3 (descent, backtracking)
 - [Line Search](../../optimizer/optimizers/LINE_SEARCH.md)
 - [Acceptance and Stopping](../../optimizer/optimizers/OPTIMIZER_ACCEPTANCE.md)
 - [Optimizer Lifecycle](../../optimizer/optimizers/OPTIMIZER_LIFECYCLE.md)
+
+---
+
+[⌂ Home](OPTIMIZER_THEORY_HUB.md)

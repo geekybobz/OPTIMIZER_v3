@@ -85,3 +85,7 @@ coefficients and phases must match mode shape
 - [Harmonic Guesses](GUESS_HARMONIC.md)
 - [Random Fourier Guess](GUESS_RANDOM_FOURIER.md)
 - [Source](./harmonic.py)
+
+---
+
+[⌂ Home](GUESSES_HUB.md)

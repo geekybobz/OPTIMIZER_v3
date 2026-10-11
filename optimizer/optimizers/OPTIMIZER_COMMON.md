@@ -80,3 +80,7 @@ checked.
 - [State and Warmstart](OPTIMIZER_STATE_WARMSTART.md)
 - [Optimizer Lifecycle](OPTIMIZER_LIFECYCLE.md)
 - [Source](./_common.py)
+
+---
+
+[⌂ Home](OPTIMIZERS_HUB.md)

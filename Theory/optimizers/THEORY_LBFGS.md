@@ -154,3 +154,7 @@ Nocedal & Wright, Numerical Optimization, 2nd ed., ch. 7
 - [L-BFGS](../../optimizer/optimizers/LBFGS.md)
 - [State and Warmstart](../../optimizer/optimizers/OPTIMIZER_STATE_WARMSTART.md)
 - [Optimizer Methods](../../optimizer/optimizers/OPTIMIZER_METHODS.md)
+
+---
+
+[⌂ Home](OPTIMIZER_THEORY_HUB.md)

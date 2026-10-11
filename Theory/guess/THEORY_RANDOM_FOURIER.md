@@ -72,3 +72,7 @@ compact parameter intuition
 - [Random Fourier Guess](../../optimizer/guesses/GUESS_RANDOM_FOURIER.md)
 - [Fourier Guess](../../optimizer/guesses/GUESS_FOURIER.md)
 - [Smooth Random Guess](../../optimizer/guesses/GUESS_RANDOM_SMOOTH.md)
+
+---
+
+[⌂ Home](GUESS_THEORY_HUB.md)

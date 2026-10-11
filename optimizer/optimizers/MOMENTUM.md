@@ -108,3 +108,7 @@ restart intentionally drops velocity after rejection
 - [Methods](OPTIMIZER_METHODS.md)
 - [State and Warmstart](OPTIMIZER_STATE_WARMSTART.md)
 - [Source](./momentum.py)
+
+---
+
+[⌂ Home](OPTIMIZERS_HUB.md)

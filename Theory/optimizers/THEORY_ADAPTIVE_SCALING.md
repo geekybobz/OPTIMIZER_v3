@@ -127,3 +127,7 @@ Tieleman & Hinton (2012), COURSERA Neural Networks, lecture 6.5     (RMSProp)
 - [AdaGrad and RMSProp](../../optimizer/optimizers/ADAGRAD_RMSPROP.md)
 - [Adam](../../optimizer/optimizers/ADAM.md)
 - [Optimizer Methods](../../optimizer/optimizers/OPTIMIZER_METHODS.md)
+
+---
+
+[⌂ Home](OPTIMIZER_THEORY_HUB.md)

@@ -139,3 +139,7 @@ repair output vs original controls
 - [Spectrum and Smoothness](../../optimizer/utils/UTIL_SPECTRUM_SMOOTHNESS.md)
 - [Fourier Guess](../../optimizer/guesses/GUESS_FOURIER.md)
 - [Smooth Random Guess](../../optimizer/guesses/GUESS_RANDOM_SMOOTH.md)
+
+---
+
+[⌂ Home](UTILS_THEORY_HUB.md)

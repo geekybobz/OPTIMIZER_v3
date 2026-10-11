@@ -146,3 +146,7 @@ links back to the API category reference.
 - [Util Methods](UTIL_METHODS.md)
 - [Util Lifecycle](UTIL_LIFECYCLE.md)
 - [Utils Theory Hub](../../Theory/utils/UTILS_THEORY_HUB.md)
+
+---
+
+[⌂ Home](../../README.md)

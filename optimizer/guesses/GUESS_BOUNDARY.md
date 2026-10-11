@@ -73,3 +73,7 @@ restart strategy notes
 - [Guess Contract](GUESS_CONTRACT.md)
 - [Guess Theory Hub](../../Theory/guess/GUESS_THEORY_HUB.md)
 - [Optimizer Methods](../optimizers/OPTIMIZER_METHODS.md)
+
+---
+
+[⌂ Home](GUESSES_HUB.md)

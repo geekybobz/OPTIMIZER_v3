@@ -150,3 +150,7 @@ evidence and decisions through its own passive boundary.
 - [Core Acceptance and Guards](CORE_ACCEPTANCE_GUARDS.md)
 - [Optimizer State and Warmstart](../optimizers/OPTIMIZER_STATE_WARMSTART.md)
 - [Core Engine Source](engine.py)
+
+---
+
+[⌂ Home](CORE_HUB.md)

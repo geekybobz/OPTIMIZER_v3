@@ -108,3 +108,7 @@ Armijo depends on directional derivative sign and accept mode
 - [Acceptance and Stopping](OPTIMIZER_ACCEPTANCE.md)
 - [Lifecycle](OPTIMIZER_LIFECYCLE.md)
 - [Source](./line_search.py)
+
+---
+
+[⌂ Home](OPTIMIZERS_HUB.md)

@@ -131,3 +131,7 @@ Sutskever, Martens, Dahl, Hinton (2013), On the importance of initialization
 - [Momentum](../../optimizer/optimizers/MOMENTUM.md)
 - [State and Warmstart](../../optimizer/optimizers/OPTIMIZER_STATE_WARMSTART.md)
 - [Optimizer Methods](../../optimizer/optimizers/OPTIMIZER_METHODS.md)
+
+---
+
+[⌂ Home](OPTIMIZER_THEORY_HUB.md)

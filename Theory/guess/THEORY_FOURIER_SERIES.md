@@ -78,3 +78,7 @@ you want a shaped start before Adam or line search
 - [Fourier Guess](../../optimizer/guesses/GUESS_FOURIER.md)
 - [Harmonic Guesses](../../optimizer/guesses/GUESS_HARMONIC.md)
 - [Random Fourier Guess](../../optimizer/guesses/GUESS_RANDOM_FOURIER.md)
+
+---
+
+[⌂ Home](GUESS_THEORY_HUB.md)

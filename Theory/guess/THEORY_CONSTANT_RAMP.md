@@ -86,3 +86,7 @@ you want a baseline before harmonic or random starts
 - [Simple Guesses](../../optimizer/guesses/GUESS_SIMPLE.md)
 - [Guess Common API](../../optimizer/guesses/GUESS_COMMON_API.md)
 - [Guess Methods](../../optimizer/guesses/GUESS_METHODS.md)
+
+---
+
+[⌂ Home](GUESS_THEORY_HUB.md)

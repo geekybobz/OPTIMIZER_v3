@@ -133,3 +133,7 @@ Every reason arrives as `result.stop_reason` on a normal `OptimizerResult`.
 - [Core Acceptance and Guards](CORE_ACCEPTANCE_GUARDS.md)
 - [Acceptance and Stopping](../optimizers/OPTIMIZER_ACCEPTANCE.md)
 - [Core Stopping Source](stopping.py)
+
+---
+
+[⌂ Home](CORE_HUB.md)

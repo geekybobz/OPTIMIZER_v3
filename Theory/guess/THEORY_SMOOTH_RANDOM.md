@@ -76,3 +76,7 @@ you want smoothness without explicitly choosing Fourier modes
 - [Random Smooth Guess](../../optimizer/guesses/GUESS_RANDOM_SMOOTH.md)
 - [Random Guess](../../optimizer/guesses/GUESS_RANDOM.md)
 - [Random Fourier Guess](../../optimizer/guesses/GUESS_RANDOM_FOURIER.md)
+
+---
+
+[⌂ Home](GUESS_THEORY_HUB.md)

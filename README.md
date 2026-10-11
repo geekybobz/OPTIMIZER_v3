@@ -37,42 +37,46 @@ logs and checkpoints
 result objects
 ```
 
-Use this README as the root Obsidian entry point. It links to hubs and placeholders,
-not every leaf note.
+Use this README as the root Obsidian entry point. It links to hubs, not every leaf
+note.
 
 ## Fast Start
 
 ```python
 import optimizer as opt
+from my_project.system import System
 
-sys = system(params)
+system = System(
+    primary={"tau": 1.0, "N": 1001},
+    secondary={"infidelity_weight": 1.0, "energy_weight": 0.0},
+)
 
 controls = opt.guesses.random_fourier_guess(
-    sys,
+    system,
     amplitude=0.1,
     modes=5,
     seed=1,
 )
 
-check = opt.utils.verify_gradient(sys, controls, eps=1.0e-6, directions=8)
+check = opt.utils.verify_gradient(system, controls, eps=1.0e-6, directions=8)
 
-r1 = opt.optimizers.adam(sys, controls, step_size=0.05, maxiter=50)
-r2 = opt.optimizers.lbfgs(sys, r1.controls, warmstart=r1.warmstart(), maxiter=20)
+r1 = opt.optimizers.adam(system, controls, step_size=0.05, maxiter=50)
+r2 = opt.optimizers.lbfgs(system, r1.controls, warmstart=r1.warmstart(), maxiter=20)
 
-report = opt.utils.diagnostic_report(sys, r2.controls)
-fixed = opt.utils.repair_newton(sys, r2.controls, residuals="hard")
+report = opt.utils.diagnostic_report(system, r2.controls)
+fixed = opt.utils.repair_newton(system, r2.controls, residuals="hard")
 ```
 
 Capability-gated numerical methods remain direct:
 
 ```python
-feasible = opt.optimizers.projected_gradient(sys, controls, maxiter=50)
-newton = opt.optimizers.newton_cg(sys, controls, maxiter=20)
-trusted = opt.optimizers.trust_region(sys, controls, maxiter=20)
-composite = opt.optimizers.proximal_gradient(sys, controls, maxiter=50)
+feasible = opt.optimizers.projected_gradient(system, controls, maxiter=50)
+newton = opt.optimizers.newton_cg(system, controls, maxiter=20)
+trusted = opt.optimizers.trust_region(system, controls, maxiter=20)
+composite = opt.optimizers.proximal_gradient(system, controls, maxiter=50)
 ```
 
-`opt.system_info(sys)["capabilities"]` reports which calls are compatible before
+`opt.system_info(system)["capabilities"]` reports which calls are compatible before
 any numerical work. `opt.continuation(...)` coordinates explicit parameter stages
 and requires an explicit control-transfer callable when a stage changes the control
 layout or time spacing.
@@ -114,17 +118,32 @@ opt.utils.list(kind="derivative", h=True)
 opt.core.info("run_chunk", h=True)
 ```
 
+## Public API
+
+The runtime catalog is the declared public API. `opt.list()` returns every entry
+by group, each with a summary, requirements, return value, and status, and each
+group's hub documents its entries. Compact root aliases such as `opt.adam(...)`
+call the same entries.
+
+An entry is removed only after one release in which it still works, warns when
+used, and appears with its replacement in the release evidence.
+
 ## Graph Entry Map
 
 Start with the runtime hubs:
 
 ```text
 README.md
+  -> optimizer/BASE_HUB.md
   -> optimizer/system_olgs/SYSTEM_OLGS_HUB.md
   -> optimizer/guesses/GUESSES_HUB.md
   -> optimizer/optimizers/OPTIMIZERS_HUB.md
   -> optimizer/core/CORE_HUB.md
   -> optimizer/utils/UTILS_HUB.md
+  -> optimizer/tracker/TRACKER_HUB.md
+  -> optimizer/campaigns/CAMPAIGNS.md
+  -> optimizer/visualization/VISUALIZATION_HUB.md
+  -> optimizer_log/OPTIMIZER_LOG_READER.md
 ```
 
 Then use theory hubs when mathematical context is needed:
@@ -135,7 +154,7 @@ Theory/optimizers/OPTIMIZER_THEORY_HUB.md
 Theory/utils/UTILS_THEORY_HUB.md
 ```
 
-Use placeholder hubs for folders that are intentionally not fully documented yet:
+Small support folders have compact hubs:
 
 ```text
 optimizer/schedules/SCHEDULES_HUB.md
@@ -155,7 +174,7 @@ red       optimizer methods and optimizer theory
 blue      core engine, acceptance, stopping, and shared runtime objects
 teal      diagnostics, derivative checks, repair, spectrum, and analysis utilities
 purple    theory notes
-gray      placeholder or not-yet-expanded folders: schedules, logs, tests
+gray      small support folders: schedules, logs, tests
 ```
 
 ## Main Workflow
@@ -225,11 +244,16 @@ control representation.
 
 ## Runtime Hubs
 
+- [Base API Hub](optimizer/BASE_HUB.md)
 - [OLGS System Hub](optimizer/system_olgs/SYSTEM_OLGS_HUB.md)
 - [Guess Documentation Hub](optimizer/guesses/GUESSES_HUB.md)
 - [Optimizer Documentation Hub](optimizer/optimizers/OPTIMIZERS_HUB.md)
 - [Core Documentation Hub](optimizer/core/CORE_HUB.md)
 - [Utils Documentation Hub](optimizer/utils/UTILS_HUB.md)
+- [Tracker Hub](optimizer/tracker/TRACKER_HUB.md)
+- [Campaign Modes](optimizer/campaigns/CAMPAIGNS.md)
+- [Visualization Hub](optimizer/visualization/VISUALIZATION_HUB.md)
+- [Run Log Reader](optimizer_log/OPTIMIZER_LOG_READER.md)
 
 ## Theory Hubs
 
@@ -237,15 +261,11 @@ control representation.
 - [Optimizer Theory Hub](Theory/optimizers/OPTIMIZER_THEORY_HUB.md)
 - [Utils Theory Hub](Theory/utils/UTILS_THEORY_HUB.md)
 
-## Placeholder Hubs
+## Support Hubs
 
-These folders are real parts of the library, but their Obsidian documentation is
-intentionally shallow for now. Keep them connected through placeholders until each
-folder receives the same structured treatment as optimizers, guesses, and utils.
-
-- [Schedules Placeholder Hub](optimizer/schedules/SCHEDULES_HUB.md)
-- [Logs Placeholder Hub](optimizer/logs/LOGS_HUB.md)
-- [Testing Placeholder Hub](tests/TESTING_HUB.md)
+- [Schedules Hub](optimizer/schedules/SCHEDULES_HUB.md)
+- [Logs Hub](optimizer/logs/LOGS_HUB.md)
+- [Testing Hub](tests/TESTING_HUB.md)
 
 ## Current Package Map
 
@@ -256,6 +276,9 @@ optimizer/
   result.py            Evaluation and OptimizerResult
   state.py             RunState and WarmStartState
   library.py           root facade and bound-system context
+  catalog.py           runtime catalog behind opt.list, opt.info, opt.search, opt.path
+  introspection.py     runtime self-description of registered APIs and signatures
+  continuation.py      explicit parameter-stage continuation
   core/                shared chunk engine, evaluation, stopping, acceptance guards
   optimizers/          Adam, momentum, line search, AdaGrad, RMSProp, L-BFGS, NCG, CMA-ES,
                        projected gradient, Newton-CG, trust region, proximal gradient
@@ -265,6 +288,9 @@ optimizer/
   campaigns/           multi-stage scout, comparison, refinement, challenge, and validation
   schedules/           step-size policies
   logs/                in-memory trace records and checkpoints
+  tracker/             durable run journal, observer bridge, checkpoint artifacts
+
+optimizer_log/         standalone read-only reader for tracker run folders
 ```
 
 Concrete project systems should live outside this library repository. This package
@@ -360,6 +386,11 @@ Inside the standard environment:
 conda run -n optimizer_v4 python -m unittest discover -s tests
 ```
 
+## Releases and Plans
+
+- [Release evidence](RELEASE_EVIDENCE.md): the current release record
+- [Stabilization plan](STABILIZATION.md): the steps that make V4 a stable baseline
+
 ## Repository Hygiene
 
 Generated artifacts should stay out of the graph:
@@ -377,3 +408,7 @@ local notebooks under tests/system_check/
 
 Tracked Markdown should either be a useful graph node or be removed after its content
 is migrated into structured docs.
+
+---
+
+[⌂ Home](README.md)

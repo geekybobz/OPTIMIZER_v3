@@ -131,3 +131,7 @@ fallbacks are diagnostics and live in
 - [OLGS Contract](../system_olgs/CONTRACT.md)
 - [OLGS Computation Lifecycle](../system_olgs/LIFECYCLE.md)
 - [Core Evaluation Source](evaluate.py)
+
+---
+
+[⌂ Home](CORE_HUB.md)

@@ -162,3 +162,7 @@ Hansen (2016), The CMA Evolution Strategy: A Tutorial, arXiv:1604.00772
 - [CMA-ES](../../optimizer/optimizers/CMA_ES.md)
 - [Optimizer Lifecycle](../../optimizer/optimizers/OPTIMIZER_LIFECYCLE.md)
 - [Optimizer Methods](../../optimizer/optimizers/OPTIMIZER_METHODS.md)
+
+---
+
+[⌂ Home](OPTIMIZER_THEORY_HUB.md)

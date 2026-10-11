@@ -84,3 +84,7 @@ modes must be >= 1
 - [Fourier Guess](GUESS_FOURIER.md)
 - [Random Smooth Guess](GUESS_RANDOM_SMOOTH.md)
 - [Source](./random.py)
+
+---
+
+[⌂ Home](GUESSES_HUB.md)

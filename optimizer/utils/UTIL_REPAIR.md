@@ -115,3 +115,7 @@ line search can fail when the local model is poor
 - [Derivative Checks](UTIL_DERIVATIVE_CHECKS.md)
 - [Util Lifecycle](UTIL_LIFECYCLE.md)
 - [Source](./repairs.py)
+
+---
+
+[⌂ Home](UTILS_HUB.md)

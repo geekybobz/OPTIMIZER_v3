@@ -81,3 +81,7 @@ unselected channels keep the neutral baseline
 - [Guess Methods](GUESS_METHODS.md)
 - [Guess Common API](GUESS_COMMON_API.md)
 - [Source](./simple.py)
+
+---
+
+[⌂ Home](GUESSES_HUB.md)

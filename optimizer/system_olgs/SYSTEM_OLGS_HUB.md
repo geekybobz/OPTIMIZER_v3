@@ -80,6 +80,7 @@ LOGGING_BOUNDARY.md
 Start here:
 
 - [API Contract](CONTRACT.md)
+- [Worked example: a complete minimal system](../../tests/fixtures/quadratic_system.py)
 - [System Configuration](PARAMS.md)
 - [Computation Lifecycle](LIFECYCLE.md)
 
@@ -90,7 +91,7 @@ Advanced:
 
 Reading guide:
 
-- Implementing a new system: [API Contract](CONTRACT.md)
+- Implementing a new system: [API Contract](CONTRACT.md), then the [worked example](../../tests/fixtures/quadratic_system.py)
 - Defining primary/secondary dicts: [System Configuration](PARAMS.md)
 - Calling from a notebook: [Computation Lifecycle](LIFECYCLE.md)
 - Building projected/Newton/trust-region capability: [Derivative Hooks](DERIVATIVES.md)
@@ -146,8 +147,11 @@ Keep system-local cache optional; the tracker owns persistent run evidence
 Create a small project system and initial contract test with:
 
 ```bash
-python -m optimizer.system_olgs.scaffold my_problem/system.py --profile qubit
+optimizer-system my_problem/system.py --profile qubit
 ```
+
+`optimizer-system` is the installed command for
+`python -m optimizer.system_olgs.scaffold`.
 
 Use repeated `--capability` flags for `constraints`, `second-order`, or `proximal`.
 Optional method guidance remains commented until implemented so discovery never

@@ -96,3 +96,7 @@ perturb_guess forwards kwargs to the selected perturbation generator
 - [Guess Methods](GUESS_METHODS.md)
 - [Random Fourier Guess](GUESS_RANDOM_FOURIER.md)
 - [Source](./composite.py)
+
+---
+
+[⌂ Home](GUESSES_HUB.md)

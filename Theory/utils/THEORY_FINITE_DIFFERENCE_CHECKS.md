@@ -133,3 +133,7 @@ u - eps d      u       u + eps d
 
 - [Derivative Checks](../../optimizer/utils/UTIL_DERIVATIVE_CHECKS.md)
 - [Diagnostics](../../optimizer/utils/UTIL_DIAGNOSTICS.md)
+
+---
+
+[⌂ Home](UTILS_THEORY_HUB.md)

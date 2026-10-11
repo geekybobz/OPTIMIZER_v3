@@ -58,3 +58,7 @@ pick a deterministic or random guess
 - [Guess Common API](GUESS_COMMON_API.md)
 - [Guess Lifecycle](GUESS_LIFECYCLE.md)
 - [Guess Theory Hub](../../Theory/guess/GUESS_THEORY_HUB.md)
+
+---
+
+[⌂ Home](GUESSES_HUB.md)

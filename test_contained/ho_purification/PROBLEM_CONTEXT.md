@@ -22,3 +22,7 @@ trial supports Fock and diagonal thermal oscillator preparations only; it is
 not a replacement for the full project system or its cutoff/ledger campaign.
 The small tracked run is an engineering/tracker demonstration, not a physical
 claim about purification, thermodynamic work, reachability, or optimality.
+
+---
+
+[⌂ Home](../../tests/TESTING_HUB.md)

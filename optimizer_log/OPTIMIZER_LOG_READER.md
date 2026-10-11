@@ -16,3 +16,7 @@ numerical optimizer or a scientific system.
 
 Run discovery, a portal UI, storage retention, modes, and verification scans are
 deliberately outside this reader foundation.
+
+---
+
+[⌂ Home](../README.md)

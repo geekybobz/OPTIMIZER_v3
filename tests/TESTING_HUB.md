@@ -1,73 +1,59 @@
 ---
 title: TESTING_HUB
-type: placeholder_hub
+type: module_hub
 module: tests
 tags:
   - optimizer
   - tests
-  - placeholder
   - hub
 ---
 
-# Testing Placeholder Hub
+# Testing Hub
 
-This folder contains the library test suite and fixtures.
+The library test suite, its fixtures, and the tracker trials.
 
-This note is a placeholder. Keep it connected to the graph until testing receives a
-dedicated structured documentation pass.
+## Run the suite
 
-## Current Scope
-
-Tests currently cover:
-
-```text
-controls
-public API and namespaces
-catalog metadata
-optimizer behavior
-guess generators
-utility tools
-engine behavior
-result and state objects
-trace and checkpoint behavior
-system contract behavior
-mandatory system specification and declared-metric validation
-generic plot-data and Bloch rendering
-capability-selected system scaffolding and overwrite protection
-conditional numerical capabilities and API gates
-projected, proximal, Newton-CG, and trust-region behavior
-continuation transitions and explicit control transfer
-advanced-method tracker passivity and HVP counters
+```bash
+MPLCONFIGDIR=/tmp/optimizer-mpl python -B -m unittest discover -s tests
 ```
 
-## Current Files
+Run it from the checkout root inside the `optimizer_v4` environment. `-B` keeps
+bytecode out of the checkout.
 
-```text
-tests/
-  fixtures/
-  test_*.py
-```
+## Test files
 
-Ignored local exploration files can live under:
+| Area | Files |
+|---|---|
+| Controls, results, and state | `test_controls.py`, `test_result_state.py` |
+| Public API and discovery | `test_public_api.py`, `test_namespaces.py`, `test_catalog.py`, `test_optimizer_context.py` |
+| Optimizers and engine | `test_optimizers.py`, `test_advanced_optimizers.py`, `test_engine.py`, `test_numerical_capabilities.py` |
+| Guesses and utilities | `test_guesses.py`, `test_utils_tools.py` |
+| System contract and visualization | `test_system_contract.py`, `test_system_spec_visualization.py` |
+| Traces, tracker, and campaigns | `test_trace_checkpoint.py`, `test_tracker.py`, `test_tracker_bridge.py`, `test_campaigns.py` |
+| Documentation | `test_document_links.py`: every relative link in the Markdown resolves |
 
-```text
-tests/system_check/
-```
+## Worked example
 
-## Future Documentation Plan
+[fixtures/quadratic_system.py](fixtures/quadratic_system.py) is a complete,
+minimal OLGS system used across the suite. Read it next to the
+[OLGS Contract](../optimizer/system_olgs/CONTRACT.md).
 
-Later structure should likely include:
+## Tracker trials
 
-```text
-TESTING_CONTRACT.md
-TESTING_FIXTURES.md
-TESTING_PUBLIC_API.md
-TESTING_OPTIMIZERS.md
-TESTING_DOC_GRAPH.md
-```
+Small contained systems that exercise the tracker on real physics:
 
-## Related Notes
+- [HO purification trial](../test_contained/ho_purification/PROBLEM_CONTEXT.md)
+- [Second-order PMP trial](../test_contained/second_order_pmp/PROBLEM_CONTEXT.md)
 
-- [Root Entry](../README.md)
-- [OLGS Contract](../optimizer/system_olgs/CONTRACT.md)
-- [Utils Documentation Hub](../optimizer/utils/UTILS_HUB.md)
+Local exploration notebooks may live under `tests/system_check/`, which Git
+ignores.
+
+## Connections
+
+- Parent: [the V4 entry](../README.md)
+- Related: [OLGS Contract](../optimizer/system_olgs/CONTRACT.md), [Utils Documentation Hub](../optimizer/utils/UTILS_HUB.md)
+
+---
+
+[⌂ Home](../README.md)

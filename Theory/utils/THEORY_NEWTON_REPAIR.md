@@ -134,3 +134,7 @@ verify_jacobian has passed on the system
 - [Repair](../../optimizer/utils/UTIL_REPAIR.md)
 - [Residual Geometry](../../optimizer/utils/UTIL_RESIDUAL_GEOMETRY.md)
 - [Residual Jacobian Geometry Theory](THEORY_RESIDUAL_JACOBIAN_GEOMETRY.md)
+
+---
+
+[⌂ Home](UTILS_THEORY_HUB.md)

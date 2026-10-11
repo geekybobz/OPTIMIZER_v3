@@ -103,3 +103,7 @@ may restart often when gradients are noisy or poorly scaled
 - [L-BFGS](LBFGS.md)
 - [Line Search](LINE_SEARCH.md)
 - [Source](./nonlinear_cg.py)
+
+---
+
+[⌂ Home](OPTIMIZERS_HUB.md)

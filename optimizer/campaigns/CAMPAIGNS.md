@@ -72,3 +72,7 @@ campaign_root/
 
 `campaign.report()` only reads these artifacts. It never calls `evaluate`,
 `gradient`, propagation, residual, or repair hooks.
+
+---
+
+[⌂ Home](../../README.md)

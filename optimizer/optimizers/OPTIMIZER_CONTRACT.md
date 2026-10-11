@@ -53,6 +53,7 @@ accept_mode
 accept_tolerance
 trace
 create_trace
+observers
 stage
 use_cache
 target_value
@@ -63,6 +64,21 @@ stall_tolerance
 
 Not every optimizer exposes every method-specific argument. Read the method file for
 the exact surface.
+
+## Run Recording
+
+| Argument | Accepts | Effect |
+|---|---|---|
+| `trace` | `Trace` or `None` | Append in-memory records to this trace |
+| `create_trace` | `bool`, default `True` | Create a new in-memory `Trace` when none is passed |
+| `observers` | Iterable of run observers | Receive the `on_start`, `on_iteration`, `on_chunk`, `on_checkpoint`, and `on_terminal` events; `JournalObserver` writes a durable run folder |
+| `stage` | `str` or `None` | Name the phase recorded for this chunk |
+| `use_cache` | `bool`, default `True` | Reuse the cached evaluation for identical controls |
+
+Observers are passive: they receive facts the engine has already computed and
+never call the system. An observer implements all five callbacks, or subclasses
+`optimizer.core.ObserverAdapter` and overrides only the ones it needs. See the
+[Tracker Hub](../tracker/TRACKER_HUB.md) for durable run folders.
 
 ## Return Object
 
@@ -164,3 +180,7 @@ but not from incompatible private memory.
 - [Optimizer Lifecycle](OPTIMIZER_LIFECYCLE.md)
 - [State and Warmstart](OPTIMIZER_STATE_WARMSTART.md)
 - [OLGS Contract](../system_olgs/CONTRACT.md)
+
+---
+
+[⌂ Home](OPTIMIZERS_HUB.md)

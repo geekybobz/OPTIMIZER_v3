@@ -81,3 +81,7 @@ All residual, Jacobian, HVP, smooth-gradient, prox, and bound calls go through
 `SystemEvaluator`. Its compact counter snapshot retains the original evaluation and
 gradient keys and adds only nonzero capability counters. Observers receive these
 already-computed facts; tracking performs no extra numerical calls.
+
+---
+
+[⌂ Home](OPTIMIZERS_HUB.md)

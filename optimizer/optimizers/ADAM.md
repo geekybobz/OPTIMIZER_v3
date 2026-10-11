@@ -124,3 +124,7 @@ warmstart transfers moment state only into another adam call
 - [State and Warmstart](OPTIMIZER_STATE_WARMSTART.md)
 - [AdaGrad and RMSProp](ADAGRAD_RMSPROP.md)
 - [Source](./adam.py)
+
+---
+
+[⌂ Home](OPTIMIZERS_HUB.md)

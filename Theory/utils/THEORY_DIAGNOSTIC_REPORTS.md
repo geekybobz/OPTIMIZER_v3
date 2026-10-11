@@ -103,3 +103,7 @@ unless paired with projection or repair.
 
 - [Diagnostics](../../optimizer/utils/UTIL_DIAGNOSTICS.md)
 - [Util Lifecycle](../../optimizer/utils/UTIL_LIFECYCLE.md)
+
+---
+
+[⌂ Home](UTILS_THEORY_HUB.md)

@@ -186,6 +186,42 @@ than separate schema hooks.
 missing bundle before beginning numerical work. Simple Adam systems do not need
 constraint, HVP, or proximal stubs.
 
+## Python API
+
+Any object with the five required methods satisfies the contract.
+`require_system` checks that they exist and validates `system_spec()`.
+Subclassing the abstract base `OLGS` from [olgs.py](olgs.py) is optional. It adds
+`validate_controls`, default `metrics()` and `describe()`, stubs for
+`forward_prop` and `back_prop`, and the `cache_reset` and `cache_status`
+helpers.
+
+Result containers in [results.py](results.py):
+
+| Container | Fields |
+|---|---|
+| `ForwardResult` | `controls`, `data` |
+| `BackwardResult` | `controls`, `data` |
+| `SystemEvaluation` | `controls`, `metrics`, `data` |
+| `GradientResult` | `controls`, `gradient`, `metrics`, `data` |
+| `SimulationResult` | `controls`, `metrics`, `trajectories`, `data` |
+
+Checks and builders:
+
+| Call | Purpose |
+|---|---|
+| `probe_system(system)` | Report which required and optional hooks exist, without calling them |
+| `require_system(system)` | Raise if a required hook is missing; validate `system_spec()` |
+| `get_system_spec(system)` | Return the validated static system specification |
+| `validate_controls_for_system(system, controls)` | Check controls against `control_spec()` |
+| `validate_metrics(...)` | Check the metrics a system returns |
+| `basic_system_spec(...)`, `metric_spec(...)` | Build a system specification |
+| `describe_system(system)`, `contract_info()` | Describe a system or the contract itself |
+
+[tests/fixtures/quadratic_system.py](../../tests/fixtures/quadratic_system.py) is a
+complete minimal system. To start a new one, run `optimizer-system` (the same as
+`python -m optimizer.system_olgs.scaffold`); see the
+[OLGS System Hub](SYSTEM_OLGS_HUB.md).
+
 ## Related Notes
 
 - [OLGS System Hub](SYSTEM_OLGS_HUB.md)

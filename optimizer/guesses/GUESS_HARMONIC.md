@@ -77,3 +77,7 @@ scale controls whether amplitude means max_abs, l2, energy, or raw multiplier
 - [Guess Methods](GUESS_METHODS.md)
 - [Fourier Guess](GUESS_FOURIER.md)
 - [Source](./harmonic.py)
+
+---
+
+[⌂ Home](GUESSES_HUB.md)

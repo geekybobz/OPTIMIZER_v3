@@ -104,3 +104,7 @@ Long theory notes should live in `Theory/optimizers`, not in runtime modules.
 - [Optimizer Contract](OPTIMIZER_CONTRACT.md)
 - [Theory Hub](../../Theory/optimizers/OPTIMIZER_THEORY_HUB.md)
 - [Common Helpers](OPTIMIZER_COMMON.md)
+
+---
+
+[⌂ Home](OPTIMIZERS_HUB.md)

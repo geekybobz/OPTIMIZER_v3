@@ -148,3 +148,7 @@ relying on the guard to absorb it.
 - [Acceptance and Stopping](../optimizers/OPTIMIZER_ACCEPTANCE.md)
 - [Line Search](../optimizers/LINE_SEARCH.md)
 - [Core Guards Source](guards.py)
+
+---
+
+[⌂ Home](CORE_HUB.md)

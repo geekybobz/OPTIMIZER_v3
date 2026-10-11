@@ -78,3 +78,7 @@ frequency content.
 - [Harmonic Guesses](../../optimizer/guesses/GUESS_HARMONIC.md)
 - [Fourier Guess](../../optimizer/guesses/GUESS_FOURIER.md)
 - [Guess Common API](../../optimizer/guesses/GUESS_COMMON_API.md)
+
+---
+
+[⌂ Home](GUESS_THEORY_HUB.md)

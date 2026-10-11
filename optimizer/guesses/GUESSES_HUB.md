@@ -136,3 +136,7 @@ note links back to the API reference.
 - [Guess Methods](GUESS_METHODS.md)
 - [Guess Lifecycle](GUESS_LIFECYCLE.md)
 - [Guess Theory Hub](../../Theory/guess/GUESS_THEORY_HUB.md)
+
+---
+
+[⌂ Home](../../README.md)

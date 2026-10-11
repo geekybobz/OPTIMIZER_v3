@@ -77,3 +77,7 @@ reuse Adam moment vectors because Adam private state is not L-BFGS private state
 - [Optimizer Contract](OPTIMIZER_CONTRACT.md)
 - [Optimizer Lifecycle](OPTIMIZER_LIFECYCLE.md)
 - [Theory Hub](../../Theory/optimizers/OPTIMIZER_THEORY_HUB.md)
+
+---
+
+[⌂ Home](OPTIMIZERS_HUB.md)

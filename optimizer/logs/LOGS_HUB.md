@@ -1,57 +1,53 @@
 ---
 title: LOGS_HUB
-type: placeholder_hub
+type: module_hub
 module: optimizer/logs
 tags:
   - optimizer
   - logs
-  - placeholder
   - hub
 ---
 
-# Logs Placeholder Hub
+# Logs Hub
 
-This folder contains lightweight trace and checkpoint objects.
+Lightweight, in-memory run records: the `Trace` that optimizers fill by default
+and the checkpoints inside it.
 
-This note is a placeholder. Keep it connected to the graph until logging receives a
-dedicated structured pass.
+## In brief
 
-## Current Scope
+A `Trace` lives in memory for one session. For durable evidence on disk, use
+the [Tracker Hub](../tracker/TRACKER_HUB.md); both receive the same engine
+events.
 
-Logs currently own:
+## API
 
-```text
-iteration records
-chunk records
-event records
-in-memory traces
-checkpoint payloads
-```
+| Object | Holds |
+|---|---|
+| `Trace` | `run_id`, `iteration_records`, `chunk_records`, `event_records`, `checkpoints`, and checkpoint `labels` |
+| `IterationRecord`, `ChunkRecord`, `EventRecord` | One iteration, one chunk, or one named event |
+| `Checkpoint` | `id`, `label`, `controls`, `state`, `metrics`, `system_params`, `optimizer_state`, `iteration`, `stage`, `previous_id`, `random_state` |
+| `clone_run_state` | A deep copy of a `RunState` for a checkpoint |
 
-## Current Files
+Useful `Trace` calls: `checkpoint(...)`, `latest_checkpoint_id(label)`,
+`get_checkpoint(label_or_id)`, `restore(label_or_id)`, which returns the
+controls and state, and `to_dict()`.
 
-```text
-optimizer/logs/
-  checkpoint.py
-  records.py
-  trace.py
-```
+Optimizers create a `Trace` unless `create_trace=False`; see
+[Optimizer Contract](../optimizers/OPTIMIZER_CONTRACT.md).
 
-## Future Documentation Plan
+## Files
 
-Later structure should likely include:
+| File | Owns |
+|---|---|
+| [trace.py](trace.py) | `Trace` |
+| [records.py](records.py) | The record types |
+| [checkpoint.py](checkpoint.py) | `Checkpoint` and `clone_run_state` |
 
-```text
-LOG_CONTRACT.md
-LOG_TRACE.md
-LOG_CHECKPOINTS.md
-LOG_RECORDS.md
-LOG_BOUNDARY.md
-```
+## Connections
 
-## Related Notes
+- Parent: [the V4 entry](../../README.md)
+- Related: [Base API Hub](../BASE_HUB.md), [Optimizer State and Warmstart](../optimizers/OPTIMIZER_STATE_WARMSTART.md), [OLGS Logging Boundary](../system_olgs/LOGGING_BOUNDARY.md), [Core Engine](../core/CORE_ENGINE.md)
 
-- [Root Entry](../../README.md)
-- [Optimizer State and Warmstart](../optimizers/OPTIMIZER_STATE_WARMSTART.md)
-- [OLGS Logging Boundary](../system_olgs/LOGGING_BOUNDARY.md)
-- [Core Engine](../core/CORE_ENGINE.md)
+---
+
+[⌂ Home](../../README.md)

@@ -81,3 +81,7 @@ compatible specs for mixing
 - [Guess Contract](GUESS_CONTRACT.md)
 - [Guess Methods](GUESS_METHODS.md)
 - [Base Source](./base.py)
+
+---
+
+[⌂ Home](GUESSES_HUB.md)

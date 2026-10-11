@@ -116,3 +116,7 @@ how many residual-preserving directions remain?
 - [Residual Geometry](../../optimizer/utils/UTIL_RESIDUAL_GEOMETRY.md)
 - [Newton Repair Theory](THEORY_NEWTON_REPAIR.md)
 - [Nullspace Projection Theory](THEORY_NULLSPACE_PROJECTION.md)
+
+---
+
+[⌂ Home](UTILS_THEORY_HUB.md)

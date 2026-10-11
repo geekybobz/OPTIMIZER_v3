@@ -171,3 +171,7 @@ links back to the API reference.
 - [Optimizer Lifecycle](OPTIMIZER_LIFECYCLE.md)
 - [State and Warmstart](OPTIMIZER_STATE_WARMSTART.md)
 - [Theory Hub](../../Theory/optimizers/OPTIMIZER_THEORY_HUB.md)
+
+---
+
+[⌂ Home](../../README.md)

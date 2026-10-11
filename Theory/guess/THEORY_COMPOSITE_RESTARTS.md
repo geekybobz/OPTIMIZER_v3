@@ -80,3 +80,7 @@ you want to test amplitude sensitivity
 - [Composite Guess Helpers](../../optimizer/guesses/GUESS_COMPOSITE.md)
 - [Random Fourier Guess](../../optimizer/guesses/GUESS_RANDOM_FOURIER.md)
 - [Guess Methods](../../optimizer/guesses/GUESS_METHODS.md)
+
+---
+
+[⌂ Home](GUESS_THEORY_HUB.md)

@@ -56,3 +56,7 @@ layer has a `parameter`) are rasterized by default before saving, since a `Line3
 exported as pure vector PDF renders inconsistently across PDF viewers (confirmed:
 poppler/Ghostscript vs. macOS Preview/Quartz can disagree on the same file). Opt out
 per layer with `style={"rasterized": False}` if pure vector output is required.
+
+---
+
+[⌂ Home](../../README.md)

@@ -82,3 +82,7 @@ use random_smooth_guess or random_fourier_guess for smoother starts
 - [Random Smooth Guess](GUESS_RANDOM_SMOOTH.md)
 - [Random Fourier Guess](GUESS_RANDOM_FOURIER.md)
 - [Source](./random.py)
+
+---
+
+[⌂ Home](GUESSES_HUB.md)

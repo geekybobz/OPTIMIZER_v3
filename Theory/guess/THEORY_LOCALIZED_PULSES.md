@@ -79,3 +79,7 @@ you need a deterministic alternative to random starts
 - [Localized Guesses](../../optimizer/guesses/GUESS_LOCALIZED.md)
 - [Guess Common API](../../optimizer/guesses/GUESS_COMMON_API.md)
 - [Guess Methods](../../optimizer/guesses/GUESS_METHODS.md)
+
+---
+
+[⌂ Home](GUESS_THEORY_HUB.md)

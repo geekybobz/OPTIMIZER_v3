@@ -98,3 +98,7 @@ use after rough optimization rather than as global search
 - [Methods](OPTIMIZER_METHODS.md)
 - [State and Warmstart](OPTIMIZER_STATE_WARMSTART.md)
 - [Source](./lbfgs.py)
+
+---
+
+[⌂ Home](OPTIMIZERS_HUB.md)

@@ -85,3 +85,7 @@ roughness is measured along the time/control dimension
 - [Fourier Guess](../guesses/GUESS_FOURIER.md)
 - [Smooth Random Guess](../guesses/GUESS_RANDOM_SMOOTH.md)
 - [Source](./spectrum.py)
+
+---
+
+[⌂ Home](UTILS_HUB.md)

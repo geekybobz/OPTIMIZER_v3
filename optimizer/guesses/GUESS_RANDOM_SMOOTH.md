@@ -78,3 +78,7 @@ distribution is uniform or normal
 - [Random Guess](GUESS_RANDOM.md)
 - [Random Fourier Guess](GUESS_RANDOM_FOURIER.md)
 - [Source](./random.py)
+
+---
+
+[⌂ Home](GUESSES_HUB.md)

@@ -120,3 +120,7 @@ these methods do not carry first-moment momentum
 - [Methods](OPTIMIZER_METHODS.md)
 - [Adam](ADAM.md)
 - [Source](./adaptive.py)
+
+---
+
+[⌂ Home](OPTIMIZERS_HUB.md)

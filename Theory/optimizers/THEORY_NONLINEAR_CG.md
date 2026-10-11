@@ -152,3 +152,7 @@ Nocedal & Wright, Numerical Optimization, 2nd ed., ch. 5
 - [Nonlinear CG](../../optimizer/optimizers/NONLINEAR_CG.md)
 - [Line Search](../../optimizer/optimizers/LINE_SEARCH.md)
 - [L-BFGS](../../optimizer/optimizers/LBFGS.md)
+
+---
+
+[⌂ Home](OPTIMIZER_THEORY_HUB.md)

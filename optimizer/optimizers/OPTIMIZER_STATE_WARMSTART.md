@@ -184,3 +184,7 @@ Line-search step-size adaptation
 - [Momentum](MOMENTUM.md)
 - [L-BFGS](LBFGS.md)
 - [RunState Source](../state.py)
+
+---
+
+[⌂ Home](OPTIMIZERS_HUB.md)

@@ -141,3 +141,7 @@ acceptance should validate its own metrics.  See
 - [Core Evaluation](CORE_EVALUATION.md)
 - [Optimizer Contract](../optimizers/OPTIMIZER_CONTRACT.md)
 - [Core Engine Source](engine.py)
+
+---
+
+[⌂ Home](CORE_HUB.md)

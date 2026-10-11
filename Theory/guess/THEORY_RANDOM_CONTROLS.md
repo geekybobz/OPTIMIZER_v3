@@ -76,3 +76,7 @@ Use smoother random families for ordinary multi-start exploration.
 - [Random Guess](../../optimizer/guesses/GUESS_RANDOM.md)
 - [Random Smooth Guess](../../optimizer/guesses/GUESS_RANDOM_SMOOTH.md)
 - [Random Fourier Guess](../../optimizer/guesses/GUESS_RANDOM_FOURIER.md)
+
+---
+
+[⌂ Home](GUESS_THEORY_HUB.md)

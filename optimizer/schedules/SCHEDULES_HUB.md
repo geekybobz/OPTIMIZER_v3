@@ -1,56 +1,33 @@
 ---
 title: SCHEDULES_HUB
-type: placeholder_hub
+type: module_hub
 module: optimizer/schedules
 tags:
   - optimizer
   - schedules
-  - placeholder
   - hub
 ---
 
-# Schedules Placeholder Hub
+# Schedules Hub
 
-This folder contains step-size schedule helpers used by optimizer workflows.
+Small step-size policy objects for optimizer and repair workflows.
 
-This note is a placeholder. Keep it connected to the graph until schedules get a
-full API and theory structure.
+## API
 
-## Current Scope
+| Schedule | Parameters | Behaviour |
+|---|---|---|
+| `ConstantSchedule` | `value` | Always returns the same step size |
+| `AdaptiveStepSchedule` | `initial_step=1e-3`, `shrink=0.5`, `grow=1.0`, `min_step=1e-12`, `max_step=None` | Shrinks the step after a rejected step and grows it after an accepted one, clamped to `[min_step, max_step]` |
 
-Schedules currently own:
+Both offer `initial()` for the first step size and
+`update(current, accepted=...)` for the next one. The code lives in
+[step_size.py](step_size.py).
 
-```text
-constant step-size policy
-adaptive step-size policy
-accepted/rejected step updates
-small reusable schedule objects
-```
+## Connections
 
-## Current Files
+- Parent: [the V4 entry](../../README.md)
+- Related: [Optimizer Acceptance](../optimizers/OPTIMIZER_ACCEPTANCE.md), [Line Search](../optimizers/LINE_SEARCH.md), [Adaptive Scaling Theory](../../Theory/optimizers/THEORY_ADAPTIVE_SCALING.md)
 
-```text
-optimizer/schedules/
-  __init__.py
-  step_size.py
-```
+---
 
-## Future Documentation Plan
-
-Later structure should likely include:
-
-```text
-SCHEDULE_CONTRACT.md
-SCHEDULE_METHODS.md
-SCHEDULE_CONSTANT.md
-SCHEDULE_ADAPTIVE.md
-```
-
-Theory can connect to optimizer line-search and adaptive-scaling notes when needed.
-
-## Related Notes
-
-- [Root Entry](../../README.md)
-- [Optimizer Acceptance](../optimizers/OPTIMIZER_ACCEPTANCE.md)
-- [Line Search](../optimizers/LINE_SEARCH.md)
-- [Adaptive Scaling Theory](../../Theory/optimizers/THEORY_ADAPTIVE_SCALING.md)
+[⌂ Home](../../README.md)
