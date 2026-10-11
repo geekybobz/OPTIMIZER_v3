@@ -189,8 +189,11 @@ constraint, HVP, or proximal stubs.
 ## Related Notes
 
 - [OLGS System Hub](SYSTEM_OLGS_HUB.md)
-- [OLGS System Build Skill](templates/OLGS_SYSTEM_BUILD_SKILL.md)
 - [System Configuration](PARAMS.md)
 - [Computation Lifecycle](LIFECYCLE.md)
 - [Derivative Hooks](DERIVATIVES.md)
 - [Logging Boundary](LOGGING_BOUNDARY.md)
+
+---
+
+[⌂ Home](SYSTEM_OLGS_HUB.md)

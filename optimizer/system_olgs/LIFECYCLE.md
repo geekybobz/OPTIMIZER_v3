@@ -138,8 +138,11 @@ raise a clear error.
 ## Related Notes
 
 - [OLGS System Hub](SYSTEM_OLGS_HUB.md)
-- [OLGS System Build Skill](templates/OLGS_SYSTEM_BUILD_SKILL.md)
 - [API Contract](CONTRACT.md)
 - [System Configuration](PARAMS.md)
 - [Derivative Hooks](DERIVATIVES.md)
 - [Logging Boundary](LOGGING_BOUNDARY.md)
+
+---
+
+[⌂ Home](SYSTEM_OLGS_HUB.md)

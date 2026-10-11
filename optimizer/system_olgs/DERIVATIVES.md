@@ -120,7 +120,10 @@ The exact HVP return convention should be documented by the system that exposes 
 ## Related Notes
 
 - [OLGS System Hub](SYSTEM_OLGS_HUB.md)
-- [OLGS System Build Skill](templates/OLGS_SYSTEM_BUILD_SKILL.md)
 - [API Contract](CONTRACT.md)
 - [Computation Lifecycle](LIFECYCLE.md)
 - [Logging Boundary](LOGGING_BOUNDARY.md)
+
+---
+
+[⌂ Home](SYSTEM_OLGS_HUB.md)

@@ -118,6 +118,9 @@ Parameter classes are not part of the public OLGS contract.
 ## Related Notes
 
 - [OLGS System Hub](SYSTEM_OLGS_HUB.md)
-- [OLGS System Build Skill](templates/OLGS_SYSTEM_BUILD_SKILL.md)
 - [API Contract](CONTRACT.md)
 - [Computation Lifecycle](LIFECYCLE.md)
+
+---
+
+[⌂ Home](SYSTEM_OLGS_HUB.md)

@@ -73,16 +73,12 @@ DERIVATIVES.md
 
 LOGGING_BOUNDARY.md
   Cache/logging placeholders and what OLGS should not own yet.
-
-templates/OLGS_SYSTEM_BUILD_SKILL.md
-  Build protocol for turning theory notes into a project-local system.py.
 ```
 
 ## System Map
 
 Start here:
 
-- [OLGS System Build Skill](templates/OLGS_SYSTEM_BUILD_SKILL.md)
 - [API Contract](CONTRACT.md)
 - [System Configuration](PARAMS.md)
 - [Computation Lifecycle](LIFECYCLE.md)
@@ -94,7 +90,6 @@ Advanced:
 
 Reading guide:
 
-- Building a new project system from theory: [OLGS System Build Skill](templates/OLGS_SYSTEM_BUILD_SKILL.md)
 - Implementing a new system: [API Contract](CONTRACT.md)
 - Defining primary/secondary dicts: [System Configuration](PARAMS.md)
 - Calling from a notebook: [Computation Lifecycle](LIFECYCLE.md)
@@ -173,7 +168,9 @@ optimizer/system_olgs/
   results.py
   scaffold.py
   templates/
-    OLGS_SYSTEM_BUILD_SKILL.md
+    __init__.py
+    system.py.tmpl
+    test_system.py.tmpl
 ```
 
 ## Reading Path
@@ -182,7 +179,6 @@ For a new system author:
 
 ```text
 SYSTEM_OLGS_HUB.md
-templates/OLGS_SYSTEM_BUILD_SKILL.md
 CONTRACT.md
 PARAMS.md
 LIFECYCLE.md
@@ -195,3 +191,7 @@ CONTRACT.md
 DERIVATIVES.md
 LOGGING_BOUNDARY.md
 ```
+
+---
+
+[⌂ Home](../../README.md)
