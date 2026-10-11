@@ -431,6 +431,7 @@ def line_search(
     accept_mode: str | None = None,
     accept_tolerance: float = 0.0,
     accept: Any | None = None,
+    gradient_tolerance: float | None = 1.0e-8,
     state: RunState | None = None,
     warmstart: Any | None = None,
     **engine_kwargs: Any,
@@ -474,5 +475,6 @@ def line_search(
         accept_metric=resolved_metric,
         accept_mode=resolved_mode,
         accept_tolerance=accept_tolerance,
+        gradient_tolerance=gradient_tolerance,
         **method_api_context(engine_kwargs, method="line_search", config=config),
     )

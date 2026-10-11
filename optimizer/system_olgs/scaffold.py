@@ -52,8 +52,9 @@ def _guidance(profile: str, capabilities: Sequence[str]) -> str:
     return "\n\n".join(blocks) or "    # No optional capability hooks selected."
 
 
-def _template(name: str) -> str:
-    return files("optimizer.system_olgs.templates").joinpath(name).read_text(encoding="utf-8")
+def _template(name: str, *, family: str) -> str:
+    package = "optimizer.system_olss.templates" if family == "olss" else "optimizer.system_olgs.templates"
+    return files(package).joinpath(name).read_text(encoding="utf-8")
 
 
 def scaffold_system(
@@ -64,13 +65,19 @@ def scaffold_system(
     system_name: str | None = None,
     profile: str = "base",
     capabilities: Sequence[str] = (),
+    family: str = "olgs",
     force: bool = False,
     with_test: bool = True,
 ) -> tuple[Path, ...]:
     """Create a system module and optional initial test without silent overwrite."""
 
+    family = str(family).lower()
+    if family not in {"olgs", "olss"}:
+        raise ValueError("family must be 'olgs' or 'olss'.")
     if profile not in {"base", "qubit"}:
         raise ValueError("profile must be 'base' or 'qubit'.")
+    if family == "olss" and capabilities:
+        raise ValueError("OLSS scaffold does not use OLGS capability flags.")
     unknown = sorted(set(capabilities) - set(_CAPABILITIES))
     if unknown:
         raise ValueError(f"Unknown scaffold capabilities: {', '.join(unknown)}.")
@@ -107,9 +114,9 @@ def scaffold_system(
             text = text.replace(key, value)
         return text
 
-    rendered = [render(_template("system.py.tmpl"))]
+    rendered = [render(_template("system.py.tmpl", family=family))]
     if with_test:
-        rendered.append(render(_template("test_system.py.tmpl")))
+        rendered.append(render(_template("test_system.py.tmpl", family=family)))
     system_path.parent.mkdir(parents=True, exist_ok=True)
     for path, content in zip(targets, rendered):
         path.write_text(content, encoding="utf-8")
@@ -123,6 +130,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--system-id")
     parser.add_argument("--system-name")
     parser.add_argument("--profile", choices=("base", "qubit"), default="base")
+    parser.add_argument("--family", choices=("olgs", "olss"), default="olgs")
     parser.add_argument("--capability", action="append", choices=_CAPABILITIES, default=[])
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--no-test", action="store_true")
@@ -138,6 +146,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             system_id=args.system_id,
             system_name=args.system_name,
             profile=args.profile,
+            family=args.family,
             capabilities=args.capability,
             force=args.force,
             with_test=not args.no_test,

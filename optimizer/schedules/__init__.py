@@ -13,10 +13,24 @@ How it fits the architecture
 - schedules are plain data objects and do not call ``system.evaluate``.
 """
 
-from optimizer.schedules.step_size import AdaptiveStepSchedule, ConstantSchedule
+from optimizer.schedules.step_size import (
+    AdaptiveStepSchedule,
+    ConstantSchedule,
+    CosineDecaySchedule,
+    ExponentialDecaySchedule,
+    LinearWarmupSchedule,
+)
 from optimizer.catalog import attach_namespace_helpers
 
 
 attach_namespace_helpers(globals(), "schedules")
 
-__all__ = ["AdaptiveStepSchedule", "ConstantSchedule", "info", "list"]
+__all__ = [
+    "AdaptiveStepSchedule",
+    "ConstantSchedule",
+    "CosineDecaySchedule",
+    "ExponentialDecaySchedule",
+    "LinearWarmupSchedule",
+    "info",
+    "list",
+]

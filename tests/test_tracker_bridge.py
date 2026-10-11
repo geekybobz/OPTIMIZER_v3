@@ -412,13 +412,15 @@ class TrackerBridgeTests(unittest.TestCase):
             )
 
             records = read_timeline(journal.run_dir).records
-            iteration = next(event["payload"] for event in records if event["kind"] == "iteration")
+            iterations = [event["payload"] for event in records if event["kind"] == "iteration"]
+            iteration = iterations[-1]
             self.assertEqual(result.stop_reason, "nonfinite_trial")
             self.assertEqual(iteration["reason"], "nonfinite_trial")
+            self.assertEqual([item["reason"] for item in iterations[:-1]], ["trial_evaluation_rejected"] * 2)
             self.assertIsNone(iteration["trial"])
             self.assertEqual(iteration["after"]["metrics"]["J"], 0.0)
             self.assertEqual(iteration["after"]["counters"]["evaluation"], 1)
-            self.assertEqual(iteration["after"]["counters"]["evaluation_attempt"], 2)
+            self.assertEqual(iteration["after"]["counters"]["evaluation_attempt"], 4)
             self.assertIn("error", iteration["technical"])
             self.assertEqual(read_terminal(journal.run_dir)["status"], "failed")
 

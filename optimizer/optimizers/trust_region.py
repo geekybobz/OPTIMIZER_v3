@@ -131,14 +131,6 @@ def _build_step(config: TrustRegionConfig):
     def step(context: StepContext) -> StepProposal:
         gradient_norm = context.gradient.norm()
         radius = float(context.state.step_size or config.initial_radius)
-        if gradient_norm <= float(config.gradient_tolerance):
-            return StepProposal(
-                controls=context.state.controls.copy(name="trust_region_converged"),
-                step_size=radius,
-                optimizer_state={"gradient_norm": gradient_norm, "trust_radius": radius},
-                technical={"gradient_norm": gradient_norm, "trust_radius": radius, "predicted_reduction": 0.0},
-                stop_reason="gradient_converged",
-            )
         step_vector, info = _steihaug(context, radius, config)
         candidate = controls_from_flat_like(
             context.state.controls,
@@ -255,6 +247,7 @@ def trust_region(
         state=state,
         warmstart=coerce_warmstart(warmstart, target_optimizer="trust_region"),
         step_size=initial_radius,
+        gradient_tolerance=gradient_tolerance,
         accept=_accept(config),
         accept_metric=config.objective_metric,
         accept_mode="min" if config.objective_direction == "minimize" else "max",

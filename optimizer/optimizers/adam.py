@@ -41,14 +41,18 @@ import numpy as np
 from optimizer.controls import Controls
 from optimizer.core.engine import StepContext, StepProposal, run_chunk
 from optimizer.optimizers._common import (
+    StepSize,
+    accept_finite_trial,
     clip_vector,
     coerce_warmstart,
     controls_from_flat_like,
     flat_state_array,
     method_api_context,
+    next_scheduled_step,
     require_finite,
     require_probability_like,
     require_variant,
+    resolve_step_size,
 )
 from optimizer.result import OptimizerResult
 from optimizer.state import RunState
@@ -62,7 +66,7 @@ class AdamConfig:
     """Validated options for ``opt.adam``."""
 
     variant: str = "adam"
-    step_size: float | None = None
+    step_size: StepSize | None = None
     beta1: float = 0.9
     beta2: float = 0.999
     eps: float = 1.0e-8
@@ -71,7 +75,7 @@ class AdamConfig:
 
     def __post_init__(self) -> None:
         require_variant(self.variant, VALID_VARIANTS, family="adam")
-        require_finite("step_size", self.initial_step_size, positive=True)
+        resolve_step_size(self.step_size, default=1.0e-3)
         require_probability_like("beta1", self.beta1)
         require_probability_like("beta2", self.beta2)
         require_finite("eps", self.eps, positive=True)
@@ -82,7 +86,11 @@ class AdamConfig:
     def initial_step_size(self) -> float:
         """Default Adam learning rate used without explicit state."""
 
-        return 1.0e-3 if self.step_size is None else float(self.step_size)
+        return resolve_step_size(self.step_size, default=1.0e-3)[0]
+
+    @property
+    def schedule(self):
+        return resolve_step_size(self.step_size, default=1.0e-3)[1]
 
 
 def _radam_rectifier(beta2: float, t: int) -> tuple[float, float]:
@@ -257,6 +265,18 @@ def _build_adam_step(config: AdamConfig):
         return StepProposal(
             controls=candidate,
             step_size=step_size,
+            step_size_on_accept=next_scheduled_step(
+                config.schedule,
+                step_size,
+                accepted=True,
+                iteration=context.state.global_iteration + 1,
+            ),
+            step_size_on_reject=next_scheduled_step(
+                config.schedule,
+                step_size,
+                accepted=False,
+                iteration=context.state.global_iteration + 1,
+            ),
             optimizer_state_on_accept=accept_state,
             optimizer_state_on_reject=reject_state,
             technical={
@@ -286,7 +306,7 @@ def adam(
     *,
     variant: str = "adam",
     maxiter: int = 100,
-    step_size: float | None = None,
+    step_size: StepSize | None = None,
     beta1: float = 0.9,
     beta2: float = 0.999,
     eps: float = 1.0e-8,
@@ -294,9 +314,11 @@ def adam(
     max_step_norm: float | None = None,
     state: RunState | None = None,
     warmstart: Any | None = None,
+    accept: Any | None = None,
     accept_metric: str | None = None,
     accept_mode: str | None = None,
     accept_tolerance: float = 0.0,
+    gradient_tolerance: float | None = 1.0e-8,
     **engine_kwargs: Any,
 ) -> OptimizerResult:
     """Run Adam or one of its explicit variants."""
@@ -310,6 +332,11 @@ def adam(
         weight_decay=weight_decay,
         max_step_norm=max_step_norm,
     )
+    engine_step_size = (
+        config.initial_step_size
+        if state is None and warmstart is None
+        else (config.initial_step_size if config.schedule is None and step_size is not None else None)
+    )
     return run_chunk(
         system,
         controls,
@@ -318,7 +345,9 @@ def adam(
         maxiter=maxiter,
         state=state,
         warmstart=coerce_warmstart(warmstart, target_optimizer="adam"),
-        step_size=step_size,
+        step_size=engine_step_size,
+        accept=accept_finite_trial if accept is None else accept,
+        gradient_tolerance=gradient_tolerance,
         accept_metric=accept_metric,
         accept_mode=accept_mode,
         accept_tolerance=accept_tolerance,

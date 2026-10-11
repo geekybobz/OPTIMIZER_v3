@@ -202,9 +202,10 @@ class EngineTests(unittest.TestCase):
         )
 
         self.assertEqual(result.stop_reason, "nonfinite_trial")
-        self.assertEqual(result.iterations, 1)
-        self.assertFalse(result.trace.iteration_records[0].accepted)
-        self.assertIn("ValueError", result.trace.iteration_records[0].technical["error"])
+        self.assertEqual(result.iterations, 3)
+        self.assertTrue(all(record.accepted is False for record in result.trace.iteration_records))
+        self.assertEqual(result.trace.iteration_records[0].reason, "trial_evaluation_rejected")
+        self.assertIn("ValueError", result.trace.iteration_records[-1].technical["error"])
 
     def test_target_can_stop_before_iterations(self):
         system = QuadraticSystem(target=0.0)

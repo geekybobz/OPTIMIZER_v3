@@ -15,6 +15,7 @@ from typing import Any, Mapping
 from optimizer import catalog
 from optimizer.core.engine import run_chunk
 from optimizer.system_olgs import contract_info, describe_system
+from optimizer.system_olss import describe_shooting_system, shooting_contract_info
 from optimizer.tracker import info as tracker_info
 
 
@@ -51,6 +52,17 @@ def context_info(
     run_chunk_parameters = list(inspect.signature(run_chunk).parameters)
     package_file = Path(__file__).resolve().with_name("__init__.py")
 
+    described_system = None
+    selected_contract = contract_info()
+    if system is not None:
+        hook = getattr(system, "system_spec", None)
+        raw = hook() if callable(hook) else None
+        if isinstance(raw, Mapping) and raw.get("family") == "olss":
+            described_system = describe_shooting_system(system)
+            selected_contract = shooting_contract_info()
+        else:
+            described_system = describe_system(system)
+
     return {
         "schema_version": SCHEMA_VERSION,
         "optimizer": {
@@ -76,7 +88,7 @@ def context_info(
                 ),
             },
         },
-        "system_contract": contract_info(),
+        "system_contract": selected_contract,
         "tracker": tracker_info(),
-        "system": None if system is None else describe_system(system),
+        "system": described_system,
     }

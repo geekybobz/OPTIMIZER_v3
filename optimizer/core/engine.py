@@ -255,6 +255,57 @@ def _proposal_step_size(proposal: StepProposal, *, accepted: bool) -> float | No
     return None
 
 
+def _project_proposal_to_bounds(
+    proposal: StepProposal,
+    *,
+    lower: np.ndarray,
+    upper: np.ndarray,
+) -> StepProposal:
+    """Project one proposed control onto system-declared elementwise bounds."""
+
+    matrix = proposal.controls.as_matrix(copy=False)
+    clipped = np.clip(matrix, lower, upper)
+    if np.array_equal(matrix, clipped):
+        return proposal
+    controls = Controls.from_matrix(
+        proposal.controls.spec,
+        clipped,
+        name=proposal.controls.name,
+        meta=proposal.controls.meta,
+    )
+    technical = dict(proposal.technical)
+    technical.update(
+        {
+            "bounds_projected": True,
+            "bounds_projection_norm": float(np.linalg.norm(clipped - matrix)),
+        }
+    )
+    return replace(proposal, controls=controls, technical=technical)
+
+
+def _stationary_reason(
+    evaluator: SystemEvaluator,
+    controls: Controls,
+    *,
+    curvature_tolerance: float,
+) -> tuple[str, dict[str, Any]]:
+    """Distinguish a sampled non-minimum stationary point when HVP is available."""
+
+    if not evaluator.capabilities.get("has_hvp", False):
+        return "gradient_converged", {"curvature_checked": False}
+    from optimizer.core.curvature import curvature_evidence
+
+    evidence = curvature_evidence(
+        evaluator.system,
+        controls,
+        directions=min(16, controls.spec.size),
+    )
+    evidence["curvature_checked"] = True
+    if float(evidence["minimum_curvature"]) < -float(curvature_tolerance):
+        return "stationary_nonminimum", evidence
+    return "gradient_converged", evidence
+
+
 # ----------------------------------------------------------------------
 # Run-state construction helpers
 # ----------------------------------------------------------------------
@@ -679,6 +730,8 @@ def run_chunk(
     stall_tolerance: float = 0.0,
     stall_metric: str | None = None,
     stall_mode: str | None = None,
+    gradient_tolerance: float | None = None,
+    stationary_curvature_tolerance: float = 1.0e-10,
     accept: AcceptFunction | None = None,
     accept_metric: str | None = None,
     accept_mode: str | None = None,
@@ -689,6 +742,9 @@ def run_chunk(
     stage: str | None = None,
     chunk: int = 0,
     use_cache: bool = True,
+    enforce_bounds: bool = True,
+    failed_trial_retries: int = 3,
+    failed_trial_shrink: float = 0.5,
     checkpoint_start: bool = True,
     checkpoint_latest: bool = True,
     checkpoint_accepted: bool = True,
@@ -705,6 +761,16 @@ def run_chunk(
         raise TypeError("random_state must be a mapping, callable, or None.")
     if gradient_source not in {"gradient", "smooth_gradient"}:
         raise ValueError("gradient_source must be 'gradient' or 'smooth_gradient'.")
+    if gradient_tolerance is not None and (
+        not np.isfinite(float(gradient_tolerance)) or float(gradient_tolerance) < 0.0
+    ):
+        raise ValueError("gradient_tolerance must be finite and nonnegative, or None.")
+    if not np.isfinite(float(stationary_curvature_tolerance)) or float(stationary_curvature_tolerance) < 0.0:
+        raise ValueError("stationary_curvature_tolerance must be finite and nonnegative.")
+    if int(failed_trial_retries) < 1:
+        raise ValueError("failed_trial_retries must be >= 1.")
+    if not 0.0 < float(failed_trial_shrink) < 1.0:
+        raise ValueError("failed_trial_shrink must satisfy 0 < value < 1.")
 
     evaluator = SystemEvaluator(system, use_cache=use_cache)
     objective = evaluator.system_spec["objective"]
@@ -731,6 +797,24 @@ def run_chunk(
     active_observers = _active_observers(active_trace, observers)
     active_controls = _start_controls(controls, state, warmstart)
     validate_controls_for_system(evaluator.system, active_controls)
+    bounds_arrays: tuple[np.ndarray, np.ndarray] | None = None
+    initial_bounds_projection_norm = 0.0
+    if bool(enforce_bounds) and evaluator.capabilities.get("has_control_bounds", False):
+        bounds = evaluator.control_bounds()
+        bounds_arrays = (
+            bounds.lower.as_matrix(copy=False),
+            bounds.upper.as_matrix(copy=False),
+        )
+        active_matrix = active_controls.as_matrix(copy=False)
+        projected_matrix = np.clip(active_matrix, bounds_arrays[0], bounds_arrays[1])
+        if not np.array_equal(active_matrix, projected_matrix):
+            initial_bounds_projection_norm = float(np.linalg.norm(projected_matrix - active_matrix))
+            active_controls = Controls.from_matrix(
+                active_controls.spec,
+                projected_matrix,
+                name=active_controls.name,
+                meta=active_controls.meta,
+            )
 
     params = _extract_system_params(evaluator.system, system_params)
     if stopping is None:
@@ -768,6 +852,8 @@ def run_chunk(
             "stall_tolerance": float(stall_tolerance),
             "stall_metric": resolved_stall_metric,
             "stall_mode": resolved_stall_mode,
+            "gradient_tolerance": gradient_tolerance,
+            "stationary_curvature_tolerance": float(stationary_curvature_tolerance),
             "accept": _callable_name(accept) or "default_accept",
             "accept_metric": resolved_accept_metric,
             "accept_mode": resolved_accept_mode,
@@ -782,6 +868,11 @@ def run_chunk(
             "stage": stage,
             "chunk": int(chunk),
             "use_cache": bool(use_cache),
+            "enforce_bounds": bool(enforce_bounds),
+            "initial_bounds_projected": initial_bounds_projection_norm > 0.0,
+            "initial_bounds_projection_norm": initial_bounds_projection_norm,
+            "failed_trial_retries": int(failed_trial_retries),
+            "failed_trial_shrink": float(failed_trial_shrink),
             "gradient_source": gradient_source,
             "prefer_value_and_gradient": bool(prefer_value_and_gradient),
             "state_supplied": state is not None,
@@ -943,6 +1034,7 @@ def run_chunk(
     current_eval = initial_evaluation
     stop_reason = "maxiter"
     accepted_any = False
+    consecutive_failed_trials = 0
 
     def record_terminal_selection(reason: str) -> None:
         """Persist bounded selected evidence from already-owned run state."""
@@ -1069,6 +1161,18 @@ def run_chunk(
             )
             break
 
+        gradient_norm = gradient_outcome.gradient.norm()
+        if gradient_tolerance is not None and gradient_norm <= float(gradient_tolerance):
+            stop_reason, curvature = _stationary_reason(
+                evaluator,
+                run_state.controls,
+                curvature_tolerance=stationary_curvature_tolerance,
+            )
+            run_state.optimizer_state.update(
+                {"gradient_norm": gradient_norm, "stationary_evidence": curvature}
+            )
+            break
+
         context = StepContext(
             system=evaluator.system,
             evaluator=evaluator,
@@ -1084,6 +1188,12 @@ def run_chunk(
             raw_proposal = step(context)
             proposal = raw_proposal if isinstance(raw_proposal, StepProposal) else StepProposal(raw_proposal)
             validate_controls_for_system(evaluator.system, proposal.controls)
+            if bounds_arrays is not None:
+                proposal = _project_proposal_to_bounds(
+                    proposal,
+                    lower=bounds_arrays[0],
+                    upper=bounds_arrays[1],
+                )
         except KeyboardInterrupt:
             close_interrupted_run()
             raise
@@ -1125,13 +1235,20 @@ def run_chunk(
             close_interrupted_run()
             raise
         if not trial_outcome.ok or trial_outcome.evaluation is None:
+            consecutive_failed_trials += 1
             run_state.iteration += 1
             run_state.global_iteration += 1
             run_state.optimizer_state.update(_proposal_state_update(proposal, accepted=False))
             rejected_step_size = _proposal_step_size(proposal, accepted=False)
+            current_step_size = run_state.step_size
+            if current_step_size is not None and (
+                rejected_step_size is None or rejected_step_size >= current_step_size
+            ):
+                rejected_step_size = current_step_size * float(failed_trial_shrink)
             if rejected_step_size is not None:
                 run_state.step_size = rejected_step_size
-            stop_reason = "nonfinite_trial"
+            terminal_failure = consecutive_failed_trials >= int(failed_trial_retries)
+            iteration_reason = "nonfinite_trial" if terminal_failure else "trial_evaluation_rejected"
             _record_iteration(
                 active_observers,
                 state=run_state,
@@ -1143,7 +1260,7 @@ def run_chunk(
                 stage=stage,
                 chunk=chunk,
                 accepted=False,
-                reason=stop_reason,
+                reason=iteration_reason,
                 before=before_snapshot,
                 trial=None,
                 after=_snapshot_facts(run_state.metrics, evaluator=evaluator, state=run_state),
@@ -1155,13 +1272,18 @@ def run_chunk(
                 run_state,
                 evaluator=evaluator,
                 optimizer_name=optimizer_name,
-                reason=stop_reason,
+                reason=iteration_reason,
                 stage=stage,
                 chunk=chunk,
                 api_context=resolved_api_context,
                 random_state=random_state,
             )
-            break
+            if terminal_failure:
+                stop_reason = "nonfinite_trial"
+                break
+            continue
+
+        consecutive_failed_trials = 0
 
         try:
             accept_function = accept

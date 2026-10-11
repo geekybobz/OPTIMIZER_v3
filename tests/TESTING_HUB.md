@@ -28,6 +28,8 @@ bytecode out of the checkout.
 | Controls, results, and state | `test_controls.py`, `test_result_state.py` |
 | Public API and discovery | `test_public_api.py`, `test_namespaces.py`, `test_catalog.py`, `test_optimizer_context.py` |
 | Optimizers and engine | `test_optimizers.py`, `test_advanced_optimizers.py`, `test_engine.py`, `test_numerical_capabilities.py` |
+| Integrated OLGS/OLSS changes | `test_olgs_olss_integrations.py` |
+| OLSS contract and scenarios | `test_olss.py`, `test_olss_scenarios.py` |
 | Guesses and utilities | `test_guesses.py`, `test_utils_tools.py` |
 | System contract and visualization | `test_system_contract.py`, `test_system_spec_visualization.py` |
 | Traces, tracker, and campaigns | `test_trace_checkpoint.py`, `test_tracker.py`, `test_tracker_bridge.py`, `test_campaigns.py` |
@@ -38,6 +40,11 @@ bytecode out of the checkout.
 [fixtures/quadratic_system.py](fixtures/quadratic_system.py) is a complete,
 minimal OLGS system used across the suite. Read it next to the
 [OLGS Contract](../optimizer/system_olgs/CONTRACT.md).
+
+The planned separation between fast deterministic regression coverage and longer
+contained convergence studies is implemented under
+`test_contained/olgs_convergence/` and defined in the
+[OLGS Convergence Test Design](../optimizer/system_olgs/OLGS_CONVERGENCE_TEST_DESIGN.md).
 
 ## Tracker trials
 

@@ -58,6 +58,7 @@ class LBFGSConfig:
     step_size: float | None = None
     curvature_eps: float = 1.0e-12
     max_step_norm: float | None = None
+    reject_shrink: float = 0.5
 
     def __post_init__(self) -> None:
         if int(self.history_size) < 1:
@@ -65,6 +66,8 @@ class LBFGSConfig:
         require_finite("step_size", self.initial_step_size, positive=True)
         require_finite("curvature_eps", self.curvature_eps, positive=True)
         require_finite("max_step_norm", self.max_step_norm, positive=True)
+        if not 0.0 < float(self.reject_shrink) < 1.0:
+            raise ValueError("reject_shrink must satisfy 0 < reject_shrink < 1.")
 
     @property
     def initial_step_size(self) -> float:
@@ -197,7 +200,8 @@ def _build_lbfgs_step(config: LBFGSConfig):
         }
         return StepProposal(
             controls=candidate,
-            step_size=step_size,
+            step_size_on_accept=step_size,
+            step_size_on_reject=step_size * float(config.reject_shrink),
             optimizer_state_on_accept=accept_state,
             optimizer_state_on_reject=reject_state,
             technical={
@@ -229,11 +233,13 @@ def lbfgs(
     step_size: float | None = None,
     curvature_eps: float = 1.0e-12,
     max_step_norm: float | None = None,
+    reject_shrink: float = 0.5,
     state: RunState | None = None,
     warmstart: Any | None = None,
     accept_metric: str | None = None,
     accept_mode: str | None = None,
     accept_tolerance: float = 0.0,
+    gradient_tolerance: float | None = 1.0e-8,
     **engine_kwargs: Any,
 ) -> OptimizerResult:
     """Run limited-memory BFGS."""
@@ -243,6 +249,7 @@ def lbfgs(
         step_size=step_size,
         curvature_eps=curvature_eps,
         max_step_norm=max_step_norm,
+        reject_shrink=reject_shrink,
     )
     return run_chunk(
         system,
@@ -256,5 +263,6 @@ def lbfgs(
         accept_metric=accept_metric,
         accept_mode=accept_mode,
         accept_tolerance=accept_tolerance,
+        gradient_tolerance=gradient_tolerance,
         **method_api_context(engine_kwargs, method="lbfgs", config=config),
     )

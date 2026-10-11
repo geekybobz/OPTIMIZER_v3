@@ -38,14 +38,18 @@ import numpy as np
 from optimizer.controls import Controls
 from optimizer.core.engine import StepContext, StepProposal, run_chunk
 from optimizer.optimizers._common import (
+    StepSize,
+    accept_finite_trial,
     clip_vector,
     coerce_warmstart,
     controls_from_flat_like,
     flat_state_array,
     method_api_context,
+    next_scheduled_step,
     require_finite,
     require_probability_like,
     require_variant,
+    resolve_step_size,
 )
 from optimizer.result import OptimizerResult
 from optimizer.state import RunState
@@ -59,13 +63,13 @@ class MomentumConfig:
     """Validated options for ``opt.momentum``."""
 
     variant: str = "heavy_ball"
-    step_size: float | None = None
+    step_size: StepSize | None = None
     momentum: float = 0.9
     max_step_norm: float | None = None
 
     def __post_init__(self) -> None:
         require_variant(self.variant, VALID_VARIANTS, family="momentum")
-        require_finite("step_size", self.initial_step_size, positive=True)
+        resolve_step_size(self.step_size, default=1.0e-3)
         require_probability_like("momentum", self.momentum)
         require_finite("max_step_norm", self.effective_max_step_norm, positive=True)
 
@@ -73,7 +77,11 @@ class MomentumConfig:
     def initial_step_size(self) -> float:
         """Default step used when no state/warmstart value exists."""
 
-        return 1.0e-3 if self.step_size is None else float(self.step_size)
+        return resolve_step_size(self.step_size, default=1.0e-3)[0]
+
+    @property
+    def schedule(self):
+        return resolve_step_size(self.step_size, default=1.0e-3)[1]
 
     @property
     def effective_max_step_norm(self) -> float | None:
@@ -180,6 +188,18 @@ def _build_momentum_step(config: MomentumConfig):
         return StepProposal(
             controls=candidate,
             step_size=step_size,
+            step_size_on_accept=next_scheduled_step(
+                config.schedule,
+                step_size,
+                accepted=True,
+                iteration=context.state.global_iteration + 1,
+            ),
+            step_size_on_reject=next_scheduled_step(
+                config.schedule,
+                step_size,
+                accepted=False,
+                iteration=context.state.global_iteration + 1,
+            ),
             optimizer_state_on_accept=accept_state,
             optimizer_state_on_reject=reject_state,
             technical={
@@ -204,14 +224,16 @@ def momentum(
     *,
     variant: str = "heavy_ball",
     maxiter: int = 100,
-    step_size: float | None = None,
+    step_size: StepSize | None = None,
     momentum: float = 0.9,
     max_step_norm: float | None = None,
     state: RunState | None = None,
     warmstart: Any | None = None,
+    accept: Any | None = None,
     accept_metric: str | None = None,
     accept_mode: str | None = None,
     accept_tolerance: float = 0.0,
+    gradient_tolerance: float | None = 1.0e-8,
     **engine_kwargs: Any,
 ) -> OptimizerResult:
     """Run the momentum optimizer family."""
@@ -222,6 +244,11 @@ def momentum(
         momentum=momentum,
         max_step_norm=max_step_norm,
     )
+    engine_step_size = (
+        config.initial_step_size
+        if state is None and warmstart is None
+        else (config.initial_step_size if config.schedule is None and step_size is not None else None)
+    )
     return run_chunk(
         system,
         controls,
@@ -230,7 +257,9 @@ def momentum(
         maxiter=maxiter,
         state=state,
         warmstart=coerce_warmstart(warmstart, target_optimizer="momentum"),
-        step_size=step_size,
+        step_size=engine_step_size,
+        accept=accept_finite_trial if accept is None else accept,
+        gradient_tolerance=gradient_tolerance,
         accept_metric=accept_metric,
         accept_mode=accept_mode,
         accept_tolerance=accept_tolerance,

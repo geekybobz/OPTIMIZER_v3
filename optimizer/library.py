@@ -38,7 +38,7 @@ Reviewer invariants
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, is_dataclass, replace
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Mapping
 from uuid import uuid4
 
 from optimizer.controls import ControlSpec, Controls
@@ -77,11 +77,20 @@ from optimizer.optimizers import proximal_gradient as _proximal_gradient
 from optimizer.optimizers import rmsprop as _rmsprop
 from optimizer.optimizers import trust_region as _trust_region
 from optimizer.result import Evaluation, OptimizerResult
-from optimizer.schedules import AdaptiveStepSchedule, ConstantSchedule
+from optimizer.schedules import (
+    AdaptiveStepSchedule,
+    ConstantSchedule,
+    CosineDecaySchedule,
+    ExponentialDecaySchedule,
+    LinearWarmupSchedule,
+)
 from optimizer.state import RunState, WarmStartState
 from optimizer.system_olgs import get_secondary_update_hook, require_system
 from optimizer.utils import (
+    compare_methods as _compare_methods,
     control_spectrum as _control_spectrum,
+    curvature_probe as _curvature_probe,
+    diagnose_run as _diagnose_run,
     diagnostic_report as _diagnostic_report,
     finite_difference_gradient as _finite_difference_gradient,
     finite_difference_jacobian as _finite_difference_jacobian,
@@ -90,6 +99,7 @@ from optimizer.utils import (
     nullspace_basis as _nullspace_basis,
     project_gradient as _project_gradient,
     repair_newton as _repair_newton,
+    shooting_geometry_probe as _shooting_geometry_probe,
     smoothness_report as _smoothness_report,
     verify_gradient as _verify_gradient,
     verify_jacobian as _verify_jacobian,
@@ -316,6 +326,15 @@ class OptimizerContext:
 
         return self.library.geometry_probe(self.system, controls, *args, **kwargs)
 
+    def curvature_probe(self, controls: Controls, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return self.library.curvature_probe(self.system, controls, *args, **kwargs)
+
+    def compare_methods(self, controls: Controls, methods: Any, **kwargs: Any) -> dict[str, Any]:
+        return self.library.compare_methods(self.system, controls, methods, **kwargs)
+
+    def shooting_geometry_probe(self, variables: Any, **kwargs: Any) -> dict[str, Any]:
+        return self.library.shooting_geometry_probe(self.system, variables, **kwargs)
+
     def verify_gradient(self, controls: Controls, *args: Any, **kwargs: Any) -> dict[str, Any]:
         """Check the bound system's analytical gradient."""
 
@@ -461,14 +480,27 @@ class OptimizerLibrary:
 
         return Controls.constant(spec, value, **kwargs)
 
-    def evaluate(self, system: Any, controls: Controls, *, use_cache: bool = True) -> Evaluation:
+    def evaluate(self, system: Any, controls: Any, *, use_cache: bool = True) -> Any:
         """Evaluate a system through the validated public boundary."""
+        hook = getattr(system, "system_spec", None)
+        if callable(hook):
+            raw = hook()
+            if isinstance(raw, Mapping) and raw.get("family") == "olss":
+                from optimizer.shooting import ShootingEvaluator
 
+                return ShootingEvaluator(system, use_cache=use_cache).evaluate(controls)
         return self._evaluator(system, use_cache=use_cache).evaluate(controls)
 
     def gradient(self, system: Any, controls: Controls, *, use_cache: bool = True) -> Controls:
         """Return the analytical system gradient through the public boundary."""
-
+        hook = getattr(system, "system_spec", None)
+        if callable(hook):
+            raw = hook()
+            if isinstance(raw, Mapping) and raw.get("family") == "olss":
+                raise TypeError(
+                    "OLSS systems expose residuals and jacobian, not an objective gradient; "
+                    "use opt.shooting.ShootingEvaluator or opt.shooting.solve_shooting."
+                )
         return self._evaluator(system, use_cache=use_cache).gradient(controls)
 
     def value_and_gradient(
@@ -560,6 +592,13 @@ class OptimizerLibrary:
         """Return declared system metadata without evaluating controls."""
 
         from optimizer.system_olgs import describe_system
+        from optimizer.system_olss import describe_shooting_system
+
+        hook = getattr(system, "system_spec", None)
+        if callable(hook):
+            raw = hook()
+            if isinstance(raw, Mapping) and raw.get("family") == "olss":
+                return describe_shooting_system(system)
 
         return describe_system(system)
 
@@ -639,6 +678,14 @@ class OptimizerLibrary:
         stages: Iterable[ContinuationStage | dict[str, Any]],
         **kwargs: Any,
     ) -> ContinuationResult:
+        hook = getattr(system, "system_spec", None)
+        if callable(hook):
+            raw = hook()
+            if isinstance(raw, Mapping) and raw.get("family") == "olss":
+                raise TypeError(
+                    "opt.continuation is the OLGS staged-control workflow; "
+                    "use opt.shooting.continue_parameter or opt.shooting.continue_shooting for OLSS."
+                )
         return _continuation(system, controls, stages=tuple(stages), **kwargs)
 
     # ------------------------------------------------------------------
@@ -659,6 +706,18 @@ class OptimizerLibrary:
         """Return local residual/Jacobian geometry diagnostics."""
 
         return _geometry_probe(system, controls, **kwargs)
+
+    def diagnose_run(self, result: Any, **kwargs: Any) -> dict[str, Any]:
+        return _diagnose_run(result, **kwargs)
+
+    def curvature_probe(self, system: Any, controls: Controls, **kwargs: Any) -> dict[str, Any]:
+        return _curvature_probe(system, controls, **kwargs)
+
+    def compare_methods(self, system: Any, controls: Controls, methods: Any, **kwargs: Any) -> dict[str, Any]:
+        return _compare_methods(system, controls, methods, **kwargs)
+
+    def shooting_geometry_probe(self, system: Any, variables: Any, **kwargs: Any) -> dict[str, Any]:
+        return _shooting_geometry_probe(system, variables, **kwargs)
 
     def finite_difference_gradient(self, system: Any, controls: Controls, **kwargs: Any) -> Controls:
         """Return finite-difference gradient for a scalar metric."""
@@ -719,6 +778,15 @@ class OptimizerLibrary:
         """Create a shrink/grow adaptive step-size schedule."""
 
         return AdaptiveStepSchedule(**kwargs)
+
+    def exponential_decay_schedule(self, **kwargs: Any) -> ExponentialDecaySchedule:
+        return ExponentialDecaySchedule(**kwargs)
+
+    def linear_warmup_schedule(self, **kwargs: Any) -> LinearWarmupSchedule:
+        return LinearWarmupSchedule(**kwargs)
+
+    def cosine_decay_schedule(self, **kwargs: Any) -> CosineDecaySchedule:
+        return CosineDecaySchedule(**kwargs)
 
     # ------------------------------------------------------------------
     # Guess generators
@@ -856,6 +924,18 @@ class OptimizerLibrary:
             ),
             "continuation": MethodInfo(
                 "continuation", "implemented", "optimizer/continuation.py", "Numerical capabilities"
+            ),
+            "solve_shooting": MethodInfo(
+                "solve_shooting", "implemented", "optimizer/shooting/solvers.py", "OLSS"
+            ),
+            "solve_shooting_multistart": MethodInfo(
+                "solve_shooting_multistart", "implemented", "optimizer/shooting/campaigns.py", "OLSS"
+            ),
+            "continue_shooting": MethodInfo(
+                "continue_shooting", "implemented", "optimizer/shooting/continuation.py", "OLSS"
+            ),
+            "solve_direct_shooting": MethodInfo(
+                "solve_direct_shooting", "implemented", "optimizer/shooting/solvers.py", "OLSS"
             ),
             "fourier_guess": MethodInfo(
                 "fourier_guess",

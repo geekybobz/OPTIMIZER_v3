@@ -36,7 +36,7 @@ from __future__ import annotations
 
 from typing import Any as _Any, Callable as _Callable, Iterable as _Iterable
 
-from optimizer import campaigns, catalog, core, guesses, optimizers, schedules, tracker, utils, visualization
+from optimizer import campaigns, catalog, core, guesses, optimizers, schedules, shooting, tracker, utils, visualization
 import optimizer_log as optimizer_log
 from optimizer.catalog import base
 from optimizer.controls import ControlSpec, Controls
@@ -55,8 +55,15 @@ from optimizer.logs.checkpoint import Checkpoint
 from optimizer.logs.records import ChunkRecord, EventRecord, IterationRecord
 from optimizer.logs.trace import Trace
 from optimizer.result import Evaluation, OptimizerResult
-from optimizer.schedules import AdaptiveStepSchedule, ConstantSchedule
+from optimizer.schedules import (
+    AdaptiveStepSchedule,
+    ConstantSchedule,
+    CosineDecaySchedule,
+    ExponentialDecaySchedule,
+    LinearWarmupSchedule,
+)
 from optimizer.state import RunState, WarmStartState
+from optimizer.transactions import SystemRequest, SystemResponse, SystemTransactionAdapter, transact
 from optimizer.system_olgs import (
     ControlBounds,
     OLGS,
@@ -101,6 +108,46 @@ from optimizer.system_olgs import (
     value_and_gradient_system,
     with_secondary,
 )
+from optimizer.system_olss import (
+    ContinuationPoint,
+    MultiStartResult,
+    ParameterContinuationPoint,
+    ParameterContinuationResult,
+    OLSS,
+    OpenLoopShootingSystem,
+    SHOOTING_SYSTEM_SPEC_SCHEMA,
+    ShootingBlock,
+    ShootingContinuationResult,
+    ShootingEvaluation,
+    ShootingResult,
+    ShootingSpec,
+    ShootingSystemProbe,
+    ShootingVariables,
+    ShootingVerification,
+    VerificationCheck,
+    basic_shooting_system_spec,
+    describe_shooting_system,
+    get_shooting_system_spec,
+    probe_shooting_system,
+    require_shooting_system,
+    shooting_contract_info,
+    shooting_metric_spec,
+    validate_shooting_system_spec,
+)
+from optimizer.shooting import (
+    ShootingEvaluator,
+    continue_parameter,
+    compare_shooting_replay,
+    continue_shooting,
+    finite_difference_shooting_jacobian,
+    solve_direct_shooting,
+    solve_shooting,
+    solve_shooting_multistart,
+    random_shooting_seeds,
+    perturb_shooting_seeds,
+    refine_shooting_seeds,
+    verify_shooting_jacobian,
+)
 
 
 __version__ = "4.0.4"
@@ -133,11 +180,11 @@ def constant(spec: ControlSpec, value: _Any, **kwargs: _Any) -> Controls:
     return library.constant(spec, value, **kwargs)
 
 
-def evaluate(system: _Any, controls: Controls, *, use_cache: bool = True) -> Evaluation:
+def evaluate(system: _Any, controls: _Any, *, use_cache: bool = True) -> _Any:
     return library.evaluate(system, controls, use_cache=use_cache)
 
 
-def gradient(system: _Any, controls: Controls, *, use_cache: bool = True) -> Controls:
+def gradient(system: _Any, controls: _Any, *, use_cache: bool = True) -> Controls:
     return library.gradient(system, controls, use_cache=use_cache)
 
 
@@ -291,6 +338,22 @@ def diagnostic_report(system: _Any, controls: Controls, **kwargs: _Any) -> dict[
     return library.diagnostic_report(system, controls, **kwargs)
 
 
+def diagnose_run(result: _Any, **kwargs: _Any) -> dict[str, _Any]:
+    return library.diagnose_run(result, **kwargs)
+
+
+def curvature_probe(system: _Any, controls: Controls, **kwargs: _Any) -> dict[str, _Any]:
+    return library.curvature_probe(system, controls, **kwargs)
+
+
+def compare_methods(system: _Any, controls: Controls, methods: _Any, **kwargs: _Any) -> dict[str, _Any]:
+    return library.compare_methods(system, controls, methods, **kwargs)
+
+
+def shooting_geometry_probe(system: _Any, variables: _Any, **kwargs: _Any) -> dict[str, _Any]:
+    return library.shooting_geometry_probe(system, variables, **kwargs)
+
+
 def finite_difference_gradient(system: _Any, controls: Controls, **kwargs: _Any) -> Controls:
     return library.finite_difference_gradient(system, controls, **kwargs)
 
@@ -337,6 +400,18 @@ def constant_schedule(value: float) -> ConstantSchedule:
 
 def adaptive_step_schedule(**kwargs: Any) -> AdaptiveStepSchedule:
     return library.adaptive_step_schedule(**kwargs)
+
+
+def exponential_decay_schedule(**kwargs: Any) -> ExponentialDecaySchedule:
+    return library.exponential_decay_schedule(**kwargs)
+
+
+def linear_warmup_schedule(**kwargs: Any) -> LinearWarmupSchedule:
+    return library.linear_warmup_schedule(**kwargs)
+
+
+def cosine_decay_schedule(**kwargs: Any) -> CosineDecaySchedule:
+    return library.cosine_decay_schedule(**kwargs)
 
 
 def constant_guess(*args: Any, **kwargs: Any) -> Controls:
@@ -493,21 +568,29 @@ for _implementation_name in ("annotations", "logs", "result", "state", "system_o
 __all__ = [
     "AcceptanceDecision",
     "AdaptiveStepSchedule",
+    "CosineDecaySchedule",
     "Checkpoint",
     "ChunkRecord",
     "ControlSpec",
     "ControlBounds",
     "Controls",
     "ContinuationResult",
+    "ContinuationPoint",
     "ContinuationStage",
     "ConstantSchedule",
+    "ExponentialDecaySchedule",
     "Evaluation",
     "EventRecord",
     "IterationRecord",
     "MethodInfo",
     "MetricGuard",
+    "MultiStartResult",
+    "ParameterContinuationPoint",
+    "ParameterContinuationResult",
     "OLGS",
     "OLGSystem",
+    "OLSS",
+    "OpenLoopShootingSystem",
     "OptimizerContext",
     "OptimizerLibrary",
     "OptimizerResult",
@@ -516,12 +599,26 @@ __all__ = [
     "PlotData",
     "PlotLayer",
     "RepairResult",
+    "SHOOTING_SYSTEM_SPEC_SCHEMA",
     "RunState",
     "StepContext",
     "StepProposal",
     "StoppingConfig",
     "SystemEvaluator",
+    "SystemRequest",
+    "SystemResponse",
+    "SystemTransactionAdapter",
     "SystemProbe",
+    "ShootingBlock",
+    "ShootingContinuationResult",
+    "ShootingEvaluation",
+    "ShootingEvaluator",
+    "ShootingResult",
+    "ShootingSpec",
+    "ShootingSystemProbe",
+    "ShootingVariables",
+    "ShootingVerification",
+    "VerificationCheck",
     "SupportsBounds",
     "SupportsControlTransfer",
     "SupportsEqualityConstraints",
@@ -532,6 +629,7 @@ __all__ = [
     "TRACKING_SPEC_SCHEMA",
     "SYSTEM_SPEC_SCHEMA",
     "TrackingSpec",
+    "LinearWarmupSchedule",
     "StageGate",
     "StageResult",
     "Trace",
@@ -540,8 +638,10 @@ __all__ = [
     "adagrad",
     "adam",
     "adaptive_step_schedule",
+    "cosine_decay_schedule",
     "base",
     "basic_system_spec",
+    "basic_shooting_system_spec",
     "bind",
     "campaigns",
     "cma_es",
@@ -549,23 +649,32 @@ __all__ = [
     "constant_guess",
     "constant_schedule",
     "continuation",
+    "continue_parameter",
+    "continue_shooting",
     "context",
     "context_info",
     "catalog",
     "control_spec",
     "control_spectrum",
+    "compare_methods",
+    "compare_shooting_replay",
+    "curvature_probe",
     "contract_info",
     "controls",
     "core",
     "cosine_guess",
     "diagnostic_report",
+    "diagnose_run",
     "describe_system",
+    "describe_shooting_system",
     "evaluate",
     "evaluate_system",
+    "exponential_decay_schedule",
     "finite_difference_hessian",
     "finite_difference_hvp",
     "finite_difference_gradient",
     "finite_difference_jacobian",
+    "finite_difference_shooting_jacobian",
     "fourier_guess",
     "gaussian_guess",
     "geometry_probe",
@@ -575,11 +684,13 @@ __all__ = [
     "value_and_gradient_system",
     "get_tracking_spec",
     "get_system_spec",
+    "get_shooting_system_spec",
     "guesses",
     "info",
     "library",
     "lbfgs",
     "line_search",
+    "linear_warmup_schedule",
     "list",
     "metric_guard",
     "metric_report",
@@ -610,12 +721,17 @@ __all__ = [
     "projected_gradient",
     "proximal_gradient",
     "probe_system",
+    "probe_shooting_system",
+    "perturb_shooting_seeds",
     "ramp_guess",
     "random_fourier_guess",
     "random_guess",
     "random_smooth_guess",
+    "random_shooting_seeds",
+    "refine_shooting_seeds",
     "repair_newton",
     "require_system",
+    "require_shooting_system",
     "rmsprop",
     "run_chunk",
     "schedules",
@@ -623,9 +739,17 @@ __all__ = [
     "search",
     "sinc_guess",
     "sine_guess",
+    "shooting",
+    "shooting_contract_info",
+    "shooting_metric_spec",
+    "shooting_geometry_probe",
     "smoothness_report",
+    "solve_direct_shooting",
+    "solve_shooting",
+    "solve_shooting_multistart",
     "system_info",
     "trace",
+    "transact",
     "trust_region",
     "tracker",
     "util",
@@ -634,8 +758,10 @@ __all__ = [
     "validate_controls_for_system",
     "validate_metrics",
     "validate_system_spec",
+    "validate_shooting_system_spec",
     "verify_gradient",
     "verify_jacobian",
+    "verify_shooting_jacobian",
     "warmstart",
     "with_secondary",
     "zeros",

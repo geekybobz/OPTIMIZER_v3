@@ -29,12 +29,30 @@ Reviewer invariants
 from __future__ import annotations
 
 from dataclasses import asdict, is_dataclass
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterable, Mapping, Protocol, runtime_checkable
 
 import numpy as np
 
 from optimizer.controls import Controls
 from optimizer.state import RunState, WarmStartState
+
+
+@runtime_checkable
+class StepSizeSchedule(Protocol):
+    """Structural protocol shared by first-order step-size schedules."""
+
+    def initial(self) -> float: ...
+
+    def update(
+        self,
+        current: float | None = None,
+        *,
+        accepted: bool | None = None,
+        iteration: int | None = None,
+    ) -> float: ...
+
+
+StepSize = float | StepSizeSchedule
 
 
 def require_variant(name: str, valid: Iterable[str], *, family: str) -> str:
@@ -70,6 +88,47 @@ def require_finite(
     if nonnegative and out < 0.0:
         raise ValueError(f"{name} must be >= 0.")
     return out
+
+
+def resolve_step_size(value: StepSize | None, *, default: float) -> tuple[float, StepSizeSchedule | None]:
+    """Resolve a scalar or schedule into its initial finite positive step."""
+
+    if value is None:
+        return float(require_finite("step_size", default, positive=True)), None
+    if isinstance(value, StepSizeSchedule):
+        initial = require_finite("step_size.initial()", value.initial(), positive=True)
+        assert initial is not None
+        return initial, value
+    scalar = require_finite("step_size", value, positive=True)
+    assert scalar is not None
+    return scalar, None
+
+
+def next_scheduled_step(
+    schedule: StepSizeSchedule | None,
+    current: float,
+    *,
+    accepted: bool,
+    iteration: int,
+) -> float:
+    """Return the schedule branch value, or retain a scalar step unchanged."""
+
+    if schedule is None:
+        return float(current)
+    try:
+        value = schedule.update(current, accepted=accepted, iteration=iteration)
+    except TypeError:
+        # Compatibility with the original two-argument schedule protocol.
+        value = schedule.update(current, accepted=accepted)
+    resolved = require_finite("scheduled step_size", value, positive=True)
+    assert resolved is not None
+    return resolved
+
+
+def accept_finite_trial(*_: Any) -> bool:
+    """Standard first-order policy: accept every successfully evaluated trial."""
+
+    return True
 
 
 def require_probability_like(name: str, value: float) -> float:
@@ -146,6 +205,10 @@ def method_api_context(
     kwargs = dict(engine_kwargs)
     caller = dict(kwargs.pop("api_context", {}) or {})
     config_payload = asdict(config) if is_dataclass(config) else dict(config)
+    for key, value in list(config_payload.items()):
+        if isinstance(value, StepSizeSchedule):
+            payload = asdict(value) if is_dataclass(value) else {}
+            config_payload[key] = {"schedule": type(value).__name__, **payload}
     supplied_method = caller.get("method_config")
     merged_method = dict(supplied_method) if isinstance(supplied_method, Mapping) else {}
     merged_method.update({"name": str(method), **config_payload})

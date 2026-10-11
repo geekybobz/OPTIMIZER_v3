@@ -32,3 +32,4 @@ include = ["optimizer", "optimizer.*", "optimizer_log", "optimizer_log.*"]
 
 [tool.setuptools.package-data]
 "optimizer.system_olgs.templates" = ["*.tmpl"]
+"optimizer.system_olss.templates" = ["*.tmpl"]

@@ -1,0 +1,25 @@
+"""Initial contract checks for the generated OLSS system."""
+
+import unittest
+
+from optimizer import SHOOTING_SYSTEM_SPEC_SCHEMA, get_shooting_system_spec
+from optimizer import probe_shooting_system
+from system import __CLASS_NAME__
+
+
+class GeneratedSystemContractTests(unittest.TestCase):
+    def test_static_contract_and_variable_layout(self):
+        system = __CLASS_NAME__()
+        spec = get_shooting_system_spec(system)
+        variables = system.shooting_spec()
+
+        self.assertEqual(spec["schema_version"], SHOOTING_SYSTEM_SPEC_SCHEMA)
+        self.assertEqual(spec["family"], "olss")
+        self.assertEqual(spec["variables"]["size"], variables.size)
+        self.assertTrue(probe_shooting_system(system).required_ok)
+
+    # TODO: add residual/Jacobian and independent-verification checks.
+
+
+if __name__ == "__main__":
+    unittest.main()

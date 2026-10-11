@@ -60,11 +60,14 @@ class NonlinearCGConfig:
     step_size: float | None = None
     max_step_norm: float | None = None
     restart_on_nondescent: bool = True
+    reject_shrink: float = 0.5
 
     def __post_init__(self) -> None:
         require_variant(self.variant, VALID_VARIANTS, family="nonlinear_cg")
         require_finite("step_size", self.initial_step_size, positive=True)
         require_finite("max_step_norm", self.max_step_norm, positive=True)
+        if not 0.0 < float(self.reject_shrink) < 1.0:
+            raise ValueError("reject_shrink must satisfy 0 < reject_shrink < 1.")
 
     @property
     def initial_step_size(self) -> float:
@@ -142,11 +145,17 @@ def _build_ncg_step(config: NonlinearCGConfig):
             direction = -gradient
         else:
             beta = _beta(config, gradient, previous_gradient, previous_direction)
+            if not np.isfinite(beta):
+                beta = 0.0
             direction = -gradient + beta * previous_direction
 
         directional_derivative = float(np.dot(gradient, direction))
         restarted = False
-        if config.restart_on_nondescent and directional_derivative >= 0.0:
+        if (
+            not np.all(np.isfinite(direction))
+            or not np.isfinite(directional_derivative)
+            or (config.restart_on_nondescent and directional_derivative >= 0.0)
+        ):
             direction = -gradient
             beta = 0.0
             directional_derivative = float(np.dot(gradient, direction))
@@ -174,19 +183,20 @@ def _build_ncg_step(config: NonlinearCGConfig):
         )
         reject_state = _state_payload(
             config=config,
-            gradient=previous_gradient,
-            direction=previous_direction,
+            gradient=gradient,
+            direction=-gradient,
             accepted=accepted,
             rejected=rejected + 1,
-            step_size=step_size,
-            beta=beta,
-            restarted=restarted,
+            step_size=step_size * float(config.reject_shrink),
+            beta=0.0,
+            restarted=True,
             raw_step_norm=raw_step_norm,
             clipped=clipped,
         )
         return StepProposal(
             controls=candidate,
-            step_size=step_size,
+            step_size_on_accept=step_size,
+            step_size_on_reject=step_size * float(config.reject_shrink),
             optimizer_state_on_accept=accept_state,
             optimizer_state_on_reject=reject_state,
             technical={
@@ -215,11 +225,13 @@ def nonlinear_cg(
     step_size: float | None = None,
     max_step_norm: float | None = None,
     restart_on_nondescent: bool = True,
+    reject_shrink: float = 0.5,
     state: RunState | None = None,
     warmstart: Any | None = None,
     accept_metric: str | None = None,
     accept_mode: str | None = None,
     accept_tolerance: float = 0.0,
+    gradient_tolerance: float | None = 1.0e-8,
     **engine_kwargs: Any,
 ) -> OptimizerResult:
     """Run nonlinear conjugate gradient."""
@@ -229,6 +241,7 @@ def nonlinear_cg(
         step_size=step_size,
         max_step_norm=max_step_norm,
         restart_on_nondescent=restart_on_nondescent,
+        reject_shrink=reject_shrink,
     )
     return run_chunk(
         system,
@@ -242,6 +255,7 @@ def nonlinear_cg(
         accept_metric=accept_metric,
         accept_mode=accept_mode,
         accept_tolerance=accept_tolerance,
+        gradient_tolerance=gradient_tolerance,
         **method_api_context(engine_kwargs, method="nonlinear_cg", config=config),
     )
 

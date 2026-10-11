@@ -7,6 +7,7 @@ import numpy as np
 import optimizer as opt
 from fixtures.quadratic_system import QuadraticVectorSystem
 from optimizer.controls import ControlSpec, Controls
+from optimizer.core import default_accept
 from optimizer.system_olgs import basic_system_spec
 
 
@@ -153,6 +154,7 @@ class OptimizerPhaseTests(unittest.TestCase):
             variant="restart",
             step_size=100.0,
             maxiter=1,
+            accept=default_accept,
         )
 
         self.assertFalse(result.trace.iteration_records[0].accepted)

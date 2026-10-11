@@ -101,14 +101,6 @@ def _build_step(config: NewtonCGConfig):
         gradient = context.gradient.flatten(copy=False).astype(float, copy=False)
         gradient_norm = float(np.linalg.norm(gradient))
         step_size = float(context.state.step_size or config.step_size)
-        if gradient_norm <= float(config.gradient_tolerance):
-            return StepProposal(
-                controls=context.state.controls.copy(name="newton_cg_converged"),
-                step_size=step_size,
-                optimizer_state={"gradient_norm": gradient_norm, "cg_iterations": 0},
-                technical={"gradient_norm": gradient_norm, "cg_iterations": 0},
-                stop_reason="gradient_converged",
-            )
         direction, info = _newton_direction(context, config)
         update, raw_norm, clipped = clip_vector(step_size * direction, config.max_step_norm)
         candidate = controls_from_flat_like(
@@ -119,7 +111,7 @@ def _build_step(config: NewtonCGConfig):
         memory = {"gradient_norm": gradient_norm, **info}
         return StepProposal(
             controls=candidate,
-            step_size_on_accept=step_size,
+            step_size_on_accept=float(config.step_size),
             step_size_on_reject=step_size * float(config.reject_shrink),
             optimizer_state_on_accept=memory,
             optimizer_state_on_reject=memory,
@@ -178,6 +170,7 @@ def newton_cg(
         state=state,
         warmstart=coerce_warmstart(warmstart, target_optimizer="newton_cg"),
         step_size=step_size,
+        gradient_tolerance=gradient_tolerance,
         accept_metric=accept_metric,
         accept_mode=accept_mode,
         accept_tolerance=accept_tolerance,

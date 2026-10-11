@@ -46,13 +46,31 @@ class CatalogTests(unittest.TestCase):
 
     def test_all_public_role_surfaces_are_discoverable(self):
         groups = opt.catalog.groups()
-        for name in ("campaigns", "tracker", "visualization", "system_olgs", "optimizer_log"):
+        for name in (
+            "campaigns",
+            "tracker",
+            "visualization",
+            "system_olgs",
+            "system_olss",
+            "shooting",
+            "optimizer_log",
+        ):
             self.assertIn(name, groups)
             self.assertGreater(groups[name]["count"], 0)
         self.assertGreater(opt.search("campaign")["count"], 0)
         self.assertGreater(opt.search("tracker")["count"], 0)
         self.assertGreater(opt.search("visualization")["count"], 0)
         self.assertEqual(opt.catalog.campaigns.open.info()["id"], "campaigns.open")
+        olss_names = {item["name"] for item in opt.catalog.system_olss.list()["items"]}
+        self.assertTrue(
+            {"OLSS", "ShootingBlock", "ShootingSpec", "ShootingVariables", "basic_shooting_system_spec"}
+            <= olss_names
+        )
+        base_names = {item["name"] for item in opt.catalog.base.list()["items"]}
+        self.assertTrue(
+            {"SystemRequest", "SystemResponse", "SystemTransactionAdapter", "transact"}
+            <= base_names
+        )
 
     def test_human_list_contains_group_context_and_item_details(self):
         text = opt.optimizers.list(h=True)

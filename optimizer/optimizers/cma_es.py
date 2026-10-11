@@ -38,7 +38,7 @@ Reviewer invariants
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Iterable, Mapping
 from uuid import uuid4
 
@@ -61,8 +61,10 @@ from optimizer.core.observer import (
 )
 from optimizer.logs.trace import Trace
 from optimizer.optimizers._common import controls_from_flat_like, require_finite, require_variant
+from optimizer.optimizers._common import coerce_warmstart
 from optimizer.result import Evaluation, OptimizerResult
-from optimizer.state import RunState
+from optimizer.state import RunState, WarmStartState
+from optimizer.core.stopping import StopTracker, StoppingConfig
 from optimizer.system_olgs import get_system_spec, validate_controls_for_system
 
 
@@ -182,7 +184,7 @@ def _system_params(system: Any, explicit: Mapping[str, Any] | None) -> dict[str,
 
 def cma_es(
     system: Any,
-    controls: Controls,
+    controls: Controls | None = None,
     *,
     variant: str = "diagonal",
     maxiter: int = 100,
@@ -195,6 +197,16 @@ def cma_es(
     accept_metric: str | None = None,
     accept_mode: str | None = None,
     accept_tolerance: float = 0.0,
+    state: RunState | None = None,
+    warmstart: Any | None = None,
+    stopping: StoppingConfig | None = None,
+    target_value: float | None = None,
+    target_metric: str | None = None,
+    target_mode: str | None = None,
+    stall_patience: int | None = None,
+    stall_tolerance: float = 0.0,
+    stall_metric: str | None = None,
+    stall_mode: str | None = None,
     trace: Trace | None = None,
     create_trace: bool = True,
     observers: Iterable[RunObserver] | None = None,
@@ -228,6 +240,15 @@ def cma_es(
     if int(maxiter) < 0:
         raise ValueError("maxiter must be >= 0.")
     require_finite("accept_tolerance", accept_tolerance, nonnegative=True)
+
+    previous_state = state
+    warm = coerce_warmstart(warmstart, target_optimizer="cma_es")
+    if previous_state is not None:
+        controls = previous_state.controls.copy(name=previous_state.controls.name)
+    elif warm is not None:
+        controls = warm.controls.copy(name=warm.controls.name)
+    if controls is None:
+        raise ValueError("cma_es requires controls, state, or warmstart.")
 
     evaluator = SystemEvaluator(system, use_cache=use_cache)
     validate_controls_for_system(evaluator.system, controls)
@@ -307,6 +328,13 @@ def cma_es(
         system_params=params,
         trace_id=None if active_trace is None else active_trace.run_id,
     )
+    if previous_state is not None:
+        state.global_iteration = previous_state.global_iteration
+        state.checkpoint_ids = dict(previous_state.checkpoint_ids)
+        if previous_state.optimizer_name == "cma_es":
+            state.optimizer_state = dict(previous_state.optimizer_state)
+    elif warm is not None and warm.optimizer_state is not None:
+        state.optimizer_state = dict(warm.optimizer_state)
 
     start_event = RunStartEvent(
         optimizer="cma_es",
@@ -323,13 +351,57 @@ def cma_es(
     dimension = controls.spec.size
     population = config.effective_population_size(dimension)
     elite_count = config.elite_count(population)
-    mean = controls.flatten(copy=True).astype(float, copy=False)
-    diagonal_sigma = np.full(dimension, float(config.sigma), dtype=float)
+    mean = np.asarray(
+        state.optimizer_state.get("mean", controls.flatten(copy=True)), dtype=float
+    ).reshape(-1)
+    diagonal_sigma = np.asarray(
+        state.optimizer_state.get("diagonal_sigma", np.full(dimension, float(config.sigma))),
+        dtype=float,
+    ).reshape(-1)
+    if mean.shape != (dimension,) or diagonal_sigma.shape != (dimension,):
+        raise ValueError("CMA-ES warmstart state has the wrong dimension.")
     current_value = _metric(initial.metrics, config.accept_metric)
     accepted_any = False
     usable_generation_any = False
     failed_generation_count = 0
     first_usable_generation: int | None = None
+    resolved_target_metric = config.accept_metric if target_metric is None else str(target_metric)
+    resolved_target_mode = ("le" if config.accept_mode == "min" else "ge") if target_mode is None else str(target_mode)
+    resolved_stall_metric = config.accept_metric if stall_metric is None else str(stall_metric)
+    resolved_stall_mode = config.accept_mode if stall_mode is None else str(stall_mode)
+    if stopping is None:
+        stop_config = StoppingConfig(
+            maxiter=maxiter,
+            target_value=target_value,
+            target_metric=resolved_target_metric,
+            target_mode=resolved_target_mode,
+            stall_patience=stall_patience,
+            stall_tolerance=stall_tolerance,
+            stall_metric=resolved_stall_metric,
+            stall_mode=resolved_stall_mode,
+        )
+    else:
+        stop_config = replace(
+            stopping,
+            target_metric=resolved_target_metric if stopping.target_metric is None else stopping.target_metric,
+            target_mode=resolved_target_mode if stopping.target_mode is None else stopping.target_mode,
+            stall_metric=resolved_stall_metric if stopping.stall_metric is None else stopping.stall_metric,
+            stall_mode=resolved_stall_mode if stopping.stall_mode is None else stopping.stall_mode,
+        )
+    resolved_api_context["cma_es"]["effective_maxiter"] = int(stop_config.maxiter)
+    resolved_api_context["cma_es"]["stopping"] = {
+        "target_value": stop_config.target_value,
+        "target_metric": stop_config.target_metric,
+        "target_mode": stop_config.target_mode,
+        "stall_patience": stop_config.stall_patience,
+        "stall_tolerance": stop_config.stall_tolerance,
+        "stall_metric": stop_config.stall_metric,
+        "stall_mode": stop_config.stall_mode,
+        "check_finite": stop_config.check_finite,
+    }
+    tracker = StopTracker(stop_config, initial_metrics=state.metrics)
+    initial_stop = tracker.check_initial_metrics(state.metrics)
+    requested_stop: str | None = initial_stop.reason if initial_stop.stop else None
 
     def emit_checkpoint(
         label: str,
@@ -420,7 +492,9 @@ def cma_es(
         sinks.emit("on_chunk", chunk_event)
         sinks.emit("on_terminal", terminal_event)
 
-    for generation in range(int(maxiter)):
+    for generation in range(int(stop_config.maxiter)):
+        if requested_stop is not None:
+            break
         before = _snapshot(evaluator, state, state.metrics)
         if config.variant == "isotropic":
             samples = mean[None, :] + float(np.mean(diagonal_sigma)) * rng.normal(size=(population, dimension))
@@ -556,8 +630,13 @@ def cma_es(
         sinks.emit("on_iteration", iteration_event)
         if improved and checkpoint_best:
             emit_checkpoint(f"best_{config.accept_metric}", "new_best_metric")
-    stop_reason = "maxiter" if usable_generation_any or int(maxiter) == 0 else "no_usable_candidates"
-    close_events(stop_reason, degenerate=int(maxiter) == 0 or not usable_generation_any)
+        decision = tracker.check_metrics(state.metrics)
+        if decision.stop:
+            requested_stop = decision.reason or "stopped"
+    stop_reason = requested_stop or (
+        "maxiter" if usable_generation_any or int(stop_config.maxiter) == 0 else "no_usable_candidates"
+    )
+    close_events(stop_reason, degenerate=int(stop_config.maxiter) == 0 or not usable_generation_any)
     result = OptimizerResult.from_state(
         state,
         stop_reason=state.stop_reason,

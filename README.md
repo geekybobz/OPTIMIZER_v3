@@ -12,7 +12,7 @@ tags:
 
 This is the single current OPTIMIZER V4 checkout. Commits and annotated tags record
 release revisions; ordinary V4 work stays in this folder. It is a namespace-first
-optimization toolbox for system-defined control problems.
+optimization toolbox for system-defined gradient and shooting problems.
 
 A project system owns the physics:
 
@@ -24,6 +24,9 @@ optional residuals and Jacobians
 optional combined evaluation, bounds, HVP, or proximal capability
 primary and secondary parameters
 ```
+
+Shooting projects use the separate OLSS contract and own their shooting variables,
+boundary residuals, residual Jacobian, verification, and optional selection cost.
 
 The library owns the reusable optimizer engineering:
 
@@ -67,6 +70,28 @@ report = opt.utils.diagnostic_report(system, r2.controls)
 fixed = opt.utils.repair_newton(system, r2.controls, residuals="hard")
 ```
 
+The normal interactive workflow is deliberately short-run and inspectable:
+
+```python
+r = opt.adam(system, controls, step_size=opt.CosineDecaySchedule(0.05, 20), maxiter=5)
+diagnosis = opt.diagnose_run(r)
+curvature = opt.curvature_probe(system, r.controls)
+comparison = opt.compare_methods(system, r.controls, ("adam", "line_search", "lbfgs"), iterations=5)
+```
+
+Shooting uses the separate OLSS variable/residual contract:
+
+```python
+shooting_system = ShootingSystem(primary={...}, secondary={...})
+z0 = opt.ShootingVariables.from_blocks(shooting_system.shooting_spec(), {...})
+root = opt.solve_shooting(shooting_system, z0)
+geometry = opt.shooting_geometry_probe(shooting_system, root.variables)
+```
+
+Project code calls system methods directly. Shared core and future CLI/MCP layers
+can use the same family-aware envelope through `opt.SystemRequest(...)` and
+`opt.transact(system, request)`.
+
 Capability-gated numerical methods remain direct:
 
 ```python
@@ -89,6 +114,7 @@ opt.guesses.*
 opt.utils.*
 opt.schedules.*
 opt.campaigns.*
+opt.shooting.*
 ```
 
 Compact aliases such as `opt.adam(...)`, `opt.random_fourier_guess(...)`, and
@@ -136,6 +162,7 @@ Start with the runtime hubs:
 README.md
   -> optimizer/BASE_HUB.md
   -> optimizer/system_olgs/SYSTEM_OLGS_HUB.md
+  -> optimizer/system_olss/SYSTEM_OLSS_HUB.md
   -> optimizer/guesses/GUESSES_HUB.md
   -> optimizer/optimizers/OPTIMIZERS_HUB.md
   -> optimizer/core/CORE_HUB.md
@@ -246,6 +273,7 @@ control representation.
 
 - [Base API Hub](optimizer/BASE_HUB.md)
 - [OLGS System Hub](optimizer/system_olgs/SYSTEM_OLGS_HUB.md)
+- [OLSS System Hub](optimizer/system_olss/SYSTEM_OLSS_HUB.md)
 - [Guess Documentation Hub](optimizer/guesses/GUESSES_HUB.md)
 - [Optimizer Documentation Hub](optimizer/optimizers/OPTIMIZERS_HUB.md)
 - [Core Documentation Hub](optimizer/core/CORE_HUB.md)
@@ -408,6 +436,14 @@ local notebooks under tests/system_check/
 
 Tracked Markdown should either be a useful graph node or be removed after its content
 is migrated into structured docs.
+
+## Connections
+
+- Deeper: [Base API Hub](optimizer/BASE_HUB.md)
+- Deeper: [Tracker Hub](optimizer/tracker/TRACKER_HUB.md)
+- Deeper: [Schedules Hub](optimizer/schedules/SCHEDULES_HUB.md)
+- Deeper: [Logs Hub](optimizer/logs/LOGS_HUB.md)
+- Deeper: [Testing Hub](tests/TESTING_HUB.md)
 
 ---
 

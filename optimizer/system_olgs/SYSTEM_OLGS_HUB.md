@@ -87,6 +87,7 @@ Start here:
 Advanced:
 
 - [Derivative Hooks](DERIVATIVES.md)
+- [Convergence Test Design](OLGS_CONVERGENCE_TEST_DESIGN.md)
 - [Logging Boundary](LOGGING_BOUNDARY.md)
 
 Reading guide:
@@ -110,6 +111,21 @@ system = System(
 
 controls = opt.guesses.random_fourier_guess(system, amplitude=0.1, modes=4)
 result = opt.optimizers.adam(system, controls, maxiter=100)
+```
+
+Standard Adam, momentum, AdaGrad, and RMSProp behavior accepts every finite trial
+by default. Supply `accept=opt.core.default_accept` or another explicit guard when a
+monotone metric policy is wanted. First-order `step_size` accepts either a scalar
+or a reusable schedule. System-declared box bounds are projected by the shared
+engine for every engine-based method.
+
+For the intended short-run workflow:
+
+```python
+result = opt.adam(system, controls, maxiter=5)
+diagnosis = opt.diagnose_run(result)
+curvature = opt.curvature_probe(system, result.controls)
+comparison = opt.compare_methods(system, result.controls, ("adam", "line_search"), iterations=5)
 ```
 
 Curriculum updates should use secondary params:
@@ -140,6 +156,7 @@ Require analytical gradient
 Allow optional higher derivatives
 Numerical fallback only for optional advanced derivatives
 Keep system-local cache optional; the tracker owns persistent run evidence
+Keep the required OLGS calls unchanged; schedules and diagnostics are library tools
 ```
 
 ## New-System Scaffold
