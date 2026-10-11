@@ -235,8 +235,8 @@ Verification performed for this issue record:
 complete V4 fast suite                         189 passed
 focused OLSS contract/scenario tests            21 passed
 integrated OLGS/OLSS regression tests             9 passed
-full article-shaped campaign (before runner edit) 16 pass, 6 gaps, 1 deferred numerical failure
-post-fix continuation/API targeted scenarios      6 passed
+full updated article-shaped campaign              20 pass, 2 gaps, 1 deferred numerical failure
+campaign runtime / process workers                123.8 s / 8 workers
 physical OLSS-to-OLGS replay helper               passed and JSON-serialized
 ```
 
