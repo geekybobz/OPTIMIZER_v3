@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Print a runtime-derived context snapshot for the contained OPTIMIZER workspace.
+"""Print a runtime-derived context snapshot for this OPTIMIZER V4 checkout.
 
 The library owns optimizer, tracker, and system-contract self-description. This
 small command only combines those public payloads with workspace and Git state.
 It does not parse implementation source, evaluate a system, or modify Git state.
 
-    conda run --no-capture-output -n contained python optimizer_context.py
-    conda run --no-capture-output -n contained python optimizer_context.py --json
+    conda run --no-capture-output -n optimizer_v4 python optimizer_context.py
+    conda run --no-capture-output -n optimizer_v4 python optimizer_context.py --json
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def _import_contained_optimizer() -> tuple[Any, Path]:
+def _import_checkout_optimizer() -> tuple[Any, Path]:
     """Import exactly the package next to this command, not an installed copy."""
 
     root_text = str(ROOT)
@@ -41,7 +41,7 @@ def _import_contained_optimizer() -> tuple[Any, Path]:
     expected = (ROOT / "optimizer" / "__init__.py").resolve()
     if module_file != expected:
         raise RuntimeError(
-            "optimizer_context must use the contained optimizer package; "
+            "optimizer_context must use this checkout's optimizer package; "
             f"expected {expected}, imported {module_file}."
         )
     return opt, module_file
@@ -90,8 +90,8 @@ def _workspace_inventory() -> dict[str, Any]:
 
     documentation = [
         ROOT / "README.md",
-        ROOT / "OPTIMIZATION_TRACKER_HANDOFF.md",
-        ROOT / "optimizer" / "tracker" / "TRACKER_MODEL.md",
+        ROOT / "STABILIZATION.md",
+        ROOT / "optimizer" / "tracker" / "TRACKER_HUB.md",
         ROOT / "optimizer" / "system_olgs" / "CONTRACT.md",
         ROOT / "optimizer" / "core" / "CORE_ENGINE.md",
     ]
@@ -114,7 +114,7 @@ def _workspace_inventory() -> dict[str, Any]:
 def build_snapshot() -> dict[str, Any]:
     """Build a read-only snapshot from the current public runtime surface."""
 
-    opt, module_file = _import_contained_optimizer()
+    opt, module_file = _import_checkout_optimizer()
     return {
         "schema_version": SCHEMA_VERSION,
         "generated_utc": _utc_now(),
@@ -127,9 +127,9 @@ def build_snapshot() -> dict[str, Any]:
         "context": opt.context_info(),
         "inventory": _workspace_inventory(),
         "recommended_commands": [
-            "conda run --no-capture-output -n contained python optimizer_context.py",
-            "conda run --no-capture-output -n contained python optimizer_context.py --json",
-            "conda run --no-capture-output -n contained python -m unittest discover -s tests",
+            "conda run --no-capture-output -n optimizer_v4 python optimizer_context.py",
+            "conda run --no-capture-output -n optimizer_v4 python optimizer_context.py --json",
+            "conda run --no-capture-output -n optimizer_v4 python -B -m unittest discover -s tests",
         ],
     }
 
