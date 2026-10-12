@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
+import subprocess
 import unittest
 
 
@@ -15,9 +16,9 @@ LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 class DocumentationLinkTests(unittest.TestCase):
     def test_retired_v4_path_is_absent_and_relative_links_resolve(self) -> None:
         failures: list[str] = []
-        for path in ROOT.rglob("*.md"):
-            if any(part == ".git" for part in path.parts):
-                continue
+        names = subprocess.check_output(["git", "ls-files", "--cached", "--others", "--exclude-standard", "--", "*.md"], cwd=ROOT, text=True).splitlines()
+        for name in names:
+            path = ROOT / name
             text = path.read_text(encoding="utf-8")
             if "/OPTIMIZER/v4" in text:
                 failures.append(f"retired path: {path.relative_to(ROOT)}")

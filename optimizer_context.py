@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Print a runtime-derived context snapshot for this OPTIMIZER V4 checkout.
 
-The library owns optimizer, tracker, and system-contract self-description. This
+The library owns optimizer and system-contract self-description. This
 small command only combines those public payloads with workspace and Git state.
 It does not parse implementation source, evaluate a system, or modify Git state.
 
-    conda run --no-capture-output -n optimizer_v4 python optimizer_context.py
-    conda run --no-capture-output -n optimizer_v4 python optimizer_context.py --json
+    conda run --no-capture-output -n Optimizer python optimizer_context.py
+    conda run --no-capture-output -n Optimizer python optimizer_context.py --json
 """
 
 from __future__ import annotations
@@ -91,7 +91,7 @@ def _workspace_inventory() -> dict[str, Any]:
     documentation = [
         ROOT / "README.md",
         ROOT / "INDEX.md",
-        ROOT / "optimizer" / "tracker" / "TRACKER_HUB.md",
+        ROOT / "optimizer" / "mcp" / "MCP.md",
         ROOT / "optimizer" / "system_olgs" / "CONTRACT.md",
         ROOT / "optimizer" / "core" / "CORE_ENGINE.md",
     ]
@@ -127,9 +127,9 @@ def build_snapshot() -> dict[str, Any]:
         "context": opt.context_info(),
         "inventory": _workspace_inventory(),
         "recommended_commands": [
-            "conda run --no-capture-output -n optimizer_v4 python optimizer_context.py",
-            "conda run --no-capture-output -n optimizer_v4 python optimizer_context.py --json",
-            "conda run --no-capture-output -n optimizer_v4 python -B -m unittest discover -s tests",
+            "conda run --no-capture-output -n Optimizer python optimizer_context.py",
+            "conda run --no-capture-output -n Optimizer python optimizer_context.py --json",
+            "conda run --no-capture-output -n Optimizer python -B -m unittest discover -s tests",
         ],
     }
 
@@ -143,12 +143,9 @@ def _render_human(snapshot: dict[str, Any], *, verbose: bool) -> str:
     git = snapshot["git"]
     context = snapshot["context"]
     optimizer = context["optimizer"]
-    tracker = context["tracker"]
     contract = context["system_contract"]
     inventory = snapshot["inventory"]
     methods = optimizer["methods"]
-    capabilities = tracker["capabilities"]
-    unavailable = [name for name, available in capabilities.items() if not available]
     groups = optimizer["catalog"]["groups"]
     group_summary = ", ".join(
         f"{name} ({data['count']})" for name, data in groups.items()
@@ -168,19 +165,10 @@ def _render_human(snapshot: dict[str, Any], *, verbose: bool) -> str:
         f"  methods: {len(methods)}",
         f"  catalog groups: {group_summary}",
         f"  run_chunk parameters: {', '.join(optimizer['core']['run_chunk_parameters'])}",
-        f"  live tracker bridge: {_yes_no(bool(optimizer['core']['has_live_tracking_argument']))}",
         "",
         "System contract",
         f"  required hooks: {', '.join(contract['required_hooks'])}",
         f"  optional static hooks: {', '.join(contract['optional_static_hooks'])}",
-        "",
-        "Tracker",
-        f"  run schema: {tracker['run_schema_version']}",
-        f"  passive recording: {_yes_no(bool(capabilities['passive_recording']))}",
-        f"  storage: {', '.join(tracker['storage'].values())}",
-        "",
-        "Not yet available",
-        *[f"  - {name}" for name in unavailable],
         "",
         "Workspace anchors",
         f"  tests: {inventory['tests']['count']}",
@@ -202,7 +190,7 @@ def _render_human(snapshot: dict[str, Any], *, verbose: bool) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Print the runtime OPTIMIZER API and tracker context snapshot."
+        description="Print the runtime OPTIMIZER API and system context snapshot."
     )
     parser.add_argument("--json", action="store_true", help="emit machine-readable JSON only")
     parser.add_argument(

@@ -15,6 +15,13 @@ SCRIPT = ROOT / "optimizer_context.py"
 
 class OptimizerContextTests(unittest.TestCase):
     @unittest.skipUnless(SCRIPT.exists(), "requires the source checkout layout")
+    def test_human_snapshot_has_no_removed_tracker_dependency(self):
+        completed = subprocess.run([sys.executable, "-B", str(SCRIPT)],
+            cwd=ROOT.parent, text=True, capture_output=True, check=True)
+        self.assertIn("System contract", completed.stdout)
+        self.assertNotIn("Tracker", completed.stdout)
+
+    @unittest.skipUnless(SCRIPT.exists(), "requires the source checkout layout")
     def test_json_snapshot_is_runtime_derived_and_uses_contained_package(self) -> None:
         completed = subprocess.run(
             [sys.executable, "-B", str(SCRIPT), "--json"],

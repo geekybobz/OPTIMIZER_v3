@@ -32,6 +32,11 @@ typed requests to the same service and experiment owner.
 
 ## Main routes
 
+- New users: [Getting started](docs/GETTING_STARTED.md) and [Everyday workflows](docs/WORKFLOWS.md).
+- Install for any project folder: [Installation](docs/INSTALLATION.md).
+- Update the approved global runtime: [Release procedure](docs/RELEASE_PROCEDURE.md).
+- Convert old projects: [Migration](docs/MIGRATION.md).
+
 - To choose a path for a task, use the [Route Map](MAP.md).
 - To understand components and source ownership, use the [Code Map](CODE_MAP.md).
 - To find every maintained topic, use the [Topic Index](INDEX.md).
@@ -97,11 +102,13 @@ geometry = opt.shooting_geometry_probe(system, result.variables)
 ### Installation
 
 ```bash
-./install.sh
-conda activate optimizer_v4
+git rev-parse HEAD
+./install.sh --approved-ref FULL_REVIEWED_COMMIT_SHA
+conda activate Optimizer
 ```
 
-The release installation is non-editable. When validating current source rather
+Replace the placeholder with the reviewed full SHA. See [Installation](docs/INSTALLATION.md)
+for prerequisites. The release installation is non-editable. When validating current source rather
 than the installed wheel, run from this checkout with `PYTHONPATH=.`.
 
 ### Verification
@@ -116,6 +123,8 @@ Numerical scenario evidence is owned by the contained test campaigns linked
 from the [Testing Hub](tests/TESTING_HUB.md).
 
 ## Connections
+
+- Related: [Maintainer instructions](AGENTS.md)
 
 - Deeper: [Foreground operation service](optimizer/operations/SERVICE.md)
 - Deeper: [Structured terminal](optimizer/cli/TERMINAL.md)

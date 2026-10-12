@@ -93,8 +93,9 @@ def start(path,mode='exact'):
     with lock_path.open('a+b') as lock:
         try: fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         except BlockingIOError as exc: raise _ServiceError('project_locked','Another coordinator launch is in progress.') from exc
-        environment=dict(os.environ,PYTHONPATH=str(Path(__file__).resolve().parents[2]),PYTHONDONTWRITEBYTECODE='1')
-        process=subprocess.Popen([sys.executable,'-B','-m','optimizer.jobs.coordinator',str(path),mode],
+        from optimizer._process import _command
+        environment=dict(os.environ,PYTHONDONTWRITEBYTECODE='1')
+        process=subprocess.Popen(_command('optimizer.jobs.coordinator',path,mode),
             stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
             start_new_session=True,env=environment)
         deadline=time.monotonic()+10

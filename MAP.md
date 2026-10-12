@@ -10,7 +10,7 @@ reviewed: 2026-10-12
 
 ## If you are new
 
-1. Read the [V4 entry](README.md).
+1. Read [Getting started](docs/GETTING_STARTED.md), including the installation route.
 2. Choose [OLGS](optimizer/system_olgs/SYSTEM_OLGS_HUB.md) for objective-gradient
    problems or [OLSS](optimizer/system_olss/SYSTEM_OLSS_HUB.md) for shooting
    residual equations.

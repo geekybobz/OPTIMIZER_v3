@@ -1,9 +1,9 @@
 """Run the pi-pulse sample tests PP1-PP8 and print a pass/fail table.
 
 The tests have analytical answers; see REPORT.md for the model, the expected
-values and the latest evidence. From ``stable/v4``:
+values and the latest evidence. From the repository root:
 
-    PYTHONDONTWRITEBYTECODE=1 ~/miniconda3/envs/optimizer_v4/bin/python -B \
+    PYTHONDONTWRITEBYTECODE=1 ~/miniconda3/envs/Optimizer/bin/python -B \
         test_contained/pi_pulse_samples/run_samples.py
 
 Exit status is 0 when every check passes. ``--json`` prints the rows as JSON.

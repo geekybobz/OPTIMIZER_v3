@@ -16,7 +16,7 @@ The library test suite, its fixtures, and contained numerical systems.
 MPLCONFIGDIR=/tmp/optimizer-mpl python -B -m unittest discover -s tests
 ```
 
-Run it from the checkout root inside the `optimizer_v4` environment. `-B` keeps
+Run it from the checkout root inside the `Optimizer` environment. `-B` keeps
 bytecode out of the checkout.
 
 ## Test files

@@ -120,10 +120,10 @@ sign of the control.
 
 ### Run
 
-From `stable/v4`:
+To reproduce now, from the repository root:
 
 ```bash
-PYTHONDONTWRITEBYTECODE=1 ~/miniconda3/envs/optimizer_v4/bin/python -B test_contained/pi_pulse_samples/run_samples.py
+PYTHONDONTWRITEBYTECODE=1 ~/miniconda3/envs/Optimizer/bin/python -B test_contained/pi_pulse_samples/run_samples.py
 ```
 
 `--json` prints every row. The runner calls the Python API and
@@ -135,7 +135,7 @@ To use one script interactively, start the terminal in this folder and paste
 its commands, or run:
 
 ```bash
-PYTHONPATH=../.. ~/miniconda3/envs/optimizer_v4/bin/python -B -m optimizer.cli --script scripts/pp1_gradient_soft.opt
+PYTHONPATH=../.. ~/miniconda3/envs/Optimizer/bin/python -B -m optimizer.cli --script scripts/pp1_gradient_soft.opt
 ```
 
 ### Files

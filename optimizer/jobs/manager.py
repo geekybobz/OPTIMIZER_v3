@@ -467,11 +467,10 @@ class _Jobs:
             environment=dict(os.environ)
             environment.update({name:str(self.config.threads_per_worker) for name in _THREAD_ENV})
             # Preserve the currently running package, not a stale global install.
-            package_root=Path(__file__).resolve().parents[2]
-            environment["PYTHONPATH"]=str(package_root)
+            from optimizer._process import _command
             environment["PYTHONDONTWRITEBYTECODE"]="1"
-            job.process=subprocess.Popen([sys.executable,"-B","-m","optimizer.jobs.worker",str(directory),
-                str(job.result_bytes),str(self.config.shutdown_seconds),str(self.config.input_bytes)],
+            job.process=subprocess.Popen(_command("optimizer.jobs.worker",directory,
+                job.result_bytes,self.config.shutdown_seconds,self.config.input_bytes),
                 stdin=subprocess.PIPE,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
                 cwd=directory,env=environment)
             job.status="running"

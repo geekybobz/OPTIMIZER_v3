@@ -29,7 +29,7 @@ get a hint pointing to the colon commands and are not submitted.
 
 `optimizer` is the console entry point after installation from this source.
 `python -m optimizer.cli` works from the V4 checkout using the configured
-`optimizer_v4` Python. An older installed release does not acquire the new entry
+`Optimizer` Python. An older installed release does not acquire the new entry
 point until it is updated. One-shot and script modes start a fresh session:
 load a system and perform work in the same submission/file.
 

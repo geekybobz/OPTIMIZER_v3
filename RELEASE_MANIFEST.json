@@ -1,18 +1,10 @@
 {
-  "schema_version": "optimizer.release-manifest/v2",
-  "release_version": "4.0.4",
-  "tag": "v4.0.4",
-  "test_command": "/Users/billabobz/miniconda3/bin/conda run --no-capture-output -n optimizer_v4 python -B -m unittest discover -s tests",
-  "test_count": 159,
-  "test_result": "passed",
-  "wheel_sha256": "949343c965813daeb9bc9e602bef9d8d380dc0300a7ef86db2d3683ce94200d4",
-  "environment_receipt": {
-    "path": "/Users/billabobz/.optimizer_v4/install.json",
-    "sha256": "68593f501d7de472b24ce4ee356e07f6019ad6de56e91c5f12670a35387466d1"
-  },
-  "release_evidence": {
-    "path": "/Users/billabobz/OPTIMIZER/stable/v4/RELEASE_EVIDENCE.md",
-    "sha256": "329925dec9d4c5bef5fe8817d88fc82297a45e9f6aeb0837e45c52e310ff0d41"
-  },
-  "release_date": "2026-10-11"
+  "schema_version": "optimizer.release-policy/v3",
+  "release_version": "4.0.5",
+  "tag": "v4.0.5",
+  "environment": "Optimizer",
+  "install_mode": "non-editable wheel from explicit approved commit",
+  "artifact_manifest": "release.json attached to the GitHub release",
+  "verification": "verification.json attached to the GitHub release",
+  "procedure": "docs/RELEASE_PROCEDURE.md"
 }

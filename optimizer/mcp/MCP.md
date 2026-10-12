@@ -69,11 +69,11 @@ per-experiment resource limits are owned by the [jobs reference](../jobs/JOBS.md
 
 ### Launch
 
-Install from the checkout into the environment used by the client:
+Use the approved wheel and global launcher described in
+[Installation](../../docs/INSTALLATION.md):
 
 ```bash
-python -m pip install '.[mcp]'
-optimizer-mcp
+optimizer-mcp --help
 ```
 
 Initialize a named experiment in the ordinary CLI with `opt.project.init(...)`,

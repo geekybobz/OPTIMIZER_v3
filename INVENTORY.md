@@ -18,10 +18,12 @@ Front Door or `INDEX.md` remains the semantic route map.
 
 | path | role | summary | read when |
 |---|---|---|---|
+| [AGENTS.md](AGENTS.md) | topic | Maintainer rules for source ownership, generated docs and explicit release promotion. | Read before changing this repository. |
 | [CODE_MAP.md](CODE_MAP.md) | topic | Runtime components, execution paths, source ownership, and change-impact guide. | Read before changing architecture, dispatch, contracts, or shared execution behavior. |
 | [INDEX.md](INDEX.md) | index | Complete semantic index of authored OPTIMIZER V4 documentation. | Use when locating the authoritative topic for a known concept. |
 | [MAP.md](MAP.md) | map | Recommended documentation paths for common OPTIMIZER tasks. | Use when you know what you want to accomplish but not which topic owns it. |
 | [README.md](README.md) | front-door | Entry point for the OPTIMIZER V4 contracts, numerical tools, workflows, and verification evidence. | Start here when using, extending, or reviewing OPTIMIZER V4. |
+| [RELEASE_EVIDENCE.md](RELEASE_EVIDENCE.md) | topic | Release verification scope and the authority for exact artifact provenance. | Read when checking what a release verifies and where its hashes live. |
 | [Theory/guess/GUESS_THEORY_HUB.md](Theory/guess/GUESS_THEORY_HUB.md) | front-door | Entry to the mathematical notes behind each initial-guess generator. | Read when you need the mathematics of a guess generator rather than its call. |
 | [Theory/guess/THEORY_COMPOSITE_RESTARTS.md](Theory/guess/THEORY_COMPOSITE_RESTARTS.md) | topic | Mathematics of scaling, mixing, and perturbing controls for restarts. | Read when combining or perturbing earlier controls to restart a run. |
 | [Theory/guess/THEORY_CONSTANT_RAMP.md](Theory/guess/THEORY_CONSTANT_RAMP.md) | topic | Constant, linear, quadratic, and smoothstep ramp controls and where each fits. | Read when choosing a simple deterministic initial control. |
@@ -46,6 +48,11 @@ Front Door or `INDEX.md` remains the semantic route map.
 | [Theory/utils/THEORY_RESIDUAL_JACOBIAN_GEOMETRY.md](Theory/utils/THEORY_RESIDUAL_JACOBIAN_GEOMETRY.md) | topic | Local residual linearization: rank, singular values, condition number, and nullspace dimension. | Read when interpreting a geometry probe. |
 | [Theory/utils/THEORY_SPECTRUM_SMOOTHNESS.md](Theory/utils/THEORY_SPECTRUM_SMOOTHNESS.md) | topic | Real FFT spectra, high-frequency fraction, difference roughness, and total variation of controls. | Read when judging how smooth or band-limited a control is. |
 | [Theory/utils/UTILS_THEORY_HUB.md](Theory/utils/UTILS_THEORY_HUB.md) | front-door | Entry to the mathematical notes behind diagnostics, derivative checks, repair, and geometry. | Read when you need the mathematics behind a utility tool. |
+| [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) | topic | Learn the installed optimizer through a small, reproducible terminal example. | Start here for your first installation and interactive run. |
+| [docs/INSTALLATION.md](docs/INSTALLATION.md) | topic | Install a committed release in Optimizer and use it from any project folder. | Read when installing, checking global commands, or configuring notebooks. |
+| [docs/MIGRATION.md](docs/MIGRATION.md) | topic | Use the current system contracts and retire legacy trees and logger integrations. | Read when converting an older project or looking for the former workspace layout. |
+| [docs/RELEASE_PROCEDURE.md](docs/RELEASE_PROCEDURE.md) | topic | Promote an approved commit into an isolated global wheel, verify provenance and roll back. | Read before publishing, updating or restoring the installed optimizer. |
+| [docs/WORKFLOWS.md](docs/WORKFLOWS.md) | topic | Find the supported routes for independent experiments, control exchange, jobs and verification. | Read after the first run to choose your next workflow. |
 | [optimizer/BASE_HUB.md](optimizer/BASE_HUB.md) | front-door | Shared data types and top-level calls of the base catalog group: controls, results, state, and root calls. | Read when working with Controls, results, run state, or a top-level opt call. |
 | [optimizer/TRANSACTIONS.md](optimizer/TRANSACTIONS.md) | topic | Family-aware request-response boundary shared by OLGS, OLSS, and future adapters. | Read when integrating systems with shared core, terminal, or MCP-facing code. |
 | [optimizer/campaigns/CAMPAIGNS.md](optimizer/campaigns/CAMPAIGNS.md) | front-door | In-memory multi-stage campaigns, owned candidates and explicit numerical validation. | Read when comparing initial guesses, methods or refinement candidates in Python. |
@@ -127,7 +134,6 @@ Front Door or `INDEX.md` remains the semantic route map.
 | path | role | summary | read when |
 |---|---|---|---|
 | [API_REFERENCE.md](API_REFERENCE.md) | generated | Generated exact signatures and catalog semantics for every public OPTIMIZER tool. | Looking up a callable signature, default, requirement, return, or runtime identifier. |
-| [RELEASE_EVIDENCE.md](RELEASE_EVIDENCE.md) | deep | Provenance of the v4.0.4 release: tag, implementation revision, wheel, and test evidence. | Read when checking which revision and wheel the release route installs. |
 | [optimizer/cli/TERMINAL.md](optimizer/cli/TERMINAL.md) | deep | Structured terminal syntax, launch modes, retained names, display and foreground lifetime. | Read when running optimizer interactively or writing a command script. |
 | [optimizer/core/CORE_ENGINE.md](optimizer/core/CORE_ENGINE.md) | deep | run_chunk arguments, start-state precedence and compact numerical results. | Read when calling run_chunk directly or interpreting native chunk state. |
 | [optimizer/history/HISTORY.md](optimizer/history/HISTORY.md) | deep | Frontend command history, durable statement commits, explicit migration and bounded replay. | Read before inspecting or replaying terminal history or integrating an MCP recorder. |

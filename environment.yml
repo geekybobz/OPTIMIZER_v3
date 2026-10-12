@@ -1,4 +1,4 @@
-name: optimizer_v4
+name: Optimizer
 channels:
   - conda-forge
   - defaults

@@ -9,8 +9,8 @@ class CatalogTests(unittest.TestCase):
     def test_root_discovery_helpers_support_import_optimizer_as_opt(self):
         overview = opt.info()
         self.assertEqual(overview["name"], "OPTIMIZER v4")
-        self.assertEqual(overview["version"], "4.0.4")
-        self.assertEqual(opt.__version__, "4.0.4")
+        self.assertEqual(overview["version"], "4.0.5")
+        self.assertEqual(opt.__version__, "4.0.5")
         self.assertIn("groups", overview)
         self.assertIn("optimizers", overview["groups"])
         self.assertIn("beginner", overview["paths"])

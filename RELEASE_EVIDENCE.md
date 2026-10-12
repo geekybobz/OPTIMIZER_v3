@@ -1,31 +1,50 @@
 ---
-role: deep
+role: topic
 parent: README.md
-summary: "Provenance of the v4.0.4 release: tag, implementation revision, wheel, and test evidence."
-read_when: "Read when checking which revision and wheel the release route installs."
+summary: "Release verification scope and the authority for exact artifact provenance."
+read_when: "Read when checking what a release verifies and where its hashes live."
 status: active
-reviewed: 2026-10-12
+reviewed: 2026-10-13
 ---
-# V4 release evidence
+# Release evidence
 
-This is the current release-evidence record for the single live V4 checkout.
-Earlier release records are superseded and are not release inputs.
+Version **4.0.5** combines the current numerical contracts, foreground service,
+structured CLI, persistent experiments, control transforms, bounded jobs and
+standard-I/O MCP adapter with explicit commit-bound wheel deployment.
 
-| Item | Evidence |
-|---|---|
-| Intended tag | `v4.0.4` |
-| Release implementation revision | `a661e5990f2f5c20cc2547c5152a9a908deb64b7` |
-| Package | `optimizer-v4` 4.0.4 |
-| Runtime | non-editable wheel in Conda environment `optimizer_v4`; the same wheel is kept in `release_artifacts/v4.0.4/` |
-| Source tests | 159 passed: `/Users/billabobz/miniconda3/bin/conda run --no-capture-output -n optimizer_v4 python -B -m unittest discover -s tests` |
-| Installed-wheel tests | 159 passed with `optimizer` imported from site-packages and only the checkout's `tests/` folder on `PYTHONPATH` |
-| Changes since v4.0.3 | Bloch and sphere rendering fixes and optional reference-axis stubs; completed V4 docs with the runtime catalog declared as the public API; refreshed context command |
-| Release hygiene | build and cache residue cleared; preflight must pass before tagging |
+Exact commit, wheel/source SHA-256, installed-package tests and dependency
+constraints are external release artifacts, published with the
+[GitHub release](https://github.com/geekybobz/OPTIMIZER_v3/releases/tag/v4.0.5).
+`RELEASE_MANIFEST.json` describes the release policy; it is not a wheel receipt.
+The local installation receipt is `~/.local/share/optimizer/install.json`.
 
-The annotated Git tag is the immutable binding between this tracked evidence and the
-release revision. The manifest intentionally does not try to embed the SHA of the
-commit that contains it, because that would be a circular Git object identity.
+## Details
+
+The [release procedure](docs/RELEASE_PROCEDURE.md) owns build, candidate
+verification, promotion, publication and recovery. Its checks distinguish:
+
+- Full source tests, generated API freshness, Markdown inventory/navigation and
+  whitespace validation.
+- Installed-wheel numerical, persistence, CLI, coordinator and official MCP SDK
+  tests, excluding only the three checkout documentation/context checks.
+- Installed file hashes, dependency consistency and version/import location.
+- Global launcher and internal-child isolation from cwd and `PYTHONPATH`.
+- Public remote branch/tag and attached release artifacts after publication.
+
+The source and installed test counts belong to the accompanying verification
+artifact; they are not copied into several documentation pages. Candidate
+verification reuses the target environment's scientific dependencies and does
+not establish cross-platform bitwise reproducibility.
+
+The physical article comparison campaign remains deferred for separate review.
+Library tests are not scientific benchmark qualification. Live job resume,
+physical disk restart, per-coordinator resource safeguards and typed MCP replay
+limits retain their documented meanings.
+
+Legacy working trees were removed from the active repository after verified Git
+bundles and a local context backup were saved outside it. Historical revisions
+remain in Git history; current project integrations follow [Migration](docs/MIGRATION.md).
 
 ---
 
-[⌂ Home](README.md)
+[⌂ Home](README.md) · [Next →](docs/RELEASE_PROCEDURE.md)

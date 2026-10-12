@@ -16,6 +16,12 @@ reviewed: 2026-10-12
 - [API Reference](API_REFERENCE.md) — generated public signatures and catalog metadata.
 - [Markdown Inventory](INVENTORY.md) — generated exhaustive file listing.
 
+- [Getting started](docs/GETTING_STARTED.md) — first interactive experiment.
+- [Installation](docs/INSTALLATION.md) — environment, global commands and notebooks.
+- [Everyday workflows](docs/WORKFLOWS.md) — experiment, control and worker routes.
+- [Release procedure](docs/RELEASE_PROCEDURE.md) — reviewed commit to installed wheel.
+- [Migration](docs/MIGRATION.md) — current contracts and retired workspace layout.
+
 ## System contracts
 
 - [OLGS System Hub](optimizer/system_olgs/SYSTEM_OLGS_HUB.md) — gradient-system entry point.
@@ -52,6 +58,8 @@ reviewed: 2026-10-12
 
 ## Coordination and evidence
 
+- [Managed jobs](optimizer/jobs/JOBS.md) — bounded parallel workers and persistent coordinator.
+- [Control transforms](optimizer/utils/UTIL_CONTROL_TRANSFORMS.md) — grid-aware candidate conversion.
 - [Campaigns](optimizer/campaigns/CAMPAIGNS.md) — in-memory multi-stage workflows.
 - [Command history](optimizer/history/HISTORY.md) — frontend records, recovery, migration and replay.
 - [Testing Hub](tests/TESTING_HUB.md) — test ownership and scenario evidence.
