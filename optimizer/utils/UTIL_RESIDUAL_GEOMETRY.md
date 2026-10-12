@@ -1,21 +1,11 @@
 ---
-title: UTIL_RESIDUAL_GEOMETRY
-type: category_reference
-module: optimizer/utils
-source: optimizer/utils/geometry.py
-methods:
-  - geometry_probe
-  - nullspace_basis
-  - project_gradient
-tags:
-  - optimizer
-  - utils
-  - residual
-  - jacobian
-  - geometry
-  - projection
+role: topic
+parent: UTILS_HUB.md
+summary: "Geometry probe, nullspace basis, and gradient projection for residual constraints."
+read_when: "Read when examining or projecting onto a constraint surface."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Residual Geometry
 
 Residual geometry tools study the local linear constraint surface defined by

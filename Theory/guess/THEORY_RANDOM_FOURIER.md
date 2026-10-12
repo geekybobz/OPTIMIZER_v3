@@ -1,16 +1,11 @@
 ---
-title: THEORY_RANDOM_FOURIER
-type: theory_reference
-module: Theory/guess
-related_method: optimizer/guesses/GUESS_RANDOM_FOURIER.md
-tags:
-  - optimizer
-  - guesses
-  - theory
-  - random
-  - fourier
+role: topic
+parent: GUESS_THEORY_HUB.md
+summary: "Random Fourier coefficients: smoothness bias and seeded reproducibility."
+read_when: "Read when generating reproducible smooth random starts."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Random Fourier Theory
 
 This note gives the mathematical context for:

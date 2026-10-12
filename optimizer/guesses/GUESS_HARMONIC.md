@@ -1,17 +1,11 @@
 ---
-title: GUESS_HARMONIC
-type: method_reference
-module: optimizer/guesses
-methods:
-  - sine_guess
-  - cosine_guess
-tags:
-  - optimizer
-  - guesses
-  - harmonic
-  - smooth
+role: topic
+parent: GUESSES_HUB.md
+summary: "Sine and cosine controls on the normalized time grid."
+read_when: "Read when you want a single-frequency start."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Harmonic Guesses
 
 Harmonic guesses create smooth sine or cosine controls on the normalized time grid.

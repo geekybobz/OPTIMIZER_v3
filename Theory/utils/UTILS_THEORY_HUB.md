@@ -1,14 +1,11 @@
 ---
-title: UTILS_THEORY_HUB
-type: theory_hub
-module: Theory/utils
-tags:
-  - optimizer
-  - utils
-  - theory
-  - hub
+role: front-door
+parent: ../../README.md
+summary: "Entry to the mathematical notes behind diagnostics, derivative checks, repair, and geometry."
+read_when: "Read when you need the mathematics behind a utility tool."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Utils Theory Hub
 
 This folder contains mathematical and research-facing notes for utility methods.

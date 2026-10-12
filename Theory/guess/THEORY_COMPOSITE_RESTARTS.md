@@ -1,16 +1,11 @@
 ---
-title: THEORY_COMPOSITE_RESTARTS
-type: theory_reference
-module: Theory/guess
-related_method: optimizer/guesses/GUESS_COMPOSITE.md
-tags:
-  - optimizer
-  - guesses
-  - theory
-  - restart
-  - composite
+role: topic
+parent: GUESS_THEORY_HUB.md
+summary: "Mathematics of scaling, mixing, and perturbing controls for restarts."
+read_when: "Read when combining or perturbing earlier controls to restart a run."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Composite Restart Theory
 
 This note gives the mathematical context for:

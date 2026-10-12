@@ -1,16 +1,11 @@
 ---
-title: THEORY_LOCALIZED_PULSES
-type: theory_reference
-module: Theory/guess
-related_method: optimizer/guesses/GUESS_LOCALIZED.md
-tags:
-  - optimizer
-  - guesses
-  - theory
-  - localized
-  - pulses
+role: topic
+parent: GUESS_THEORY_HUB.md
+summary: "Gaussian and sinc pulse guesses and their time-frequency localization trade-off."
+read_when: "Read when an initial control should be concentrated in time."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Localized Pulse Theory
 
 This note gives the mathematical context for:

@@ -1,15 +1,11 @@
 ---
-title: Core Contract
-type: api_contract
-module: optimizer/core
-tags:
-  - optimizer
-  - core
-  - engine
-  - api
-  - contract
+role: topic
+parent: CORE_HUB.md
+summary: "The step and accept callables that connect any optimizer method to the shared engine."
+read_when: "Read when writing a custom update rule for run_chunk."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Core Contract
 
 This file defines the boundary between the shared engine and a concrete optimizer.

@@ -1,17 +1,11 @@
 ---
-title: Adam Optimizer
-type: method_reference
-module: optimizer/optimizers
-method: adam
-source: optimizer/optimizers/adam.py
-tags:
-  - optimizer
-  - adam
-  - adaptive
-  - first_order
-  - warmstart
+role: topic
+parent: OPTIMIZERS_HUB.md
+summary: "Adam and its variants: arguments, standard acceptance, schedules, and moment state."
+read_when: "Read when calling adam or continuing an Adam run."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Adam
 
 `adam` is an adaptive first-order optimizer with first and second moment state.
@@ -62,17 +56,19 @@ adabelief
 
 ```text
 variant
-step_size
+step_size            float or schedule object (see the Schedules Hub)
 beta1
 beta2
 eps
 weight_decay
 max_step_norm
+gradient_tolerance   stationarity stop, default 1e-8
 state
 warmstart
-accept_metric
-accept_mode
-accept_tolerance
+accept               default: accept every trial that evaluates successfully
+accept_metric        metric for best-so-far tracking
+accept_mode          min or max for best-so-far tracking
+accept_tolerance     used only by the engine default (accept=opt.core.default_accept)
 ```
 
 ## Optimizer State

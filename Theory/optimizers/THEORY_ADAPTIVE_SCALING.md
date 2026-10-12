@@ -1,16 +1,11 @@
 ---
-title: THEORY_ADAPTIVE_SCALING
-type: theory_reference
-module: Theory/optimizers
-related_method: optimizer/optimizers/ADAGRAD_RMSPROP.md
-tags:
-  - optimizer
-  - theory
-  - adagrad
-  - rmsprop
-  - adaptive
+role: topic
+parent: OPTIMIZER_THEORY_HUB.md
+summary: "AdaGrad and RMSProp per-coordinate scaling and how they relate to Adam."
+read_when: "Read when choosing between AdaGrad, RMSProp, and Adam."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Adaptive Scaling Theory
 
 This note gives the mathematical context for:

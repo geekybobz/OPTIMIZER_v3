@@ -1,16 +1,11 @@
 ---
-title: THEORY_ADAM_FAMILY
-type: theory_reference
-module: Theory/optimizers
-related_method: optimizer/optimizers/ADAM.md
-tags:
-  - optimizer
-  - theory
-  - adam
-  - adaptive
-  - first_order
+role: topic
+parent: OPTIMIZER_THEORY_HUB.md
+summary: "Adam moments and the AMSGrad, AdamW, RAdam, and AdaBelief variants, with convergence notes."
+read_when: "Read when choosing an Adam variant or interpreting its moment state."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Adam Family Theory
 
 This note gives the mathematical context for:

@@ -1,13 +1,11 @@
 ---
-title: OPTIMIZER_THEORY_HUB
-type: theory_hub
-module: Theory/optimizers
-tags:
-  - optimizer
-  - theory
-  - research
+role: front-door
+parent: ../../README.md
+summary: "Entry to the derivations and convergence notes behind each optimizer."
+read_when: "Read when you need why a method works rather than how to call it."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Optimizer Theory Notes
 
 This folder contains longer mathematical and research-facing notes for optimizer

@@ -1,14 +1,11 @@
 ---
-title: GUESS_THEORY_HUB
-type: theory_hub
-module: Theory/guess
-tags:
-  - optimizer
-  - guesses
-  - theory
-  - hub
+role: front-door
+parent: ../../README.md
+summary: "Entry to the mathematical notes behind each initial-guess generator."
+read_when: "Read when you need the mathematics of a guess generator rather than its call."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Guess Theory Hub
 
 This folder contains mathematical and research-facing notes for guess generators.

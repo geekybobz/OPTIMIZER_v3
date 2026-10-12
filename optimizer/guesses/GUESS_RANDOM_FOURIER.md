@@ -1,17 +1,11 @@
 ---
-title: GUESS_RANDOM_FOURIER
-type: method_reference
-module: optimizer/guesses
-methods:
-  - random_fourier_guess
-tags:
-  - optimizer
-  - guesses
-  - random
-  - fourier
-  - multi_start
+role: topic
+parent: GUESSES_HUB.md
+summary: "random_fourier_guess: smooth random starts from random Fourier coefficients and phases."
+read_when: "Read when you want reproducible smooth random starts."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Random Fourier Guess
 
 `random_fourier_guess` creates smooth random low-frequency controls by sampling

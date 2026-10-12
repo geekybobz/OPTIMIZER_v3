@@ -26,82 +26,180 @@ def _trend(values: list[float]) -> dict[str, Any]:
     }
 
 
-def diagnose_run(result: Any, *, mode: str | None = None) -> dict[str, Any]:
-    """Classify a short OLGS or OLSS run from already-recorded evidence."""
+# Classification thresholds, relative to the run's starting value so that the
+# same dynamics get the same label at any objective scale (for example an
+# infidelity of 1e-6 as much as an energy of 1e3).
+_DIAGNOSIS_THRESHOLDS = {
+    "stalled_relative_change": 1.0e-6,
+    "slow_relative_improvement": 1.0e-2,
+    "diverging_relative_increase": 1.0e-3,
+    "oscillation_reversal_fraction": 1.0 / 3.0,
+    "repeating_rejection_ratio": 0.8,
+}
 
-    if hasattr(result, "trace") and result.trace is not None:
-        records = list(result.trace.iteration_records)
-        metric = str(getattr(result, "objective_metric", "J"))
-        values = [float(record.metrics[metric]) for record in records if metric in record.metrics]
-        accepted = [record.accepted for record in records if record.accepted is not None]
-        gradient_norms = [
-            float(record.technical.get("gradient_norm"))
+
+def _reversals(values: list[float]) -> int:
+    """Count direction changes along a sequence, ignoring exact ties."""
+
+    steps = [step for step in np.diff(values) if step != 0.0]
+    return int(sum(1 for left, right in zip(steps, steps[1:]) if left * right < 0.0))
+
+
+def _classify(
+    values: list[float],
+    *,
+    rejection_ratio: float,
+    attempts: int,
+) -> tuple[str, float | None, int]:
+    """Classify a lower-is-better sequence whose first entry is the starting value."""
+
+    thresholds = _DIAGNOSIS_THRESHOLDS
+    if attempts >= 3 and rejection_ratio >= thresholds["repeating_rejection_ratio"]:
+        return "repeating_rejections", None, 0
+    if len(values) < 2:
+        return "stalled", 0.0, 0
+    start, end = values[0], values[-1]
+    scale = abs(start) if start != 0.0 else max(max(abs(value) for value in values), np.finfo(float).tiny)
+    relative = (end - start) / scale
+    reversals = _reversals(values)
+    if len(values) >= 4 and reversals >= max(2, int(np.ceil((len(values) - 1) * thresholds["oscillation_reversal_fraction"]))):
+        return "oscillating", relative, reversals
+    if relative > thresholds["diverging_relative_increase"]:
+        return "diverging", relative, reversals
+    if relative >= -thresholds["stalled_relative_change"]:
+        return "stalled", relative, reversals
+    if -relative < thresholds["slow_relative_improvement"]:
+        return "slow", relative, reversals
+    return "converging", relative, reversals
+
+
+def _optimizer_series(result: Any) -> dict[str, Any] | None:
+    """Extract the run's own samples from its trace; ``None`` without a trace.
+
+    The start value comes from the run's chunk record, so the trend starts
+    before the first step rather than after it.
+    """
+
+    trace = getattr(result, "trace", None)
+    if trace is None:
+        return None
+    metric = str(getattr(result, "objective_metric", "J"))
+    records = list(trace.iteration_records)
+    chunks = list(getattr(trace, "chunk_records", ()))
+    start_value = None
+    if chunks:
+        last = chunks[-1]
+        records = [
+            record for record in records if last.start_iteration < record.iteration <= last.end_iteration
+        ] or records
+        if metric in last.start_metrics:
+            start_value = float(last.start_metrics[metric])
+    return {
+        "metric": metric,
+        "start": start_value,
+        "values": [float(record.metrics[metric]) for record in records if metric in record.metrics],
+        "accepted": [record.accepted for record in records if record.accepted is not None],
+        "gradient_norms": [
+            float(record.technical["gradient_norm"])
             for record in records
             if record.technical.get("gradient_norm") is not None
-        ]
-        step_norms = [
-            float(record.technical.get("proposal", {}).get("applied_step_norm"))
+        ],
+        "step_norms": [
+            float(record.technical["proposal"]["applied_step_norm"])
             for record in records
-            if record.technical.get("proposal", {}).get("applied_step_norm") is not None
-        ]
-        rejection_ratio = (
-            sum(not value for value in accepted) / len(accepted) if accepted else 0.0
-        )
-        resolved_mode = "min" if mode is None else str(mode)
-        if resolved_mode not in {"min", "max"}:
-            raise ValueError("mode must be 'min' or 'max'.")
-        signed = values if resolved_mode == "min" else [-value for value in values]
-        signed_change = signed[-1] - signed[0] if len(signed) >= 2 else 0.0
-        signed_scale = max(1.0, abs(signed[0])) if signed else 1.0
-        if rejection_ratio >= 0.8 and len(accepted) >= 3:
-            classification = "repeating_rejections"
-        elif len(signed) >= 2 and signed_change > 1.0e-6 * signed_scale:
-            classification = "diverging"
-        elif len(signed) >= 4 and np.sum(np.diff(signed)[:-1] * np.diff(signed)[1:] < 0.0) >= 2:
-            classification = "oscillating"
-        elif len(signed) >= 2 and abs(signed[-1] - signed[0]) <= 1.0e-6 * max(1.0, abs(signed[0])):
-            classification = "stalled"
-        elif len(signed) >= 2 and abs(signed[-1] - signed[0]) <= 1.0e-2 * max(1.0, abs(signed[0])):
-            classification = "slow"
-        else:
-            classification = "converging"
-        return {
-            "kind": "run_diagnosis",
-            "family": "olgs",
-            "optimizer": getattr(result, "optimizer", None),
-            "stop_reason": getattr(result, "stop_reason", None),
-            "classification": classification,
-            "objective_metric": metric,
-            "objective_mode": resolved_mode,
-            "objective_trend": _trend(values),
-            "gradient_trend": _trend(gradient_norms),
-            "step_trend": _trend(step_norms),
-            "rejection_ratio": rejection_ratio,
-            "iterations": len(records),
-        }
+            if (record.technical.get("proposal") or {}).get("applied_step_norm") is not None
+        ],
+        "iterations": len(records),
+    }
 
-    history = list(getattr(result, "history", ()))
+
+def diagnose_run(result: Any, *, mode: str | None = None) -> dict[str, Any]:
+    """Classify a short OLGS or OLSS run from already-recorded evidence.
+
+    Labels: ``converging``, ``slow``, ``stalled``, ``oscillating``,
+    ``diverging``, ``repeating_rejections``, and ``no_trace`` when an OLGS run
+    kept no iteration samples.  Thresholds are relative to the starting value
+    and are returned with every diagnosis.
+    """
+
+    from optimizer.result import OptimizerResult
+    from optimizer.system_olss import ShootingResult
+
+    if isinstance(result, ShootingResult):
+        return _diagnose_shooting(result)
+    if not isinstance(result, OptimizerResult):
+        raise TypeError(
+            "diagnose_run expects an OptimizerResult or a ShootingResult, "
+            f"got {type(result).__name__}."
+        )
+    resolved_mode = "min" if mode is None else str(mode)
+    if resolved_mode not in {"min", "max"}:
+        raise ValueError("mode must be 'min' or 'max'.")
+    series = _optimizer_series(result)
+    base = {
+        "kind": "run_diagnosis",
+        "family": "olgs",
+        "optimizer": result.optimizer,
+        "stop_reason": result.stop_reason,
+        "objective_metric": result.objective_metric,
+        "objective_mode": resolved_mode,
+        "thresholds": dict(_DIAGNOSIS_THRESHOLDS),
+    }
+    if series is None:
+        return {
+            **base,
+            "classification": "no_trace",
+            "message": "The run kept no iteration samples (create_trace=False); only its final metrics are known.",
+            "final_value": float(result.metrics[result.objective_metric]),
+            "iterations": int(result.iterations),
+        }
+    values = series["values"] if series["start"] is None else [series["start"], *series["values"]]
+    signed = values if resolved_mode == "min" else [-value for value in values]
+    accepted = series["accepted"]
+    rejection_ratio = sum(not value for value in accepted) / len(accepted) if accepted else 0.0
+    classification, relative, reversals = _classify(
+        signed, rejection_ratio=rejection_ratio, attempts=len(accepted)
+    )
+    return {
+        **base,
+        "classification": classification,
+        "objective_trend": _trend(values),
+        "relative_change": relative,
+        "direction_reversals": reversals,
+        "gradient_trend": _trend(series["gradient_norms"]),
+        "step_trend": _trend(series["step_norms"]),
+        "rejection_ratio": rejection_ratio,
+        "iterations": series["iterations"],
+    }
+
+
+def _diagnose_shooting(result: Any) -> dict[str, Any]:
+    history = list(result.history)
     residuals = [float(row["residual_norm"]) for row in history if "residual_norm" in row]
     accepted = [bool(row["accepted"]) for row in history if "accepted" in row]
-    if len(residuals) >= 2 and residuals[-1] < residuals[0] * 0.1:
-        classification = "converging"
-    elif len(residuals) >= 2 and residuals[-1] < residuals[0]:
-        classification = "slow"
-    elif accepted and not any(accepted):
-        classification = "repeating_rejections"
-    elif len(residuals) >= 2 and residuals[-1] > residuals[0] * (1.0 + 1.0e-6):
-        classification = "diverging"
+    rejection_ratio = sum(not value for value in accepted) / len(accepted) if accepted else 0.0
+    if result.solver_converged:
+        classification, relative, reversals = "converging", None, _reversals(residuals)
+        if len(residuals) >= 2:
+            relative = (residuals[-1] - residuals[0]) / max(residuals[0], np.finfo(float).tiny)
     else:
-        classification = "stalled"
+        classification, relative, reversals = _classify(
+            residuals, rejection_ratio=rejection_ratio, attempts=len(accepted)
+        )
     return {
         "kind": "run_diagnosis",
         "family": "olss",
-        "method": getattr(result, "method", None),
-        "stop_reason": getattr(result, "stop_reason", None),
+        "method": result.method,
+        "stop_reason": result.stop_reason,
+        "solver_converged": bool(result.solver_converged),
+        "qualified": bool(result.qualified),
         "classification": classification,
         "residual_trend": _trend(residuals),
-        "rejection_ratio": sum(not value for value in accepted) / len(accepted) if accepted else 0.0,
+        "relative_change": relative,
+        "direction_reversals": reversals,
+        "rejection_ratio": rejection_ratio,
         "iterations": len(history),
+        "thresholds": dict(_DIAGNOSIS_THRESHOLDS),
     }
 
 

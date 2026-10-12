@@ -1,15 +1,11 @@
 ---
-title: GUESS_RANDOM
-type: method_reference
-module: optimizer/guesses
-methods:
-  - random_guess
-tags:
-  - optimizer
-  - guesses
-  - random
+role: topic
+parent: GUESSES_HUB.md
+summary: "random_guess: raw random controls with optional envelope, endpoint, and scaling."
+read_when: "Read when using an unstructured random start."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Random Guess
 
 `random_guess` creates raw random controls before optional envelope, endpoint, and

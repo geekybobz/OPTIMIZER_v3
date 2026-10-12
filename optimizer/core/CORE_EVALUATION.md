@@ -1,14 +1,11 @@
 ---
-title: Core Evaluation
-type: helper_reference
-module: optimizer/core
-tags:
-  - optimizer
-  - core
-  - evaluation
-  - cache
+role: topic
+parent: CORE_HUB.md
+summary: "SystemEvaluator: validated system calls, the bounded evaluation cache, and call counters."
+read_when: "Read when counting system calls or checking what the engine caches."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Core Evaluation
 
 This file documents `SystemEvaluator`, the only path the engine uses to reach a
@@ -22,12 +19,13 @@ changed.  `SystemEvaluator` is where that work lives, once.
 ## Construction
 
 ```python
-evaluator = opt.SystemEvaluator(system, use_cache=True)
+evaluator = opt.SystemEvaluator(system, use_cache=True, cache_size=32)
 ```
 
 ```text
 system      validated on construction via require_system
 use_cache   reuse evaluations for identical control content, default True
+cache_size  most recent entries kept per cache, default 32; None keeps all
 ```
 
 ## Two Call Styles
@@ -78,10 +76,20 @@ Consequences worth knowing:
 re-evaluating the current controls in a proposal is free
 line search that revisits a candidate step pays once
 the cache is per-evaluator, so it dies with the chunk
+only the most recent cache_size entries are kept (least recently used first out)
 ```
 
+The bound keeps memory flat in long runs on large control layouts; a chunk only
+revisits recent points. The same bounded store backs the OLSS
+`ShootingEvaluator`.
+
 Gradients are **not** cached.  Every `gradient` call reaches the system.  Repeated
-gradient requests at the same controls therefore cost full price.
+gradient requests at the same controls therefore cost full price. A system that
+keeps its last forward propagation, as the OLGS template does, pays one forward
+and one backward propagation per iteration. Under standard acceptance the engine
+also evaluates a trial through `value_and_gradient` when the system provides it,
+so the gradient of an accepted trial is not recomputed; see
+[Core Acceptance and Guards](CORE_ACCEPTANCE_GUARDS.md#method-defaults).
 
 ## Counters
 

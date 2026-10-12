@@ -1,16 +1,11 @@
 ---
-title: THEORY_SPECTRUM_SMOOTHNESS
-type: theory_reference
-module: Theory/utils
-related_method: optimizer/utils/UTIL_SPECTRUM_SMOOTHNESS.md
-tags:
-  - optimizer
-  - utils
-  - theory
-  - spectrum
-  - smoothness
+role: topic
+parent: UTILS_THEORY_HUB.md
+summary: "Real FFT spectra, high-frequency fraction, difference roughness, and total variation of controls."
+read_when: "Read when judging how smooth or band-limited a control is."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Spectrum and Smoothness Theory
 
 This note gives the mathematical context for:

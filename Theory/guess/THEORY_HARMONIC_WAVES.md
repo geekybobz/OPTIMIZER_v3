@@ -1,16 +1,11 @@
 ---
-title: THEORY_HARMONIC_WAVES
-type: theory_reference
-module: Theory/guess
-related_method: optimizer/guesses/GUESS_HARMONIC.md
-tags:
-  - optimizer
-  - guesses
-  - theory
-  - harmonic
-  - frequency
+role: topic
+parent: GUESS_THEORY_HUB.md
+summary: "Sine and cosine guesses on normalized time, their frequency content, and envelopes."
+read_when: "Read when using a single-harmonic initial control."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Harmonic Wave Theory
 
 This note gives the mathematical context for:

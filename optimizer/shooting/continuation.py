@@ -6,7 +6,11 @@ from typing import Any, Mapping
 
 import numpy as np
 
-from optimizer.shooting.evaluator import ShootingEvaluator, resolve_verification_request
+from optimizer.shooting.evaluator import (
+    ShootingEvaluator,
+    resolve_verification_request,
+    resolve_verification_tolerance,
+)
 from optimizer.system_olss import (
     ContinuationPoint,
     ParameterContinuationPoint,
@@ -64,8 +68,12 @@ def continue_shooting(
     if minimum_step <= 0.0 or maximum_step < minimum_step:
         raise ValueError("Continuation step limits must satisfy 0 < min_step <= max_step.")
     active_step = min(active_step, maximum_step)
-    verify_tol = float(tolerance if verification_tolerance is None else verification_tolerance)
     runtime = ShootingEvaluator(system)
+    verify_tol, tolerance_source = resolve_verification_tolerance(
+        runtime.system_spec,
+        working_tolerance=float(tolerance),
+        verification_tolerance=verification_tolerance,
+    )
     seed_jacobian = runtime.jacobian(current, options=options)
     singular_values = np.linalg.svd(seed_jacobian, compute_uv=False)
     largest = float(singular_values[0]) if singular_values.size else 0.0
@@ -92,24 +100,28 @@ def continue_shooting(
 
     def point(value: ShootingVariables, tangent: np.ndarray, iterations: int) -> ContinuationPoint:
         residuals = runtime.residuals(value, options=options)
-        verification = runtime.verify(
-            value,
-            options=resolved_verification_options,
-            independent=verification_independent,
-            independence_source=independence_source,
-        )
+        try:
+            verification = runtime.verify(
+                value,
+                options=resolved_verification_options,
+                independent=verification_independent,
+                independence_source=independence_source,
+            )
+        except Exception:  # noqa: BLE001 - a failed verification leaves the point unverified.
+            verification = None
         return ContinuationPoint(
             variables=value.copy(),
             residual_norm=float(np.linalg.norm(residuals)),
             tangent=tangent.copy(),
             corrector_iterations=iterations,
             verified=bool(
-                verification.independent
+                verification is not None
+                and verification.independent
                 and verification.numerical_success
                 and all(check.passed for check in verification.checks)
                 and verification.residual_norm <= verify_tol
             ),
-            verification_independent=verification.independent,
+            verification_independent=bool(verification is not None and verification.independent),
         )
 
     secant = current.flatten(copy=False) - previous.flatten(copy=False)
@@ -119,9 +131,15 @@ def continue_shooting(
     tangent = secant / secant_norm
     points = [point(previous, tangent, 0), point(current, tangent, 0)]
     if not all(item.verified for item in points):
-        return ShootingContinuationResult(points, 0, int(steps), "seed_verification_failed", active_step)
+        return ShootingContinuationResult(
+            points, 0, int(steps), "seed_verification_failed", active_step,
+            verification_tolerance=verify_tol, verification_tolerance_source=tolerance_source,
+        )
     if target_index is not None and abs(current.flatten(copy=False)[target_index] - target_value) <= float(target_tolerance):
-        return ShootingContinuationResult(points, 0, int(steps), "target_reached", active_step)
+        return ShootingContinuationResult(
+            points, 0, int(steps), "target_reached", active_step,
+            verification_tolerance=verify_tol, verification_tolerance_source=tolerance_source,
+        )
 
     completed = 0
     stop_reason = "completed"
@@ -136,9 +154,15 @@ def continue_shooting(
             corrected = predictor.copy()
             converged = False
             iterations = 0
+            corrector_error: str | None = None
             for iteration in range(int(max_corrector_iterations) + 1):
-                variables = curr.with_flat(corrected, name="continuation_corrector")
-                residuals, jacobian = runtime.residuals_and_jacobian(variables, options=options)
+                try:
+                    variables = curr.with_flat(corrected, name="continuation_corrector")
+                    residuals, jacobian = runtime.residuals_and_jacobian(variables, options=options)
+                except Exception as exc:  # noqa: BLE001 - a failed corrector point shrinks the step.
+                    corrector_error = f"{type(exc).__name__}: {exc}"
+                    iterations = iteration
+                    break
                 arclength = float(tangent @ (corrected - predictor))
                 augmented_residual = np.concatenate((residuals, [arclength]))
                 iterations = iteration
@@ -146,7 +170,11 @@ def continue_shooting(
                     converged = True
                     break
                 augmented_jacobian = np.vstack((jacobian, tangent.reshape(1, -1)))
-                delta = np.linalg.lstsq(augmented_jacobian, -augmented_residual, rcond=None)[0]
+                try:
+                    delta = np.linalg.lstsq(augmented_jacobian, -augmented_residual, rcond=None)[0]
+                except np.linalg.LinAlgError as exc:
+                    corrector_error = f"{type(exc).__name__}: {exc}"
+                    break
                 corrected += delta
             step_history.append(
                 {
@@ -154,6 +182,7 @@ def continue_shooting(
                     "attempted_step_size": active_step,
                     "corrector_iterations": iterations,
                     "accepted": converged,
+                    **({"error": corrector_error} if corrector_error is not None else {}),
                 }
             )
             if converged:
@@ -192,8 +221,12 @@ def continue_shooting(
                     selector[target_index] = 1.0
                     landed = False
                     for landing_iterations in range(int(max_corrector_iterations) + 1):
-                        trial = curr.with_flat(landing_values, name="continuation_target_landing")
-                        residuals, jacobian = runtime.residuals_and_jacobian(trial, options=options)
+                        try:
+                            trial = curr.with_flat(landing_values, name="continuation_target_landing")
+                            residuals, jacobian = runtime.residuals_and_jacobian(trial, options=options)
+                        except Exception as exc:  # noqa: BLE001 - recorded as a landing failure.
+                            step_history[-1]["error"] = f"{type(exc).__name__}: {exc}"
+                            break
                         target_residual = float(landing_values[target_index] - target_value)
                         augmented = np.concatenate((residuals, [target_residual]))
                         if float(np.linalg.norm(augmented)) <= float(tolerance):
@@ -201,7 +234,11 @@ def continue_shooting(
                             landed = True
                             break
                         augmented_jacobian = np.vstack((jacobian, selector.reshape(1, -1)))
-                        landing_values += np.linalg.lstsq(augmented_jacobian, -augmented, rcond=None)[0]
+                        try:
+                            landing_values += np.linalg.lstsq(augmented_jacobian, -augmented, rcond=None)[0]
+                        except np.linalg.LinAlgError as exc:
+                            step_history[-1]["error"] = f"{type(exc).__name__}: {exc}"
+                            break
                     if not landed:
                         stop_reason = "target_landing_failed"
                         break
@@ -237,6 +274,8 @@ def continue_shooting(
         stop_reason=stop_reason,
         step_size=active_step,
         step_history=step_history,
+        verification_tolerance=verify_tol,
+        verification_tolerance_source=tolerance_source,
     )
 
 
@@ -257,7 +296,7 @@ def continue_parameter(
 ) -> ParameterContinuationResult:
     """Continue an OLSS root over one secondary parameter with exact landing."""
 
-    from optimizer.shooting.solvers import solve_shooting
+    from optimizer.shooting.solvers import _solve_or_record
 
     start = float(start)
     target = float(target)
@@ -277,6 +316,7 @@ def continue_parameter(
     current_parameter = start
     current = initial
     points: list[ParameterContinuationPoint] = []
+    step_history: list[dict[str, Any]] = []
     stop_reason = "max_steps"
     for _ in range(int(max_steps)):
         remaining = abs(target - current_parameter)
@@ -286,7 +326,22 @@ def continue_parameter(
         attempted = min(active_step, remaining)
         next_parameter = current_parameter + direction * attempted
         stage_system = system.with_secondary(**{str(parameter): next_parameter})
-        result = solve_shooting(stage_system, current, **options)
+        result = _solve_or_record(stage_system, current, options)
+        step_history.append(
+            {
+                "parameter": next_parameter,
+                "attempted_step": attempted,
+                "qualified": result.qualified,
+                "solver_converged": result.solver_converged,
+                "stop_reason": result.stop_reason,
+                "residual_norm": result.residual_norm,
+                "verification_residual_norm": (
+                    None if result.verification is None else result.verification.residual_norm
+                ),
+                "verification_tolerance": result.verification_tolerance,
+                "error": result.error,
+            }
+        )
         if result.qualified:
             points.append(ParameterContinuationPoint(next_parameter, result, attempted))
             current_parameter = next_parameter
@@ -297,7 +352,7 @@ def continue_parameter(
         if active_step < minimum_step:
             stop_reason = "minimum_step_reached"
             break
-    reached = abs(target - current_parameter) <= np.finfo(float).eps * max(1.0, abs(target))
+    reached = bool(abs(target - current_parameter) <= np.finfo(float).eps * max(1.0, abs(target)))
     if reached:
         stop_reason = "target_reached"
     return ParameterContinuationResult(
@@ -306,4 +361,5 @@ def continue_parameter(
         points=points,
         stop_reason=stop_reason,
         reached_target=reached,
+        step_history=step_history,
     )

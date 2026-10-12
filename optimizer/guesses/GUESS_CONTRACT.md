@@ -1,13 +1,11 @@
 ---
-title: GUESS_CONTRACT
-type: api_contract
-module: optimizer/guesses
-tags:
-  - optimizer
-  - guesses
-  - contract
+role: topic
+parent: GUESSES_HUB.md
+summary: "Input and return rules every guess generator follows."
+read_when: "Read when writing or validating a guess generator."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Guess Contract
 
 This file defines the public contract for initial-control guess generators.

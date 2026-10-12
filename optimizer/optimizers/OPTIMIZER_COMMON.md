@@ -1,24 +1,32 @@
 ---
-title: OPTIMIZER_COMMON
-type: helper_reference
-module: optimizer/optimizers
-source: optimizer/optimizers/_common.py
-tags:
-  - optimizer
-  - common
-  - helpers
+role: topic
+parent: OPTIMIZERS_HUB.md
+summary: "Shared plumbing in _common.py: shapes, clipping, warm starts, schedule resolution, and standard acceptance."
+read_when: "Read when writing an optimizer method or changing a shared helper."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Common Helpers
 
 `_common.py` contains shared plumbing for optimizer methods.
 
-It does not choose directions, inspect physics, accept trials, or implement
-schedules.
+It does not choose directions, inspect physics, or define schedule classes. It
+does hold the standard acceptance function and the helpers that resolve and
+advance a step-size schedule, so every first-order method treats them alike.
 
 ## Helper Map
 
 ```text
+accept_finite_trial
+  Standard acceptance: accept every trial that evaluates successfully. The
+  engine recognises it and may evaluate such a trial with value_and_gradient.
+
+resolve_step_size
+  Turn a float or schedule object into the initial step and the schedule.
+
+next_scheduled_step
+  Advance a schedule on the accepted or rejected branch of an iteration.
+
 require_variant
   Normalize and validate method variant names.
 

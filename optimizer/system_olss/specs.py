@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable, Mapping
 from typing import Any
 
@@ -75,6 +76,7 @@ def basic_shooting_system_spec(
     selection_direction: str = "minimize",
     reconstruction: Mapping[str, Any] | None = None,
     verification_options: Mapping[str, Any] | None = None,
+    verification_tolerance: float | None = None,
     allow_additional_metrics: bool = False,
 ) -> dict[str, Any]:
     metric_payload: dict[str, Any] = {
@@ -127,7 +129,8 @@ def basic_shooting_system_spec(
             "verification": {
                 "default_options": (
                     None if verification_options is None else dict(verification_options)
-                )
+                ),
+                "default_tolerance": verification_tolerance,
             },
             "allow_additional_metrics": bool(allow_additional_metrics),
         }
@@ -209,8 +212,14 @@ def validate_shooting_system_spec(value: Mapping[str, Any]) -> dict[str, Any]:
     default_options = verification_raw.get("default_options")
     if default_options is not None and not isinstance(default_options, Mapping):
         raise TypeError("OLSS verification.default_options must be a mapping or null.")
+    default_tolerance = verification_raw.get("default_tolerance")
+    if default_tolerance is not None:
+        default_tolerance = float(default_tolerance)
+        if not math.isfinite(default_tolerance) or default_tolerance < 0.0:
+            raise ValueError("OLSS verification.default_tolerance must be finite and nonnegative, or null.")
     verification = {
-        "default_options": None if default_options is None else dict(default_options)
+        "default_options": None if default_options is None else dict(default_options),
+        "default_tolerance": default_tolerance,
     }
 
     return {

@@ -37,6 +37,11 @@ def finite_difference_shooting_jacobian(
     return jacobian
 
 
+# Ratio between the two comparison steps used for a numerical-declared Jacobian.
+# An irrational ratio keeps at least one step away from any common project step.
+_SECOND_STEP_RATIO = 1.6180339887498949
+
+
 def verify_shooting_jacobian(
     system: Any,
     variables: ShootingVariables,
@@ -46,35 +51,54 @@ def verify_shooting_jacobian(
     rtol: float = 1.0e-5,
     options: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Compare the declared Jacobian with central finite differences.
+
+    A numerical-declared Jacobian is itself a finite difference, so one
+    comparison step could reproduce the project's own stencil and agree to
+    roundoff without checking anything.  Such a Jacobian is compared at two
+    separated steps; at least one differs from the project's step, and the
+    check passes only when both comparisons agree.
+    """
+
     source = str(
         get_shooting_system_spec(system)["derivatives"]["jacobian"]["source"]
     )
-    comparison_eps = float(eps)
-    comparison_strategy = "central_difference"
     if source == "numerical-declared":
-        comparison_eps = 10.0 * float(eps)
+        steps = (10.0 * float(eps), 10.0 * float(eps) * _SECOND_STEP_RATIO)
         comparison_strategy = "separated_central_difference_step"
+    else:
+        steps = (float(eps),)
+        comparison_strategy = "central_difference"
     analytical = ShootingEvaluator(system).jacobian(variables, options=options)
-    numerical = finite_difference_shooting_jacobian(
-        system, variables, eps=comparison_eps, options=options
-    )
-    error = analytical - numerical
-    max_abs = float(np.max(np.abs(error))) if error.size else 0.0
-    denominator = np.maximum(np.abs(numerical), float(atol))
-    max_rel = float(np.max(np.abs(error) / denominator)) if error.size else 0.0
-    passed = bool(np.allclose(analytical, numerical, atol=float(atol), rtol=float(rtol)))
+    comparisons = []
+    for step in steps:
+        numerical = finite_difference_shooting_jacobian(
+            system, variables, eps=step, options=options
+        )
+        error = analytical - numerical
+        denominator = np.maximum(np.abs(numerical), float(atol))
+        comparisons.append(
+            {
+                "numerical": numerical,
+                "max_abs": float(np.max(np.abs(error))) if error.size else 0.0,
+                "max_rel": float(np.max(np.abs(error) / denominator)) if error.size else 0.0,
+                "passed": bool(np.allclose(analytical, numerical, atol=float(atol), rtol=float(rtol))),
+            }
+        )
     return {
-        "passed": passed,
+        "passed": all(item["passed"] for item in comparisons),
         "shape": list(analytical.shape),
-        "max_abs_error": max_abs,
-        "max_relative_error": max_rel,
+        "max_abs_error": max(item["max_abs"] for item in comparisons),
+        "max_relative_error": max(item["max_rel"] for item in comparisons),
         "eps": float(eps),
-        "comparison_eps": comparison_eps,
+        "comparison_eps": steps[0],
+        "comparison_steps": list(steps),
+        "step_max_abs_errors": [item["max_abs"] for item in comparisons],
         "comparison_strategy": comparison_strategy,
         "declared_source": source,
         "independent": True,
         "atol": float(atol),
         "rtol": float(rtol),
         "analytical": analytical,
-        "numerical": numerical,
+        "numerical": comparisons[0]["numerical"],
     }

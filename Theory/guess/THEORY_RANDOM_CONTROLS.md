@@ -1,15 +1,11 @@
 ---
-title: THEORY_RANDOM_CONTROLS
-type: theory_reference
-module: Theory/guess
-related_method: optimizer/guesses/GUESS_RANDOM.md
-tags:
-  - optimizer
-  - guesses
-  - theory
-  - random
+role: topic
+parent: GUESS_THEORY_HUB.md
+summary: "Random control matrices: distributions, amplitude range, and roughness."
+read_when: "Read when using an unstructured random initial control."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Random Controls Theory
 
 This note gives the mathematical context for:

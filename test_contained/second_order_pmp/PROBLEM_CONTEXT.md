@@ -1,3 +1,11 @@
+---
+role: topic
+parent: ../../tests/TESTING_HUB.md
+summary: "Contained second-order robust qubit-transfer system used as a tracker trial and campaign case."
+read_when: "Read when running or changing the second-order PMP trial."
+status: active
+reviewed: 2026-10-12
+---
 # Second-order PMP tracker trial
 
 This contained system is derived from

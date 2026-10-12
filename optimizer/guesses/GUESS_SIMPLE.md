@@ -1,17 +1,11 @@
 ---
-title: GUESS_SIMPLE
-type: method_reference
-module: optimizer/guesses
-methods:
-  - constant_guess
-  - ramp_guess
-tags:
-  - optimizer
-  - guesses
-  - deterministic
-  - simple
+role: topic
+parent: GUESSES_HUB.md
+summary: "Constant and ramp controls."
+read_when: "Read when you want an explicit deterministic start."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Simple Guesses
 
 Simple guesses create explicit deterministic controls: constants and ramps.

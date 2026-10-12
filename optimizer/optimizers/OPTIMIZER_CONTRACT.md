@@ -1,14 +1,11 @@
 ---
-title: OPTIMIZER_CONTRACT
-type: api_contract
-module: optimizer/optimizers
-tags:
-  - optimizer
-  - optimizers
-  - api
-  - contract
+role: topic
+parent: OPTIMIZERS_HUB.md
+summary: "Common inputs, arguments, run recording, and the return object of every optimizer call."
+read_when: "Read when calling any optimizer or writing a new one."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Optimizer Contract
 
 This file defines the public contract for optimizer method calls.
@@ -156,7 +153,7 @@ Important distinction:
 
 ```text
 engine-based optimizers can start from controls, state, or warmstart
-cma_es currently requires explicit controls
+cma_es uses the same controls, state, or warmstart start-state convention
 ```
 
 ## Compatibility Rules

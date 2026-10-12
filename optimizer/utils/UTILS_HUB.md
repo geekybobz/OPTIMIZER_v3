@@ -1,14 +1,11 @@
 ---
-title: UTILS_HUB
-type: module_hub
-module: optimizer/utils
-tags:
-  - optimizer
-  - utils
-  - api
-  - hub
+role: front-door
+parent: ../../README.md
+summary: "Entry to diagnostics, derivative checks, geometry, repair, and the short-run decision loop."
+read_when: "Start here when inspecting or repairing a run."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Utils Documentation Hub
 
 This folder contains diagnostics, derivative checks, residual geometry, repair, and
@@ -31,6 +28,8 @@ system propagation
 step-size schedules
 deep mathematical theory notes
 ```
+
+## Details
 
 ## Documentation Map
 
@@ -114,12 +113,34 @@ optimizer/utils/
   geometry.py
   parallel.py
   repairs.py
+  run_diagnostics.py
   spectrum.py
 ```
 
 `parallel.py` holds map-style execution helpers.  It is generic plumbing rather than a
 diagnostic tool, so it is not part of the `opt.utils` method namespace; use
 `opt.parallel_map(...)`.  See [Util Boundary](UTIL_BOUNDARY.md).
+
+## Short-Run Decision Loop
+
+The intended interactive workflow is run a small budget, inspect recorded evidence,
+then choose the next method:
+
+```python
+result = opt.adam(system, controls, maxiter=5)
+diagnosis = opt.diagnose_run(result)
+curvature = opt.curvature_probe(system, result.controls)
+comparison = opt.compare_methods(
+    system,
+    result.controls,
+    ("adam", "line_search", "lbfgs"),
+    iterations=5,
+)
+```
+
+For OLSS, `opt.shooting_geometry_probe` reports Jacobian rank, conditioning, weak
+variable blocks, residual groups, and evaluation counters. These tools interpret
+short evidence; they do not claim global convergence or alter parameters silently.
 
 ## Theory Map
 

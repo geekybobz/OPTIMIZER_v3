@@ -1,13 +1,11 @@
 ---
-title: UTIL_CONTRACT
-type: contract
-module: optimizer/utils
-tags:
-  - optimizer
-  - utils
-  - contract
+role: topic
+parent: UTILS_HUB.md
+summary: "Control, hook, metric, shape, return, and failure rules every utility follows."
+read_when: "Read when writing or validating a utility."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Util Contract
 
 Utilities share the same `Controls` and system contract as optimizers, but they do

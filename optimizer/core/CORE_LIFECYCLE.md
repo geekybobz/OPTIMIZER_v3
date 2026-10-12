@@ -1,14 +1,11 @@
 ---
-title: Core Lifecycle
-type: computation_flow
-module: optimizer/core
-tags:
-  - optimizer
-  - core
-  - engine
-  - lifecycle
+role: topic
+parent: CORE_HUB.md
+summary: "Exact order of one chunk, its accepted and rejected branches, failure exits, and chaining."
+read_when: "Read when a chunk ends unexpectedly or chunks are chained."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Core Lifecycle
 
 This file defines the exact order of one chunk and what each exit path leaves behind.

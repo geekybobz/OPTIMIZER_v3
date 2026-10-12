@@ -1,16 +1,11 @@
 ---
-title: OLGS Convergence Test Design
-type: test_design
-module: optimizer/system_olgs
-status: implemented_and_verified
-tags:
-  - optimizer
-  - system
-  - olgs
-  - convergence
-  - testing
+role: deep
+parent: ../../tests/TESTING_HUB.md
+summary: "OLGS validation design, scenario matrix, method coverage, and the 2026-10-12 outcome."
+read_when: "Read when checking OLGS method structure or rerunning the matrix."
+status: active
+reviewed: 2026-10-12
 ---
-
 # OLGS Convergence Test Design
 
 This page records the OLGS validation design and its 2026-10-12 implementation
@@ -639,13 +634,13 @@ an OLGS contract rewrite before evidence justifies it.
 
 ## Related Notes
 
-- [OLGS System Hub](SYSTEM_OLGS_HUB.md)
-- [OLGS Contract](CONTRACT.md)
-- [OLGS Derivatives](DERIVATIVES.md)
-- [Optimizer Methods](../optimizers/OPTIMIZER_METHODS.md)
-- [Conditional Numerical Capabilities](../optimizers/NUMERICAL_CAPABILITIES.md)
+- [OLGS System Hub](../../optimizer/system_olgs/SYSTEM_OLGS_HUB.md)
+- [OLGS Contract](../../optimizer/system_olgs/CONTRACT.md)
+- [OLGS Derivatives](../../optimizer/system_olgs/DERIVATIVES.md)
+- [Optimizer Methods](../../optimizer/optimizers/OPTIMIZER_METHODS.md)
+- [Conditional Numerical Capabilities](../../optimizer/optimizers/NUMERICAL_CAPABILITIES.md)
 - [Testing Hub](../../tests/TESTING_HUB.md)
 
 ---
 
-[⌂ Home](SYSTEM_OLGS_HUB.md)
+[⌂ Home](../../optimizer/system_olgs/SYSTEM_OLGS_HUB.md)

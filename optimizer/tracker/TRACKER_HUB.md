@@ -1,13 +1,11 @@
 ---
-title: TRACKER_HUB
-type: module_hub
-module: optimizer/tracker
-tags:
-  - optimizer
-  - tracker
-  - hub
+role: front-door
+parent: ../../README.md
+summary: "Durable run journals, records, and checkpoints written without calling the system."
+read_when: "Read when a run needs a durable record on disk."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Tracker Hub
 
 `optimizer.tracker` keeps durable evidence of a run: what the optimizer did,
@@ -34,6 +32,8 @@ receipt = RunReceipt.create(
 journal = RunJournal.create(run_dir, receipt)
 result = opt.adam(system, controls, maxiter=20, observers=[JournalObserver(journal)])
 ```
+
+## Details
 
 ## Rules
 
@@ -107,10 +107,10 @@ reports both as unavailable.
 
 ## Connections
 
-- Parent: [the V4 entry](../../README.md)
+- Related: [the V4 entry](../../README.md)
 - Related: [Optimizer Contract](../optimizers/OPTIMIZER_CONTRACT.md), [Campaign Modes](../campaigns/CAMPAIGNS.md), [Logs Hub](../logs/LOGS_HUB.md)
 
-## Details
+## Implementation details
 
 ### Claim boundary
 

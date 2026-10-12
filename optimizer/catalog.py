@@ -1832,6 +1832,15 @@ def _build_groups() -> dict[str, CatalogGroup]:
             _make_item("ShootingVariables", "system_olss", "data_object", "Finite values attached to a ShootingSpec.", module="optimizer/system_olss/variables.py", tags=("shooting", "variables")),
             _make_item("VerificationCheck", "system_olss", "data_object", "Named independent acceptance check included in OLSS qualification.", module="optimizer/system_olss/results.py", tags=("shooting", "verification")),
             _make_item("basic_shooting_system_spec", "system_olss", "helper", "Build and validate the static OLSS declaration.", module="optimizer/system_olss/specs.py", tags=("shooting", "system_spec")),
+            _make_item("shooting_metric_spec", "system_olss", "helper", "Build one OLSS metric declaration for system_spec().", module="optimizer/system_olss/specs.py", tags=("shooting", "system_spec", "metric")),
+            _make_item("ShootingEvaluation", "system_olss", "data_object", "Candidate, residual vector, declared metrics, and working options of one evaluation.", module="optimizer/system_olss/results.py", tags=("shooting", "result")),
+            _make_item("ShootingVerification", "system_olss", "data_object", "Independent verification residuals, metrics, options, independence source, and named checks.", module="optimizer/system_olss/results.py", tags=("shooting", "verification", "result")),
+            _make_item("ShootingResult", "system_olss", "data_object", "One root solve: candidate, residuals, metrics, convergence, verification, qualification, stop reason, error, tolerance source, counters, and history.", module="optimizer/system_olss/results.py", tags=("shooting", "result")),
+            _make_item("MultiStartResult", "system_olss", "data_object", "All multistart results, qualified and unique roots, and the ranking with its selection source.", module="optimizer/system_olss/results.py", tags=("shooting", "multistart", "result")),
+            _make_item("ContinuationPoint", "system_olss", "data_object", "One verified pseudo-arclength branch point with its tangent.", module="optimizer/system_olss/results.py", tags=("shooting", "continuation", "result")),
+            _make_item("ShootingContinuationResult", "system_olss", "data_object", "Pseudo-arclength branch points, step history, stop reason, and verification tolerance.", module="optimizer/system_olss/results.py", tags=("shooting", "continuation", "result")),
+            _make_item("ParameterContinuationPoint", "system_olss", "data_object", "One natural-continuation stage: parameter value, attempted step, and its shooting result.", module="optimizer/system_olss/results.py", tags=("shooting", "continuation", "result")),
+            _make_item("ParameterContinuationResult", "system_olss", "data_object", "Natural-continuation stages, per-attempt step history, stop reason, and target status.", module="optimizer/system_olss/results.py", tags=("shooting", "continuation", "result")),
         ),
     )
 
@@ -1888,7 +1897,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 "Follow a one-dimensional OLSS root branch with pseudo-arclength continuation.",
                 inputs={"previous/current": "Two verified neighboring branch points.", "step_size": "Arclength predictor size."},
                 returns={"type": "ShootingContinuationResult"},
-                requires=("residual count = variable count - 1",),
+                requires=("Jacobian numerical rank = variable count - 1; redundant residual rows are allowed",),
                 best_for=("continuation through folds",),
                 example="branch = opt.shooting.continue_shooting(system, z_prev, z_now, steps=20, step_size=0.1)",
                 module="optimizer/shooting/continuation.py",
@@ -1914,7 +1923,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 "derivative",
                 "Compare the declared OLSS Jacobian with explicit central finite differences.",
                 inputs={"system": "OLSS system.", "variables": "Point to check.", "eps": "Relative perturbation scale."},
-                returns={"type": "dict", "fields": "passed, errors, analytical, numerical"},
+                returns={"type": "dict", "fields": "passed, errors, comparison_steps, step_max_abs_errors, analytical, numerical"},
                 requires=("OLSS residuals and Jacobian",),
                 best_for=("system bring-up", "sensitivity debugging"),
                 example="check = opt.shooting.verify_shooting_jacobian(system, z0)",
@@ -1926,6 +1935,8 @@ def _build_groups() -> dict[str, CatalogGroup]:
             _make_item("perturb_shooting_seeds", "shooting", "generator", "Generate a scale-aware perturbation cloud around an anchor.", module="optimizer/shooting/campaigns.py", tags=("shooting", "seed", "perturbation")),
             _make_item("refine_shooting_seeds", "shooting", "campaign", "Solve, select elites, perturb, and refine a shooting seed campaign.", module="optimizer/shooting/campaigns.py", tags=("shooting", "seed", "refine")),
             _make_item("compare_shooting_replay", "shooting", "diagnostic", "Replay OLSS-recovered controls in OLGS and compare declared metrics.", module="optimizer/shooting/replay.py", tags=("shooting", "olgs", "replay")),
+            _make_item("finite_difference_shooting_jacobian", "shooting", "derivative", "Central-difference reference Jacobian of the OLSS residual vector; does not replace the declared Jacobian.", module="optimizer/shooting/derivatives.py", tags=("shooting", "jacobian", "derivative")),
+            _make_item("ShootingEvaluator", "shooting", "runtime", "Validated, cached, and counted OLSS evaluation shared by the shooting tools.", module="optimizer/shooting/evaluator.py", tags=("shooting", "evaluation", "cache")),
         ),
     )
 

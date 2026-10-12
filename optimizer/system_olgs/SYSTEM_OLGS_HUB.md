@@ -1,217 +1,75 @@
 ---
-title: SYSTEM_OLGS_HUB
-type: module_hub
-module: optimizer/system_olgs
-tags:
-  - optimizer
-  - system
-  - olgs
+role: front-door
+parent: ../../README.md
+summary: "Entry point for the Open Loop Gradient System contract and its supporting tools."
+read_when: "Implementing a differentiable optimization system or choosing OLGS capabilities."
+status: active
+reviewed: 2026-10-12
 ---
-
 # OLGS System Hub
 
-OLGS means **Open Loop Gradient System**.
+OLGS is the reusable boundary for differentiable optimization problems. A project
+owns its physics and objective; the library owns optimizers, diagnostics, schedules,
+validation, state transfer, and result containers.
 
-This folder contains the system-facing documentation and Python implementation for
-the OLGS class format.  OLGS is the system template format for OPTIMIZER v4: a
-project system with analytical forward propagation, backward propagation, objective
-evaluation, and gradient.
-
-The intent is compact documentation. This hub is the entry point; each linked file
-owns one technical part of the system API.
-
-## Design Scope
-
-OLGS owns the contract between a physical system and the optimizer.
-
-The system provides:
+## Required Surface
 
 ```text
-control layout
-complete static system/metric/derivative specification
-primary physical parameters
-secondary objective/curriculum parameters
-forward propagation
-backward propagation
-objective metrics
-analytical gradient
-optional residuals and higher derivatives
-optional combined value/gradient, bounds, HVP, and proximal operations
-optional explicit renderer-independent plot data
+system_spec() -> mapping
+control_spec() -> ControlSpec
+evaluate(controls) -> metrics mapping containing J
+gradient(controls) -> Controls
+with_secondary(**updates) -> new compatible system
 ```
 
-The optimizer library provides:
+The five calls stay fixed. Optional capabilities add constrained, second-order,
+proximal, combined-evaluation, and visualization workflows without enlarging the
+base contract.
 
-```text
-Controls and ControlSpec
-optimizer loops
-guess generators
-diagnostics and repairs
-result objects
-logging boundary
-```
+## Read by Task
 
-## Documentation Map
+| Task | Read |
+|---|---|
+| Implement or validate a system | [Contract](CONTRACT.md) |
+| Separate fixed and curriculum parameters | [Parameters](PARAMS.md) |
+| Understand propagation and evaluation order | [Lifecycle](LIFECYCLE.md) |
+| Add HVP, constraints, or proximal behavior | [Derivatives](DERIVATIVES.md) |
+| Use short-run diagnostics | [Utils Hub](../utils/UTILS_HUB.md) |
+| Inspect verification evidence | [OLGS campaign report](../../test_contained/olgs_convergence/REPORT.md) |
 
-Read in this order:
-
-```text
-SYSTEM_OLGS_HUB.md
-  Entry point and design scope.
-
-CONTRACT.md
-  Required and optional OLGS methods.
-
-PARAMS.md
-  Primary and secondary parameter split.
-
-LIFECYCLE.md
-  Forward, backward, evaluate, gradient, metrics flow.
-
-DERIVATIVES.md
-  Optional Jacobian, Hessian, HVP, and numerical fallback policy.
-
-LOGGING_BOUNDARY.md
-  Cache/logging placeholders and what OLGS should not own yet.
-```
-
-## System Map
-
-Start here:
-
-- [API Contract](CONTRACT.md)
-- [Worked example: a complete minimal system](../../tests/fixtures/quadratic_system.py)
-- [System Configuration](PARAMS.md)
-- [Computation Lifecycle](LIFECYCLE.md)
-
-Advanced:
-
-- [Derivative Hooks](DERIVATIVES.md)
-- [Convergence Test Design](OLGS_CONVERGENCE_TEST_DESIGN.md)
-- [Logging Boundary](LOGGING_BOUNDARY.md)
-
-Reading guide:
-
-- Implementing a new system: [API Contract](CONTRACT.md), then the [worked example](../../tests/fixtures/quadratic_system.py)
-- Defining primary/secondary dicts: [System Configuration](PARAMS.md)
-- Calling from a notebook: [Computation Lifecycle](LIFECYCLE.md)
-- Building projected/Newton/trust-region capability: [Derivative Hooks](DERIVATIVES.md)
-- Connecting a future tracker: [Logging Boundary](LOGGING_BOUNDARY.md)
-
-## Target User Shape
+## Minimal Use
 
 ```python
-from my_project.system import System
 import optimizer as opt
 
-system = System(
-    primary={"tau": 1.0, "N": 1001},
-    secondary={"infidelity_weight": 1.0, "energy_weight": 0.0},
-)
-
+system = System(primary={"tau": 1.0}, secondary={"energy_weight": 0.0})
 controls = opt.guesses.random_fourier_guess(system, amplitude=0.1, modes=4)
-result = opt.optimizers.adam(system, controls, maxiter=100)
-```
-
-Standard Adam, momentum, AdaGrad, and RMSProp behavior accepts every finite trial
-by default. Supply `accept=opt.core.default_accept` or another explicit guard when a
-monotone metric policy is wanted. First-order `step_size` accepts either a scalar
-or a reusable schedule. System-declared box bounds are projected by the shared
-engine for every engine-based method.
-
-For the intended short-run workflow:
-
-```python
 result = opt.adam(system, controls, maxiter=5)
 diagnosis = opt.diagnose_run(result)
-curvature = opt.curvature_probe(system, result.controls)
-comparison = opt.compare_methods(system, result.controls, ("adam", "line_search"), iterations=5)
 ```
 
-Curriculum updates should use secondary params:
+Use `opt.system_info(system)` before selecting a conditional method. Use
+`optimizer-system path/to/system.py --profile qubit` to create a starting scaffold;
+the generated system must still be adapted to the project physics. The scaffold
+is laid out as forward propagation → backward propagation → gradient, with the
+last forward propagation cached; see
+[One propagation per iteration](LIFECYCLE.md#one-propagation-per-iteration).
 
-```python
-system = system.with_secondary(residual_weight=0.2, energy_weight=1.0e-3)
-```
+## Ownership Boundary
 
-Advanced methods are conditional rather than mandatory:
+OLGS owns system semantics, control layout, objective metrics, and analytical
+derivatives. It does not own optimizer update rules, persistent run logging, generic
+finite-difference diagnostics, or result ranking.
 
-```python
-capabilities = opt.system_info(system)["capabilities"]
-if capabilities["second_order"]["newton_cg_ready"]:
-    result = opt.newton_cg(system, controls, maxiter=20)
-```
+## Connections
 
-## Decisions Already Fixed
-
-```text
-Name: OLGS
-Folder: optimizer/system_olgs
-Only one system class format for now
-Require system_spec as the single semantic discovery API
-Use primary and secondary params only
-No runtime parameter group for now
-Use row-wise Controls layout: (n_controls, control_dim)
-Require analytical gradient
-Allow optional higher derivatives
-Numerical fallback only for optional advanced derivatives
-Keep system-local cache optional; the tracker owns persistent run evidence
-Keep the required OLGS calls unchanged; schedules and diagnostics are library tools
-```
-
-## New-System Scaffold
-
-Create a small project system and initial contract test with:
-
-```bash
-optimizer-system my_problem/system.py --profile qubit
-```
-
-`optimizer-system` is the installed command for
-`python -m optimizer.system_olgs.scaffold`.
-
-Use repeated `--capability` flags for `constraints`, `second-order`, or `proximal`.
-Optional method guidance remains commented until implemented so discovery never
-reports placeholder methods as working capabilities.
-
-## Implementation Files
-
-Current implementation files:
-
-```text
-optimizer/system_olgs/
-  __init__.py
-  olgs.py
-  contract.py
-  specs.py
-  validation.py
-  derivatives.py
-  results.py
-  scaffold.py
-  templates/
-    __init__.py
-    system.py.tmpl
-    test_system.py.tmpl
-```
-
-## Reading Path
-
-For a new system author:
-
-```text
-SYSTEM_OLGS_HUB.md
-CONTRACT.md
-PARAMS.md
-LIFECYCLE.md
-```
-
-For optimizer/tool integration:
-
-```text
-CONTRACT.md
-DERIVATIVES.md
-LOGGING_BOUNDARY.md
-```
+- Related: [V4 entry](../../README.md)
+- Related: [Contract](CONTRACT.md)
+- Related: [Parameters](PARAMS.md)
+- Related: [Lifecycle](LIFECYCLE.md)
+- Related: [Derivative capabilities](DERIVATIVES.md)
+- Related: [Logging boundary](LOGGING_BOUNDARY.md)
+- Related: [Transactions](../TRANSACTIONS.md), [Optimizer methods](../optimizers/OPTIMIZERS_HUB.md), [OLSS](../system_olss/SYSTEM_OLSS_HUB.md)
 
 ---
 

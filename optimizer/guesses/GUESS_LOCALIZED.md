@@ -1,17 +1,11 @@
 ---
-title: GUESS_LOCALIZED
-type: method_reference
-module: optimizer/guesses
-methods:
-  - gaussian_guess
-  - sinc_guess
-tags:
-  - optimizer
-  - guesses
-  - localized
-  - pulses
+role: topic
+parent: GUESSES_HUB.md
+summary: "Gaussian and sinc pulses concentrated around a center in normalized time."
+read_when: "Read when a start should be localized in time."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Localized Guesses
 
 Localized guesses create pulses concentrated around a center in normalized time.

@@ -1,14 +1,11 @@
 ---
-title: OLGS Derivatives
-type: derivative_policy
-module: optimizer/system_olgs
-tags:
-  - optimizer
-  - system
-  - olgs
-  - derivatives
+role: topic
+parent: SYSTEM_OLGS_HUB.md
+summary: "The required analytical gradient, optional derivative hooks, and the numerical-fallback policy."
+read_when: "Read when implementing derivatives for an OLGS system."
+status: active
+reviewed: 2026-10-12
 ---
-
 # OLGS Derivatives
 
 Gradient is required. Other derivative tools are optional.

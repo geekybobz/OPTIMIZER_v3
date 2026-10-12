@@ -1,13 +1,11 @@
 ---
-title: OPTIMIZERS_HUB
-type: module_hub
-module: optimizer/optimizers
-tags:
-  - optimizer
-  - optimizers
-  - api
+role: front-door
+parent: ../../README.md
+summary: "Entry to the optimizer methods: map, public entry points, and theory."
+read_when: "Start here when choosing or calling an optimizer."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Optimizer Methods Documentation
 
 This folder contains the optimizer method layer for OPTIMIZER v4.
@@ -41,6 +39,8 @@ guess generation
 standalone residual repair diagnostics
 deep mathematical theory notes
 ```
+
+## Details
 
 ## Documentation Map
 
@@ -85,10 +85,10 @@ ADAGRAD_RMSPROP.md
 LBFGS.md
 NONLINEAR_CG.md
 CMA_ES.md
-projected.py
-newton_cg.py
-trust_region.py
-proximal.py
+PROJECTED_GRADIENT.md
+NEWTON_CG.md
+TRUST_REGION.md
+PROXIMAL_GRADIENT.md
 ```
 
 ## Public Entry Points

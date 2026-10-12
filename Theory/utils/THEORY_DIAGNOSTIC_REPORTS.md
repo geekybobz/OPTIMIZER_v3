@@ -1,16 +1,11 @@
 ---
-title: THEORY_DIAGNOSTIC_REPORTS
-type: theory_reference
-module: Theory/utils
-related_method: optimizer/utils/UTIL_DIAGNOSTICS.md
-tags:
-  - optimizer
-  - utils
-  - theory
-  - diagnostics
-  - metrics
+role: topic
+parent: UTILS_THEORY_HUB.md
+summary: "What metric and diagnostic reports measure: control, gradient, and residual norms."
+read_when: "Read when interpreting the numbers in a diagnostic report."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Diagnostic Report Theory
 
 This note gives the mathematical context for:

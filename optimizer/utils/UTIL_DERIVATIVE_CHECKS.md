@@ -1,22 +1,11 @@
 ---
-title: UTIL_DERIVATIVE_CHECKS
-type: category_reference
-module: optimizer/utils
-source: optimizer/utils/derivatives.py
-methods:
-  - finite_difference_gradient
-  - verify_gradient
-  - finite_difference_jacobian
-  - verify_jacobian
-tags:
-  - optimizer
-  - utils
-  - derivative
-  - finite_difference
-  - gradient
-  - jacobian
+role: topic
+parent: UTILS_HUB.md
+summary: "Gradient and Jacobian checks against finite differences."
+read_when: "Read before trusting an optimizer on a new system."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Derivative Checks
 
 Derivative utilities compare analytical hooks against finite-difference behavior.

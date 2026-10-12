@@ -1,13 +1,11 @@
 ---
-title: OPTIMIZER_BOUNDARY
-type: module_boundary
-module: optimizer/optimizers
-tags:
-  - optimizer
-  - boundary
-  - architecture
+role: topic
+parent: OPTIMIZERS_HUB.md
+summary: "What belongs in optimizer/optimizers versus systems, core, utils, guesses, and theory."
+read_when: "Read before adding an optimizer method."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Optimizer Boundary
 
 This file defines what belongs in `optimizer/optimizers`.

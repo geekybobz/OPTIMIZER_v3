@@ -1,16 +1,11 @@
 ---
-title: THEORY_CONSTANT_RAMP
-type: theory_reference
-module: Theory/guess
-related_method: optimizer/guesses/GUESS_SIMPLE.md
-tags:
-  - optimizer
-  - guesses
-  - theory
-  - deterministic
-  - ramp
+role: topic
+parent: GUESS_THEORY_HUB.md
+summary: "Constant, linear, quadratic, and smoothstep ramp controls and where each fits."
+read_when: "Read when choosing a simple deterministic initial control."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Constant and Ramp Theory
 
 This note gives the mathematical context for:

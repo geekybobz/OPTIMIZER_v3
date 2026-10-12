@@ -1,20 +1,24 @@
 ---
-title: OPTIMIZER_ACCEPTANCE
-type: engine_policy
-module: optimizer/optimizers
-tags:
-  - optimizer
-  - acceptance
-  - stopping
+role: topic
+parent: OPTIMIZERS_HUB.md
+summary: "Per-method acceptance, custom accept functions, line-search specifics, stopping inputs, and best-so-far tracking."
+read_when: "Read when a method rejects steps or a stopping input needs choosing."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Acceptance and Stopping
 
 The shared engine decides whether a trial replaces the current controls.
 
+Adam, momentum, AdaGrad, and RMSProp use standard acceptance by default: every
+trial that evaluates successfully is accepted, as in the textbook algorithms.
+The other gradient methods use the engine default below. Each method's default
+and the way to change it are owned by
+[Core Acceptance and Guards](../core/CORE_ACCEPTANCE_GUARDS.md#method-defaults).
+
 ## Default Acceptance
 
-Default acceptance compares one scalar metric:
+The engine default compares one scalar metric:
 
 ```text
 accept_metric = "J"
@@ -42,7 +46,8 @@ always propose steps along `-grad J`.
 
 ## Custom Acceptance
 
-`line_search` accepts an optional `accept` function.
+`adam`, `momentum`, `adagrad`, `rmsprop`, `line_search`, and `run_chunk` accept
+an optional `accept` function.
 
 Custom accept functions should return either:
 

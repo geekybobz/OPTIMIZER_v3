@@ -1,13 +1,11 @@
 ---
-title: OPTIMIZER_LIFECYCLE
-type: computation_flow
-module: optimizer/optimizers
-tags:
-  - optimizer
-  - lifecycle
-  - engine
+role: topic
+parent: OPTIMIZERS_HUB.md
+summary: "How a method's proposal function runs inside the shared engine, and the CMA-ES exception."
+read_when: "Read when writing a step function or tracing one iteration."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Optimizer Lifecycle
 
 Most optimizer methods use `optimizer.core.engine.run_chunk`.

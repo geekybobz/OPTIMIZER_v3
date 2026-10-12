@@ -1,16 +1,11 @@
 ---
-title: THEORY_SMOOTH_RANDOM
-type: theory_reference
-module: Theory/guess
-related_method: optimizer/guesses/GUESS_RANDOM_SMOOTH.md
-tags:
-  - optimizer
-  - guesses
-  - theory
-  - random
-  - smooth
+role: topic
+parent: GUESS_THEORY_HUB.md
+summary: "Smoothed random controls: smoothing model, correlation length, edge padding, and scaling."
+read_when: "Read when tuning the smoothness of a random initial control."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Smooth Random Theory
 
 This note gives the mathematical context for:

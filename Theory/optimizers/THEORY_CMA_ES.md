@@ -1,16 +1,11 @@
 ---
-title: THEORY_CMA_ES
-type: theory_reference
-module: Theory/optimizers
-related_method: optimizer/optimizers/CMA_ES.md
-tags:
-  - optimizer
-  - theory
-  - cma_es
-  - derivative_free
-  - population
+role: topic
+parent: OPTIMIZER_THEORY_HUB.md
+summary: "Population search with isotropic or diagonal sampling, elite means, and sigma adaptation."
+read_when: "Read when using the derivative-free CMA-ES method."
+status: active
+reviewed: 2026-10-12
 ---
-
 # CMA-ES Theory
 
 This note gives the mathematical context for:

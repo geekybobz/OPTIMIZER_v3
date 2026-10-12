@@ -1,16 +1,11 @@
 ---
-title: THEORY_FOURIER_SERIES
-type: theory_reference
-module: Theory/guess
-related_method: optimizer/guesses/GUESS_FOURIER.md
-tags:
-  - optimizer
-  - guesses
-  - theory
-  - fourier
-  - basis
+role: topic
+parent: GUESS_THEORY_HUB.md
+summary: "Finite sine-series guesses, their low-frequency bias, and per-channel coefficients."
+read_when: "Read when building a smooth band-limited initial control."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Fourier Series Theory
 
 This note gives the mathematical context for:

@@ -1,13 +1,11 @@
 ---
-title: BASE_HUB
-type: module_hub
-module: optimizer
-tags:
-  - optimizer
-  - base
-  - hub
+role: front-door
+parent: ../README.md
+summary: "Shared data types and top-level calls of the base catalog group: controls, results, state, and root calls."
+read_when: "Read when working with Controls, results, run state, or a top-level opt call."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Base API Hub
 
 The `base` catalog group: the shared data types and the top-level calls that
@@ -18,6 +16,8 @@ every other group builds on. They live in the root modules of `optimizer/`.
 `Controls` carry the numbers, `OptimizerResult` carries the outcome, and
 `WarmStartState` carries a run into the next method. Every optimizer, guess,
 utility, and checkpoint uses the same `Controls` matrix.
+
+## Details
 
 ## Control layout
 
@@ -91,12 +91,18 @@ identical controls.
 | [continuation.py](continuation.py) | Parameter-stage continuation |
 | [catalog.py](catalog.py) | The runtime catalog behind `opt.list`, `opt.info`, `opt.search`, and `opt.path` |
 | [introspection.py](introspection.py) | Runtime self-description of registered APIs and signatures |
+| [transactions.py](transactions.py) | Family-aware request and response envelopes for OLGS and OLSS |
 | [logs/trace.py](logs/trace.py) | `Trace` |
+
+OLSS uses `ShootingSpec`, `ShootingVariables`, `ShootingEvaluation`, and
+`ShootingResult` rather than `ControlSpec`, `Controls`, and `OptimizerResult`.
+Their family contracts remain separate even though the transaction envelope and
+runtime discovery conventions are shared.
 
 ## Connections
 
-- Parent: [the V4 entry](../README.md)
-- Related: [Core Hub](core/CORE_HUB.md), [Optimizer State and Warmstart](optimizers/OPTIMIZER_STATE_WARMSTART.md), [Logs Hub](logs/LOGS_HUB.md)
+- Related: [the V4 entry](../README.md)
+- Related: [Core Hub](core/CORE_HUB.md), [Transactions](TRANSACTIONS.md), [Optimizer State and Warmstart](optimizers/OPTIMIZER_STATE_WARMSTART.md), [Logs Hub](logs/LOGS_HUB.md)
 
 ---
 

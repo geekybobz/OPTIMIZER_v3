@@ -1,17 +1,11 @@
 ---
-title: THEORY_FINITE_DIFFERENCE_CHECKS
-type: theory_reference
-module: Theory/utils
-related_method: optimizer/utils/UTIL_DERIVATIVE_CHECKS.md
-tags:
-  - optimizer
-  - utils
-  - theory
-  - finite_difference
-  - gradient
-  - jacobian
+role: topic
+parent: UTILS_THEORY_HUB.md
+summary: "Central-difference gradient and Jacobian checks, error interpretation, and choosing eps."
+read_when: "Read when a derivative check fails or eps needs choosing."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Finite Difference Checks Theory
 
 This note gives the mathematical context for:

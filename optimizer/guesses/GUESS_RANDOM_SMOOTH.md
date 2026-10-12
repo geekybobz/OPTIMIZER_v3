@@ -1,16 +1,11 @@
 ---
-title: GUESS_RANDOM_SMOOTH
-type: method_reference
-module: optimizer/guesses
-methods:
-  - random_smooth_guess
-tags:
-  - optimizer
-  - guesses
-  - random
-  - smooth
+role: topic
+parent: GUESSES_HUB.md
+summary: "random_smooth_guess: random controls smoothed with a Gaussian correlation kernel."
+read_when: "Read when tuning the correlation length of a random start."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Random Smooth Guess
 
 `random_smooth_guess` creates random controls and smooths each channel with a

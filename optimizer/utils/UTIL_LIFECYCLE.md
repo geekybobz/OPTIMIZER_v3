@@ -1,13 +1,11 @@
 ---
-title: UTIL_LIFECYCLE
-type: lifecycle
-module: optimizer/utils
-tags:
-  - optimizer
-  - utils
-  - lifecycle
+role: topic
+parent: UTILS_HUB.md
+summary: "The debug order: metrics, gradient and Jacobian trust, geometry, projection or repair, and shape."
+read_when: "Read when a run misbehaves and the cause is unclear."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Util Lifecycle
 
 Utilities are most useful as a debugging and repair workflow around optimizer runs.

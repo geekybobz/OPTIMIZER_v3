@@ -1,9 +1,11 @@
 ---
-title: Visualization
-type: module_hub
-module: optimizer/visualization
+role: front-door
+parent: ../../README.md
+summary: "System-owned plot data and reusable renderers for Bloch, projection, and control panels."
+read_when: "Read when plotting a system's data."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Visualization
 
 Visualization is split into system-owned data and reusable rendering.

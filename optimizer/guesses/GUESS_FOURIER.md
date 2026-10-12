@@ -1,16 +1,11 @@
 ---
-title: GUESS_FOURIER
-type: method_reference
-module: optimizer/guesses
-methods:
-  - fourier_guess
-tags:
-  - optimizer
-  - guesses
-  - fourier
-  - low_frequency
+role: topic
+parent: GUESSES_HUB.md
+summary: "fourier_guess: deterministic low-frequency sine-series controls."
+read_when: "Read when you want a smooth deterministic start."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Fourier Guess
 
 `fourier_guess` creates deterministic low-frequency sine-series controls.

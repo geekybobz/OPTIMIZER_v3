@@ -1,14 +1,11 @@
 ---
-title: CORE_HUB
-type: module_hub
-module: optimizer/core
-tags:
-  - optimizer
-  - core
-  - engine
-  - hub
+role: front-door
+parent: ../../README.md
+summary: "Entry to the shared chunk engine: system boundary, acceptance, stopping, and the method boundary."
+read_when: "Start here before changing or extending the engine."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Core Documentation Hub
 
 This folder contains the shared chunk engine: the loop every gradient-based optimizer
@@ -28,6 +25,7 @@ Core owns the mechanics that must behave identically for every method:
 ```text
 evaluate current controls
 request an analytical gradient
+apply declared control bounds to engine-based trial controls
 hand the method a StepContext
 validate and evaluate the proposed trial
 accept or reject the trial
@@ -45,6 +43,8 @@ initial-control generation
 step-size schedules
 map-style parallel execution
 ```
+
+## Details
 
 ## Documentation Map
 
@@ -131,6 +131,7 @@ optimizer/core/
   evaluate.py     SystemEvaluator and structured outcomes
   guards.py       MetricGuard and metric_guard
   stopping.py     StoppingConfig, StopTracker, StopDecision
+  curvature.py    matrix-free curvature evidence and classification
 ```
 
 ## Reading Path

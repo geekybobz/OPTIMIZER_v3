@@ -1,14 +1,11 @@
 ---
-title: OLGS Parameters
-type: configuration_contract
-module: optimizer/system_olgs
-tags:
-  - optimizer
-  - system
-  - olgs
-  - parameters
+role: topic
+parent: SYSTEM_OLGS_HUB.md
+summary: "Primary and secondary parameter groups and dict-first construction of OLGS systems."
+read_when: "Read when defining a system's configuration."
+status: active
+reviewed: 2026-10-12
 ---
-
 # OLGS Parameters
 
 OLGS uses two parameter groups:

@@ -1,3 +1,11 @@
+---
+role: topic
+parent: ../../tests/TESTING_HUB.md
+summary: "Contained harmonic-oscillator purification system used as a tracker trial."
+read_when: "Read when running or changing the HO purification trial."
+status: active
+reviewed: 2026-10-12
+---
 # HO purification tracker trial
 
 This contained test system is derived from

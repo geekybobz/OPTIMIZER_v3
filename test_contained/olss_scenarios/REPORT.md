@@ -1,14 +1,11 @@
 ---
-title: OLSS Issues Found
-type: issue_record
-module: optimizer/system_olss
-tags:
-  - optimizer
-  - olss
-  - shooting
-  - validation
+role: deep
+parent: ../../tests/TESTING_HUB.md
+summary: "OLSS issue record: resolution status, original findings, and campaign evidence."
+read_when: "Read when checking an OLSS issue or rerunning the scenario campaign."
+status: active
+reviewed: 2026-10-12
 ---
-
 # OLSS Issues Found
 
 This record began as the 2026-10-11 OLSS robustness review. The original finding
@@ -38,17 +35,21 @@ Additional review findings recorded after the original file:
 | ID | Status | Current result |
 |---|---|---|
 | OLSS-013 | Resolved | Qualification requires independent verification options or a distinct system default and records provenance. |
-| OLSS-014 | Resolved | Numerical-declared Jacobians are checked with an independent step and report independence evidence. |
+| OLSS-014 | Resolved 2026-10-12 | The single separated step could still coincide with the project's own step and pass hollowly; numerical-declared Jacobians are now compared at two separated steps ([2026-10-12 review](../review_2026_10_12/REPORT.md), fix 4). |
 | OLSS-015 | Resolved | Pseudo-arclength checks numerical rank `n-1` and accepts redundant rows. |
 | OLSS-016 | Resolved | Top-level evaluation/gradient/continuation dispatch is family-aware and names the OLSS equivalent. |
 | OLSS-017 | Resolved | OLSS uses `System(primary=..., secondary=...)` and declares both parameter groups. |
 | OLSS-018 | Resolved | Multistart defaults to processes when a factory is available, otherwise serial. |
 | OLSS-019 | Deferred with OLSS-004 | Direct-shooting verification cost and stationarity policy belong to the later solver upgrade. |
 | OLSS-020 | Resolved | Continuation retries with step shrink and grows successful fast steps within declared limits. |
-| OLSS-021 | Deferred | A bounded evaluator cache remains later numerical/runtime work. |
-| OLSS-022 | Deferred | Verification-metric ranking remains a later selection-policy change. |
+| OLSS-021 | Resolved 2026-10-12 | Both evaluators use one bounded least-recently-used cache ([2026-10-12 review](../review_2026_10_12/REPORT.md), issue S-2). |
+| OLSS-022 | Resolved 2026-10-12 | Multistart ranks on verified selection metrics and records `selection_source` ([2026-10-12 review](../review_2026_10_12/REPORT.md), fix 5). |
 | OLSS-023 | Deferred | The current `lm` name still denotes fixed-damping Gauss-Newton; no measured practical deficit justified renaming in this pass. |
 | OLSS-024 | Resolved | `optimizer-system --family olss` generates a contract-shaped system and test. |
+| OLSS-025 | Resolved 2026-10-12 | Evaluation failures after the start become stop reasons; failed seeds and stages are recorded instead of aborting campaigns ([2026-10-12 review](../review_2026_10_12/REPORT.md), fix 1). |
+| OLSS-026 | Resolved 2026-10-12 | Systems declare a verification tolerance; results record the tolerance and its source; natural continuation records every attempt ([2026-10-12 review](../review_2026_10_12/REPORT.md), fix 2). |
+| OLSS-027 | Resolved 2026-10-12 | All OLSS result objects serialize as strict JSON ([2026-10-12 review](../review_2026_10_12/REPORT.md), fix 3). |
+| OLSS-028 | Design | The root-solver update rule is fixed (`newton`, `lm`, `damped`); OLSS root methods become step functions in shared-core phase 4 ([2026-10-12 review](../review_2026_10_12/REPORT.md), issue S-1). |
 
 The high- and medium-priority contract, integration, diagnostic, and workflow gaps
 are therefore closed. The remaining items are explicitly the later numerical or
@@ -69,7 +70,7 @@ dominated the relative-distance test.
 Required follow-up: define one solver-coordinate scaling rule and apply it
 consistently to linear solves, damping, step limits, tangent calculations,
 finite-difference steps, and root deduplication. Residuals must remain the
-unscaled physical residuals required by the [OLSS contract](CONTRACT.md).
+unscaled physical residuals required by the [OLSS contract](../../optimizer/system_olss/CONTRACT.md).
 
 ### OLSS-002 — Dense Jacobians are the only consumed representation
 
@@ -221,13 +222,13 @@ structured result evidence.
 
 ## Evidence
 
-- [Article-shaped and numerical-stress systems](../../test_contained/olss_scenarios/systems.py)
-- [Method compatibility probe](../../test_contained/olss_scenarios/probe.py)
-- [Broad executable scenario campaign](../../test_contained/olss_scenarios/run_scenarios.py)
+- [Article-shaped and numerical-stress systems](systems.py)
+- [Method compatibility probe](probe.py)
+- [Broad executable scenario campaign](run_scenarios.py)
 - [Article scenario tests](../../tests/test_olss_scenarios.py)
 - [Core OLSS robustness tests](../../tests/test_olss.py)
-- [Root and direct solvers](../shooting/solvers.py)
-- [Pseudo-arclength continuation](../shooting/continuation.py)
+- [Root and direct solvers](../../optimizer/shooting/solvers.py)
+- [Pseudo-arclength continuation](../../optimizer/shooting/continuation.py)
 
 Verification performed for this issue record:
 
@@ -249,4 +250,4 @@ cross-family replay tools directly.
 
 ---
 
-[⌂ Home](SYSTEM_OLSS_HUB.md)
+[⌂ Home](../../optimizer/system_olss/SYSTEM_OLSS_HUB.md)

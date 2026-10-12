@@ -1,16 +1,11 @@
 ---
-title: Line Search Optimizer
-type: method_reference
-module: optimizer/optimizers
-method: line_search
-source: optimizer/optimizers/line_search.py
-tags:
-  - optimizer
-  - line_search
-  - gradient
-  - first_order
+role: topic
+parent: OPTIMIZERS_HUB.md
+summary: "Gradient descent with fixed, normalized, backtracking, and Armijo steps."
+read_when: "Read when calling line_search."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Line Search
 
 `line_search` is the auditable gradient-descent family.

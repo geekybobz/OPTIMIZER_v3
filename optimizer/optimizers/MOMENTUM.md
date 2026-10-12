@@ -1,16 +1,11 @@
 ---
-title: Momentum Optimizer
-type: method_reference
-module: optimizer/optimizers
-method: momentum
-source: optimizer/optimizers/momentum.py
-tags:
-  - optimizer
-  - momentum
-  - gradient
-  - first_order
+role: topic
+parent: OPTIMIZERS_HUB.md
+summary: "Heavy-ball, Nesterov, restart, and clipped momentum: arguments and velocity state."
+read_when: "Read when calling momentum."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Momentum
 
 `momentum` is a low-memory gradient optimizer with a velocity buffer.
@@ -59,14 +54,16 @@ clipped
 
 ```text
 variant
-step_size
+step_size            float or schedule object (see the Schedules Hub)
 momentum
 max_step_norm
+gradient_tolerance   stationarity stop, default 1e-8
 state
 warmstart
-accept_metric
-accept_mode
-accept_tolerance
+accept               default: accept every trial that evaluates successfully
+accept_metric        metric for best-so-far tracking
+accept_mode          min or max for best-so-far tracking
+accept_tolerance     used only by the engine default (accept=opt.core.default_accept)
 ```
 
 ## Optimizer State

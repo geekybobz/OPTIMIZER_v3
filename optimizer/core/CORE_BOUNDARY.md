@@ -1,14 +1,11 @@
 ---
-title: Core Boundary
-type: module_boundary
-module: optimizer/core
-tags:
-  - optimizer
-  - core
-  - boundary
-  - architecture
+role: topic
+parent: CORE_HUB.md
+summary: "What belongs in optimizer/core and what does not."
+read_when: "Read before adding shared behavior to the engine."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Core Boundary
 
 This file defines what belongs in `optimizer/core`.

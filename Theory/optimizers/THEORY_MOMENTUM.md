@@ -1,16 +1,11 @@
 ---
-title: THEORY_MOMENTUM
-type: theory_reference
-module: Theory/optimizers
-related_method: optimizer/optimizers/MOMENTUM.md
-tags:
-  - optimizer
-  - theory
-  - momentum
-  - nesterov
-  - first_order
+role: topic
+parent: OPTIMIZER_THEORY_HUB.md
+summary: "Heavy-ball and Nesterov momentum, restarts, and clipping."
+read_when: "Read when choosing a momentum variant or step size."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Momentum Theory
 
 This note gives the mathematical context for:

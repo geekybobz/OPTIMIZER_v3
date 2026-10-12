@@ -1,16 +1,11 @@
 ---
-title: THEORY_LINE_SEARCH
-type: theory_reference
-module: Theory/optimizers
-related_method: optimizer/optimizers/LINE_SEARCH.md
-tags:
-  - optimizer
-  - theory
-  - gradient_descent
-  - line_search
-  - armijo
+role: topic
+parent: OPTIMIZER_THEORY_HUB.md
+summary: "Descent steps, directional derivatives, backtracking, and the Armijo condition."
+read_when: "Read when choosing a line-search variant or step rule."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Gradient Descent and Line Search Theory
 
 This note gives the mathematical context for:

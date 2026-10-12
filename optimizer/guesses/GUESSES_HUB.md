@@ -1,13 +1,11 @@
 ---
-title: GUESSES_HUB
-type: module_hub
-module: optimizer/guesses
-tags:
-  - optimizer
-  - guesses
-  - hub
+role: front-door
+parent: ../../README.md
+summary: "Entry to the initial-control generators: families, common options, and theory."
+read_when: "Start here when choosing an initial control."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Guess Documentation Hub
 
 This folder contains initial-control guess generators for OPTIMIZER v4.
@@ -27,6 +25,8 @@ ControlSpec
 
 They do not evaluate objectives, compute gradients, run optimizers, or inspect
 physical dynamics.
+
+## Details
 
 ## Documentation Map
 

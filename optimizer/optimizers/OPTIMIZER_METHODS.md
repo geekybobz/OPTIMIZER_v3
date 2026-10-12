@@ -1,13 +1,11 @@
 ---
-title: OPTIMIZER_METHODS
-type: method_index
-module: optimizer/optimizers
-tags:
-  - optimizer
-  - methods
-  - api
+role: topic
+parent: OPTIMIZERS_HUB.md
+summary: "Lookup table of the implemented optimizer methods with a suggested workflow."
+read_when: "Read to pick an optimizer quickly."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Optimizer Methods
 
 This is the compact lookup table for implemented optimizer methods.
@@ -67,10 +65,10 @@ reuse Adam moment vectors because Adam private state is not L-BFGS private state
 - [L-BFGS](LBFGS.md)
 - [Nonlinear CG](NONLINEAR_CG.md)
 - [CMA-ES](CMA_ES.md)
-- [Projected source](projected.py)
-- [Newton-CG source](newton_cg.py)
-- [Trust-region source](trust_region.py)
-- [Proximal-gradient source](proximal.py)
+- [Projected Gradient](PROJECTED_GRADIENT.md)
+- [Newton-CG](NEWTON_CG.md)
+- [Trust Region](TRUST_REGION.md)
+- [Proximal Gradient](PROXIMAL_GRADIENT.md)
 
 ## Related Notes
 

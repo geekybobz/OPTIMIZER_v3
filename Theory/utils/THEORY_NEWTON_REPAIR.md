@@ -1,17 +1,11 @@
 ---
-title: THEORY_NEWTON_REPAIR
-type: theory_reference
-module: Theory/utils
-related_method: optimizer/utils/UTIL_REPAIR.md
-tags:
-  - optimizer
-  - utils
-  - theory
-  - repair
-  - newton
-  - lm
+role: topic
+parent: UTILS_THEORY_HUB.md
+summary: "Least-squares and damped Newton steps that reduce a residual vector, with line search and stop reasons."
+read_when: "Read when repairing controls onto residual constraints."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Newton Repair Theory
 
 This note gives the mathematical context for:

@@ -1,16 +1,11 @@
 ---
-title: Nonlinear Conjugate Gradient
-type: method_reference
-module: optimizer/optimizers
-method: nonlinear_cg
-source: optimizer/optimizers/nonlinear_cg.py
-tags:
-  - optimizer
-  - nonlinear_cg
-  - conjugate_gradient
-  - low_memory
+role: topic
+parent: OPTIMIZERS_HUB.md
+summary: "Nonlinear conjugate gradient variants for large control vectors: arguments and direction state."
+read_when: "Read when calling nonlinear_cg."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Nonlinear Conjugate Gradient
 
 `nonlinear_cg` is a low-memory deterministic optimizer for large control vectors.
@@ -59,6 +54,8 @@ variant
 step_size
 max_step_norm
 restart_on_nondescent
+reject_shrink        step multiplier after a rejected trial, default 0.5
+gradient_tolerance   stationarity stop, default 1e-8
 state
 warmstart
 accept_metric

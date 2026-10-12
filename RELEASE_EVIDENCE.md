@@ -1,3 +1,11 @@
+---
+role: deep
+parent: README.md
+summary: "Provenance of the v4.0.4 release: tag, implementation revision, wheel, and test evidence."
+read_when: "Read when checking which revision and wheel the release route installs."
+status: active
+reviewed: 2026-10-12
+---
 # V4 release evidence
 
 This is the current release-evidence record for the single live V4 checkout.

@@ -1,18 +1,11 @@
 ---
-title: GUESS_COMPOSITE
-type: method_reference
-module: optimizer/guesses
-methods:
-  - scale_guess
-  - mix_guess
-  - perturb_guess
-tags:
-  - optimizer
-  - guesses
-  - composite
-  - restart
+role: topic
+parent: GUESSES_HUB.md
+summary: "Building new starting controls by scaling, mixing, and perturbing existing Controls."
+read_when: "Read when restarting from earlier controls."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Composite Guess Helpers
 
 Composite helpers build new starting controls from existing `Controls`.

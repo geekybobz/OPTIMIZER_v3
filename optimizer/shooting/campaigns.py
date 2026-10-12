@@ -7,7 +7,7 @@ from typing import Any, Callable, Iterable, Mapping
 
 import numpy as np
 
-from optimizer.shooting.solvers import solve_shooting
+from optimizer.shooting.solvers import _solve_or_record
 from optimizer.system_olss import MultiStartResult, ShootingResult, ShootingSpec, ShootingVariables
 from optimizer.system_olss import get_shooting_system_spec, roots_equivalent_system
 from optimizer.utils.parallel import ParallelConfig, parallel_map
@@ -21,7 +21,11 @@ class _MultistartJob:
 
 
 def _run_multistart_job(job: _MultistartJob) -> ShootingResult:
-    return solve_shooting(job.factory(), job.seed, **job.options)
+    return _solve_or_record(job.factory(), job.seed, job.options)
+
+
+def _finite_or_inf(value: float) -> float:
+    return float(value) if np.isfinite(value) else float("inf")
 
 
 def _same_root(
@@ -71,7 +75,7 @@ def solve_shooting_multistart(
 
     if cfg.backend == "serial":
         results = [
-            solve_shooting(system if system_factory is None else system_factory(), seed, **options)
+            _solve_or_record(system if system_factory is None else system_factory(), seed, options)
             for seed in seeds
         ]
     else:
@@ -85,6 +89,7 @@ def solve_shooting_multistart(
 
     spec = get_shooting_system_spec(system)
     selection = spec.get("selection")
+    selection_source = None
     if selection is None:
         ranked = list(unique)
         metric = None
@@ -92,9 +97,11 @@ def solve_shooting_multistart(
     else:
         metric = str(selection["metric_id"])
         direction = str(selection["direction"])
+        sources = {_selection_value(result, metric)[1] for result in unique}
+        selection_source = sources.pop() if len(sources) == 1 else ("mixed" if sources else None)
         ranked = sorted(
             unique,
-            key=lambda result: float(result.metrics[metric]),
+            key=lambda result: _selection_value(result, metric)[0],
             reverse=direction == "maximize",
         )
     return MultiStartResult(
@@ -104,7 +111,17 @@ def solve_shooting_multistart(
         ranked=ranked,
         selection_metric=metric,
         selection_direction=direction,
+        selection_source=selection_source,
     )
+
+
+def _selection_value(result: ShootingResult, metric: str) -> tuple[float, str]:
+    """Rank on the verified metric when verification reports it."""
+
+    verification = result.verification
+    if verification is not None and metric in verification.metrics:
+        return float(verification.metrics[metric]), "verification"
+    return float(result.metrics[metric]), "working"
 
 
 def random_shooting_seeds(
@@ -176,7 +193,9 @@ def refine_shooting_seeds(
         parallel=parallel,
         system_factory=system_factory,
     )
-    candidates = initial.ranked or sorted(initial.results, key=lambda item: item.residual_norm)
+    candidates = initial.ranked or sorted(
+        initial.results, key=lambda item: _finite_or_inf(item.residual_norm)
+    )
     elites = candidates[: max(1, int(elite_count))]
     rng = np.random.default_rng(seed)
     bounds_hook = getattr(system, "shooting_bounds", None)

@@ -1,13 +1,11 @@
 ---
-title: OPTIMIZER_STATE_WARMSTART
-type: state_contract
-module: optimizer/optimizers
-tags:
-  - optimizer
-  - state
-  - warmstart
+role: topic
+parent: OPTIMIZERS_HUB.md
+summary: "RunState, WarmStartState, method state keys, and how state carries between chunks and methods."
+read_when: "Read when continuing a run or switching methods."
+status: active
+reviewed: 2026-10-12
 ---
-
 # State and Warmstart
 
 Optimizer calls return an `OptimizerResult`. The final run memory is available at:

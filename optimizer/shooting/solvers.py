@@ -6,8 +6,61 @@ from typing import Any, Callable, Mapping
 
 import numpy as np
 
-from optimizer.shooting.evaluator import ShootingEvaluator, resolve_verification_request
+from optimizer.shooting.evaluator import (
+    ShootingEvaluator,
+    resolve_verification_request,
+    resolve_verification_tolerance,
+)
 from optimizer.system_olss import ShootingResult, ShootingVariables
+
+
+class _InitialEvaluationError(ValueError):
+    """The starting candidate itself cannot be evaluated.
+
+    Mirrors the OLGS engine: an invalid start raises, while failures after the
+    start become named stop reasons.  Coordinators catch this one error type to
+    record a failed seed or continuation stage without hiding programming errors.
+    """
+
+
+def _failure_text(exc: BaseException) -> str:
+    return f"{type(exc).__name__}: {exc}"
+
+
+def _initial_failure_result(
+    system: Any,
+    initial: ShootingVariables,
+    exc: BaseException,
+    *,
+    method: str = "lm",
+) -> ShootingResult:
+    """Structured evidence for a candidate whose starting evaluation failed."""
+
+    from optimizer.system_olss import get_shooting_system_spec
+
+    spec = get_shooting_system_spec(system)
+    return ShootingResult(
+        variables=initial.copy(),
+        residuals=np.full(int(spec["residuals"]["size"]), np.nan),
+        metrics={},
+        solver_converged=False,
+        verified=False,
+        qualified=False,
+        iterations=0,
+        method=str(method),
+        stop_reason="initial_evaluation_failed",
+        jacobian_source=str(spec["derivatives"]["jacobian"]["source"]),
+        error=str(exc),
+    )
+
+
+def _solve_or_record(system: Any, initial: ShootingVariables, options: Mapping[str, Any]) -> ShootingResult:
+    """Run one coordinator solve; an unusable start becomes a failed result."""
+
+    try:
+        return solve_shooting(system, initial, **dict(options))
+    except _InitialEvaluationError as exc:
+        return _initial_failure_result(system, initial, exc, method=dict(options).get("method", "lm"))
 
 
 def _solve_delta(jacobian: np.ndarray, residuals: np.ndarray, method: str, damping: float) -> np.ndarray:
@@ -47,13 +100,11 @@ def solve_shooting(
     if method not in {"newton", "lm", "damped"}:
         raise ValueError("method must be 'newton', 'lm', or 'damped'.")
     tolerance = float(tolerance)
-    verification_tolerance = tolerance if verification_tolerance is None else float(verification_tolerance)
     damping = float(damping)
-    if (
-        not np.isfinite(tolerance)
-        or not np.isfinite(verification_tolerance)
-        or tolerance < 0.0
-        or verification_tolerance < 0.0
+    if not np.isfinite(tolerance) or tolerance < 0.0:
+        raise ValueError("Tolerances must be finite and nonnegative.")
+    if verification_tolerance is not None and (
+        not np.isfinite(float(verification_tolerance)) or float(verification_tolerance) < 0.0
     ):
         raise ValueError("Tolerances must be finite and nonnegative.")
     if damping < 0.0 or not np.isfinite(damping):
@@ -68,6 +119,11 @@ def solve_shooting(
         raise ValueError("max_step_norm must be finite and positive when provided.")
 
     runtime = evaluator or ShootingEvaluator(system)
+    verification_tolerance, tolerance_source = resolve_verification_tolerance(
+        runtime.system_spec,
+        working_tolerance=tolerance,
+        verification_tolerance=verification_tolerance,
+    )
     current = initial.copy(name=initial.name)
     history: list[dict[str, Any]] = (
         [dict(row) for row in previous_result.history] if previous_result is not None else []
@@ -96,8 +152,23 @@ def solve_shooting(
     )
 
     bounds = runtime.bounds()
-    for iteration in range(int(maxiter) + 1):
+    error: str | None = None
+    try:
         residuals, jacobian = runtime.residuals_and_jacobian(current, options=options)
+    except Exception as exc:  # noqa: BLE001 - an invalid start raises, as in the OLGS engine.
+        raise _InitialEvaluationError(
+            f"initial shooting variables failed evaluation: {_failure_text(exc)}"
+        ) from exc
+    current_residuals = residuals
+    for iteration in range(int(maxiter) + 1):
+        if iteration > 0:
+            try:
+                residuals, jacobian = runtime.residuals_and_jacobian(current, options=options)
+            except Exception as exc:  # noqa: BLE001 - recorded as a clean stop.
+                stop_reason = "jacobian_failed"
+                error = _failure_text(exc)
+                break
+            current_residuals = residuals
         norm = float(np.linalg.norm(residuals))
         max_abs = float(np.max(np.abs(residuals))) if residuals.size else 0.0
         row: dict[str, Any] = {
@@ -115,10 +186,14 @@ def solve_shooting(
             emit("iteration", row)
             break
 
-        delta = _solve_delta(jacobian, residuals, method, damping)
-        raw_norm = float(np.linalg.norm(delta))
         normal_gradient_norm = float(np.linalg.norm(jacobian.T @ residuals))
         row["normal_gradient_norm"] = normal_gradient_norm
+        try:
+            delta = _solve_delta(jacobian, residuals, method, damping)
+        except np.linalg.LinAlgError as exc:
+            delta = np.full(current.spec.size, np.nan)
+            error = _failure_text(exc)
+        raw_norm = float(np.linalg.norm(delta))
         if not np.all(np.isfinite(delta)):
             stop_reason = "singular_step"
             emit("iteration", row)
@@ -136,6 +211,10 @@ def solve_shooting(
         scale = 1.0
         candidate_norm = norm
         candidate = current
+        candidate_residuals = residuals
+        tried = 0
+        failed_trials = 0
+        trial_error: str | None = None
         for _ in range(attempts):
             trial_values = current.flatten(copy=False) + scale * delta
             if bounds is not None:
@@ -143,12 +222,20 @@ def solve_shooting(
                 if np.array_equal(trial_values, current.flatten(copy=False)):
                     stop_reason = "bound_stalled"
                     break
-            trial = current.with_flat(trial_values, name="shooting_trial")
-            trial_residuals = runtime.residuals(trial, options=options)
+            tried += 1
+            try:
+                trial = current.with_flat(trial_values, name="shooting_trial")
+                trial_residuals = runtime.residuals(trial, options=options)
+            except Exception as exc:  # noqa: BLE001 - a failed trial is a rejection, as in the OLGS engine.
+                failed_trials += 1
+                trial_error = _failure_text(exc)
+                scale *= shrink
+                continue
             trial_norm = float(np.linalg.norm(trial_residuals))
             if trial_norm < candidate_norm:
                 candidate = trial
                 candidate_norm = trial_norm
+                candidate_residuals = trial_residuals
                 accepted = True
                 break
             scale *= shrink
@@ -159,24 +246,36 @@ def solve_shooting(
                 "accepted": accepted,
                 "accepted_scale": scale if accepted else 0.0,
                 "trial_residual_norm": candidate_norm,
+                "failed_trial_evaluations": failed_trials,
             }
         )
+        if trial_error is not None:
+            row["trial_error"] = trial_error
         emit("iteration", row)
         if not accepted:
             if stop_reason != "bound_stalled":
-                stop_reason = (
-                    "least_squares_stationary"
-                    if normal_gradient_norm <= max(tolerance, np.sqrt(np.finfo(float).eps))
-                    else "line_search_failed"
-                )
+                if tried and failed_trials == tried:
+                    stop_reason = "nonfinite_trial"
+                    error = trial_error
+                elif normal_gradient_norm <= max(tolerance, np.sqrt(np.finfo(float).eps)):
+                    stop_reason = "least_squares_stationary"
+                else:
+                    stop_reason = "line_search_failed"
             break
         current = candidate
+        current_residuals = candidate_residuals
 
-    final_residuals = runtime.residuals(current, options=options)
-    metrics = runtime.metrics(current, residuals=final_residuals, options=options)
+    final_residuals = current_residuals
+    try:
+        metrics = runtime.metrics(current, residuals=final_residuals, options=options)
+    except Exception as exc:  # noqa: BLE001 - declared metrics are required for qualification.
+        metrics = ShootingEvaluator._base_metrics(final_residuals)
+        error = _failure_text(exc)
+        if solver_converged:
+            stop_reason = "evaluation_failed"
     verification = None
     verified = False
-    if solver_converged:
+    if solver_converged and stop_reason != "evaluation_failed":
         resolved_verification_options, independent, independence_source = (
             resolve_verification_request(
                 runtime.system_spec,
@@ -184,26 +283,32 @@ def solve_shooting(
                 verification_options=verification_options,
             )
         )
-        verification = runtime.verify(
-            current,
-            options=resolved_verification_options,
-            independent=independent,
-            independence_source=independence_source,
-        )
-        named_checks_passed = all(check.passed for check in verification.checks)
-        verified = bool(
-            verification.independent
-            and
-            verification.numerical_success
-            and named_checks_passed
-            and verification.residual_norm <= verification_tolerance
-        )
-        if not verified:
-            stop_reason = (
-                "verification_failed"
-                if verification.independent
-                else "verification_not_independent"
+        try:
+            verification = runtime.verify(
+                current,
+                options=resolved_verification_options,
+                independent=independent,
+                independence_source=independence_source,
             )
+        except Exception as exc:  # noqa: BLE001 - a failed verification cannot qualify.
+            verification = None
+            error = _failure_text(exc)
+            stop_reason = "verification_failed"
+        if verification is not None:
+            named_checks_passed = all(check.passed for check in verification.checks)
+            verified = bool(
+                verification.independent
+                and
+                verification.numerical_success
+                and named_checks_passed
+                and verification.residual_norm <= verification_tolerance
+            )
+            if not verified:
+                stop_reason = (
+                    "verification_failed"
+                    if verification.independent
+                    else "verification_not_independent"
+                )
     source = runtime.system_spec["derivatives"]["jacobian"]["source"]
     result = ShootingResult(
         variables=current,
@@ -219,6 +324,9 @@ def solve_shooting(
         verification=verification,
         counters=runtime.counters(compact=True),
         history=history,
+        error=error,
+        verification_tolerance=verification_tolerance,
+        verification_tolerance_source=tolerance_source,
     )
     emit(
         "terminal",
@@ -231,6 +339,7 @@ def solve_shooting(
             "iterations": result.iterations,
             "residual_norm": result.residual_norm,
             "counters": dict(result.counters),
+            "error": result.error,
         },
     )
     return result
@@ -280,9 +389,18 @@ def solve_direct_shooting(
     current_cost = float(metrics[metric_id])
     direct_history: list[dict[str, Any]] = []
     stop_reason = "maxiter"
+    error: str | None = None
     for iteration in range(int(maxiter)):
-        residuals, jacobian = runtime.residuals_and_jacobian(current, options=options)
-        gradient = direction_sign * runtime.cost_gradient(current, options=options)
+        try:
+            residuals, jacobian = runtime.residuals_and_jacobian(current, options=options)
+        except Exception as exc:  # noqa: BLE001 - recorded as a clean stop.
+            stop_reason, error = "jacobian_failed", _failure_text(exc)
+            break
+        try:
+            gradient = direction_sign * runtime.cost_gradient(current, options=options)
+        except Exception as exc:  # noqa: BLE001 - recorded as a clean stop.
+            stop_reason, error = "cost_gradient_failed", _failure_text(exc)
+            break
         gram = jacobian @ jacobian.T + float(damping) * np.eye(jacobian.shape[0])
         multiplier = np.linalg.lstsq(gram, jacobian @ gradient, rcond=None)[0]
         tangent_gradient = gradient - jacobian.T @ multiplier
@@ -299,19 +417,26 @@ def solve_direct_shooting(
             break
         accepted = False
         scale = float(step_size)
+        failed_trials = 0
         for _ in range(12):
-            trial = current.with_flat(current.flatten(copy=False) - scale * tangent_gradient)
-            corrected = solve_shooting(
-                system,
-                trial,
-                method="newton",
-                tolerance=tolerance,
-                verification_tolerance=verification_tolerance,
-                maxiter=correction_maxiter,
-                options=options,
-                verification_options=verification_options,
-                evaluator=runtime,
-            )
+            try:
+                trial = current.with_flat(current.flatten(copy=False) - scale * tangent_gradient)
+                corrected = solve_shooting(
+                    system,
+                    trial,
+                    method="newton",
+                    tolerance=tolerance,
+                    verification_tolerance=verification_tolerance,
+                    maxiter=correction_maxiter,
+                    options=options,
+                    verification_options=verification_options,
+                    evaluator=runtime,
+                )
+            except ValueError as exc:  # non-finite trial or a trial start that cannot be evaluated
+                failed_trials += 1
+                error = _failure_text(exc)
+                scale *= 0.5
+                continue
             if corrected.qualified:
                 trial_metrics = runtime.metrics(corrected.variables, options=options)
                 trial_cost = float(trial_metrics[metric_id])
@@ -323,7 +448,13 @@ def solve_direct_shooting(
                     accepted = True
                     break
             scale *= 0.5
-        row.update({"accepted": accepted, "accepted_step": scale if accepted else 0.0})
+        row.update(
+            {
+                "accepted": accepted,
+                "accepted_step": scale if accepted else 0.0,
+                "failed_trial_evaluations": failed_trials,
+            }
+        )
         if not accepted:
             stop_reason = "cost_line_search_failed"
             break
@@ -344,4 +475,6 @@ def solve_direct_shooting(
     final.history = direct_history + final.history
     final.metrics = runtime.metrics(final.variables, options=options)
     final.counters = runtime.counters(compact=True)
+    if final.error is None:
+        final.error = error
     return final

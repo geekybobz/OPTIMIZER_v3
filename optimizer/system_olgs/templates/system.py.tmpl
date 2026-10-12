@@ -28,6 +28,8 @@ class __CLASS_NAME__:
         self.primary = {**primary_defaults, **dict(primary or {})}
         self.secondary = {**secondary_defaults, **dict(secondary or {})}
         # TODO: reject unknown keys and validate physical/grid consistency.
+        self._forward_key: bytes | None = None
+        self._forward: dict[str, Any] = {}
 
     def system_spec(self) -> dict[str, Any]:
         return basic_system_spec(
@@ -53,15 +55,52 @@ class __CLASS_NAME__:
             dt=float(self.primary["dt"]),
         )
 
+    # Physics: forward propagation -> backward propagation -> gradient.
+    # The optimizer evaluates a trial and then asks for the gradient at the
+    # same controls once the trial is accepted. Keeping the last forward pass
+    # makes each iteration cost one forward and one backward propagation.
+
+    def forward_prop(self, controls: Controls) -> dict[str, Any]:
+        """Forward propagation for these controls, reused while they are unchanged."""
+
+        key = controls.as_matrix(copy=False).tobytes()
+        if self._forward_key != key:
+            self._forward = self._propagate_forward(controls)
+            self._forward_key = key
+        return self._forward
+
+    def _propagate_forward(self, controls: Controls) -> dict[str, Any]:
+        # TODO: propagate from the initial state over the time grid and return
+        # what evaluate and back_prop need, for example the state at every step.
+        raise NotImplementedError("TODO: implement forward propagation.")
+
+    def back_prop(self, controls: Controls) -> dict[str, Any]:
+        """Backward (adjoint) propagation from the terminal condition."""
+
+        forward = self.forward_prop(controls)
+        # TODO: propagate the adjoint backward through the stored forward
+        # quantities and return it, for example the costate at every step.
+        raise NotImplementedError("TODO: implement backward propagation.")
+
     def evaluate(self, controls: Controls) -> dict[str, Any]:
         """Return declared metrics including finite scalar J."""
 
+        forward = self.forward_prop(controls)
+        # TODO: compute J and every metric declared in system_spec() from `forward`.
         raise NotImplementedError("TODO: implement the system-owned analytical objective.")
 
     def gradient(self, controls: Controls) -> Controls:
         """Return analytical dJ/du in the input control layout."""
 
+        forward = self.forward_prop(controls)
+        backward = self.back_prop(controls)
+        # TODO: assemble dJ/du from `forward` and `backward` in control row order.
         raise NotImplementedError("TODO: implement the analytical gradient; do not use a silent fallback.")
+
+    def cache_reset(self) -> None:
+        """Drop the cached forward propagation."""
+
+        self._forward_key, self._forward = None, {}
 
     def with_secondary(self, **updates: Any) -> "__CLASS_NAME__":
         secondary = dict(self.secondary)

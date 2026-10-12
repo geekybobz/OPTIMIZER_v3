@@ -1,13 +1,11 @@
 ---
-title: GUESS_LIFECYCLE
-type: computation_flow
-module: optimizer/guesses
-tags:
-  - optimizer
-  - guesses
-  - lifecycle
+role: topic
+parent: GUESSES_HUB.md
+summary: "The steps a fresh or composite guess passes through, its metadata, and validation."
+read_when: "Read when a guess's metadata or validation needs explaining."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Guess Lifecycle
 
 Most fresh guess functions follow the same path.

@@ -17,7 +17,13 @@ class GeneratedSystemContractTests(unittest.TestCase):
         self.assertEqual(spec["controls"]["control_dim"], controls.control_dim)
         self.assertTrue(probe_system(system).required_ok)
 
-    # TODO: add an analytical-gradient verification after evaluate/gradient exist.
+    # TODO: once evaluate and gradient exist, check the analytical gradient:
+    #
+    # def test_gradient_matches_finite_differences(self):
+    #     import optimizer as opt
+    #     system = __CLASS_NAME__()
+    #     controls = opt.guesses.random_fourier_guess(system, amplitude=0.1, seed=1)
+    #     self.assertTrue(opt.utils.verify_gradient(system, controls)["passed"])
 
 
 if __name__ == "__main__":

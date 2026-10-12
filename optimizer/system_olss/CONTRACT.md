@@ -1,133 +1,125 @@
 ---
-title: OLSS Contract
-type: api_contract
-module: optimizer/system_olss
-tags:
-  - optimizer
-  - system
-  - olss
-  - shooting
+role: topic
+parent: SYSTEM_OLSS_HUB.md
+summary: "Required and optional project-system operations for the OLSS contract."
+read_when: "Read when implementing an OLSS system or validating a shooting-system call."
+status: active
+reviewed: 2026-10-12
 ---
-
 # OLSS Contract
 
-OLSS is strict about optimizer-facing transactions and leaves the physical shooting
-formulation entirely inside the project system.
+OLSS is strict about optimizer-facing operations while leaving the physical
+shooting formulation inside the project system.
 
 ## Required calls
 
-| Call | Return | Requirement |
-|---|---|---|
-| `system_spec()` | Static mapping | Family, identity, variables, residuals, metrics, derivatives, capabilities, and parameters; no propagation |
-| `shooting_spec()` | `ShootingSpec` | One ordered real-valued variable layout |
-| `residuals(z, options=...)` | Array `(m,)` | Complete finite unscaled residual vector |
-| `jacobian(z, options=...)` | Matrix `(m,n)` | Derivative of exactly the declared residual vector |
-| `evaluate(z, options=...)` | Metrics mapping | All required declared metrics |
-| `verify(z, options=...)` | `ShootingVerification` or equivalent mapping | Independently evaluated residuals, metrics, options, and numerical status |
-| `with_secondary(**updates)` | New OLSS system | Immutable validated staged reconfiguration |
+| Call | Input | Output | Core invariant |
+|---|---|---|---|
+| `system_spec()` | none | static mapping | Complete `optimizer.olss-system-spec/v1`; no propagation |
+| `shooting_spec()` | none | `ShootingSpec` | One ordered, real-valued variable layout |
+| `residuals(z, options=...)` | complete `ShootingVariables` | finite array `(m,)` | Complete, unscaled physical residual vector |
+| `jacobian(z, options=...)` | complete `ShootingVariables` | finite matrix `(m,n)` | Derivative of exactly the declared residual vector |
+| `evaluate(z, options=...)` | complete `ShootingVariables` | metrics mapping | Includes every required declared metric |
+| `verify(z, options=...)` | complete `ShootingVariables` | `ShootingVerification` or equivalent mapping | Independent numerical and project acceptance evidence |
+| `with_secondary(**updates)` | named secondary updates | new OLSS system | Immutable, validated staged reconfiguration |
 
-Subclassing `OLSS` is optional. Its inherited `evaluate` and `verify` methods are
-sufficient when the only metrics are `residual_norm` and `residual_max_abs`.
+Subclassing `OLSS` is optional. The base class can supply `evaluate` and
+`verify` when the only metrics are `residual_norm` and
+`residual_max_abs`.
 
-All numerical calls take complete `ShootingVariables`. They must not mutate the
-candidate or depend on an earlier preparatory call.
+## Call rules
 
-## Variable layout
+### `system_spec()`
 
-`ShootingSpec` contains ordered `ShootingBlock` objects. Each block declares:
+Declares identity, variable layout, parameter groups, residual groups, metrics,
+Jacobian provenance, optional selection metric, capabilities, reconstruction,
+default verification options, and an optional default verification tolerance.
+It must be static and must not run the model.
 
-```text
-unique name
-shape
-meaning
-optional unit
-positive characteristic scale
-role
-optional metadata
-```
+The complete schema is owned by [OLSS Data Model](DATA_MODEL.md).
 
-The role `continuation_parameter` marks a parameter included directly in the
-shooting vector. Its Jacobian column then supports natural or pseudo-arclength
-continuation without rebuilding the system at every corrector step.
+### `shooting_spec()`
 
-Complex physical quantities require an explicitly documented real/imaginary
-packing convention.
+Returns the same ordered layout declared by `system_spec()["variables"]`.
+Every candidate, bound, Jacobian column, seed, and continuation tangent uses
+this order.
 
-## Residual and derivative rules
+### `residuals(z, options=...)`
 
-- Residuals exposed to the solver are unscaled physical residuals.
-- `residual_norm` is their Euclidean 2-norm.
-- Solver scaling and tolerances belong to the numerical method.
-- The Jacobian may be analytical, variational, automatic, or explicitly declared
-  numerical differentiation; there is no silent fallback.
-- `verify_shooting_jacobian` is an explicit diagnostic and does not replace the
-  system's declared derivative during a run.
-- A dense Jacobian is the current solver representation. Sparse and operator hooks
-  are discoverable extension points but are not yet consumed by the dense solvers.
+Returns the complete physical residual vector. Residual components may represent
+terminal mismatch, transversality, integral constraints, junction matching, or
+other project equations. They remain unscaled; solver scaling is numerical
+policy.
 
-## Accuracy and verification
+### `jacobian(z, options=...)`
 
-Evaluation options are per-call mappings. They may select integration tolerances,
-step counts, grids, or derivative accuracy without reconstructing the system.
+Returns `d residuals / d z`. The declared source is one of `analytical`,
+`variational`, `automatic`, or `numerical-declared`. No silent fallback changes
+the declared derivative during a solve.
 
-The solver first checks its working residual tolerance. A candidate is qualified
-only when `verify` also completes successfully and its residual norm satisfies the
-verification tolerance. A system with additional required metrics includes them in
-both `evaluate` and `verify`.
+### `evaluate(z, options=...)`
 
-Independent verification is mandatory for qualification: explicit
-`verification_options` or a distinct system-declared default must differ from the
-working options. `ShootingVerification.checks` may additionally contain named
-`VerificationCheck` records. Every supplied check must pass before the candidate is
-qualified; the names and physics remain project-owned.
+Returns named metrics declared in `system_spec()`. The mandatory feasibility
+metrics are `residual_norm` and `residual_max_abs`. A project may add energy,
+fidelity, stationarity, or other metrics.
 
-`simulate` is optional export functionality and has no formal acceptance meaning.
+### `verify(z, options=...)`
+
+Recomputes the candidate at distinct accuracy or through another declared
+independent route. A solver-converged point cannot be qualified without
+independent verification. See [OLSS Verification](VERIFICATION.md).
+
+### `with_secondary(**updates)`
+
+Returns a new system preserving primary configuration and replacing only named
+secondary values. It is the system boundary used by natural continuation.
+
+## Shape and mutation invariants
+
+- `n = shooting_spec().size`.
+- `m = system_spec()["residuals"]["size"]`.
+- `residuals` has shape `(m,)`.
+- `jacobian` has shape `(m, n)`.
+- Numerical arrays must be finite unless a metric explicitly permits otherwise.
+- Calls must not mutate `ShootingVariables` or depend on a previous call.
+- Complex physical quantities use a project-documented real/imaginary packing.
+- Per-call `options` select accuracy or numerical realization; they do not
+  mutate construction parameters.
 
 ## Optional capabilities
 
-| Hook | Consumer |
-|---|---|
-| `residuals_and_jacobian` | Root solvers reuse shared propagation and sensitivities |
-| `shooting_bounds` | Root-step clipping |
-| `cost_gradient` | Direct cost optimization on the feasible residual set |
-| `recover_controls` | Project export and cross-formulation checks |
-| `sparse_jacobian` | Future large multiple-shooting solver |
-| `jacobian_operator` | Future matrix-free solver |
-| `forward_prop`, `simulate`, `plot_data` | Explicit inspection and export |
+| Hook | Input and output | Consumer |
+|---|---|---|
+| `residuals_and_jacobian` | variables/options → residual vector and Jacobian | Reuse one propagation and sensitivity calculation |
+| `shooting_bounds` | none → lower and upper flat arrays | Root-step clipping and seed bounds |
+| `cost_gradient` | variables/options → array `(n,)` | Direct constrained-cost shooting |
+| `recover_controls` | variables and requested grid → `Controls` or values mapping | Cross-formulation replay and export |
+| `roots_equivalent` | two candidates and tolerance → bool | Project symmetry or gauge deduplication |
+| `sparse_jacobian` | project-defined sparse matrix | Future sparse solver |
+| `jacobian_operator` | project-defined operator | Future matrix-free solver |
+| `forward_prop`, `simulate`, `plot_data` | project-defined inspection products | Explicit inspection and export |
 
-A declared selection metric is enough to rank a finite collection of qualified
-roots. Direct shooting additionally requires `cost_gradient` in shooting-variable
-coordinates.
+## Transactions
 
-## Parallel reconstruction
-
-Serial execution is the default. Parallel multistart requires a caller-supplied
-factory so every thread or process obtains a separate system instance. Process
-factories must be importable and pickle-compatible with the host's process model.
+The generic adapter maps `residuals`, `jacobian`, `evaluate`, and `verify` to
+`payload["variables"]` plus the request `options`. `system_spec` and
+`shooting_spec` accept neither payload nor options. See
+[System Transactions](../TRANSACTIONS.md) for the envelope and error rules.
 
 ## Evidence boundary
 
-`ShootingResult` separately records:
+The contract establishes a correctly shaped, declared, and independently
+verified shooting root. It does not establish that the root is a local or
+global optimum. Selection metrics rank only the finite set of qualified roots
+provided to a campaign.
 
-```text
-solver_converged
-verified
-qualified
-stop_reason
-residual vector and norms
-declared metrics
-Jacobian provenance
-verification evidence
-evaluation counters
-iteration history
-```
+## Connections
 
-`solve_shooting` can append to a previous result history and emits optional
-start/iteration/terminal event dictionaries. These are the execution boundary for
-shared core, CLI, and MCP consumers; they do not add logging responsibility to the
-OLSS system.
-
-None of these fields is a local- or global-optimality certificate.
+- Related: [OLSS System Hub](SYSTEM_OLSS_HUB.md)
+- Related: [OLSS Data Model](DATA_MODEL.md)
+- Related: [OLSS Verification](VERIFICATION.md)
+- Related: [Shooting Methods](../shooting/SHOOTING_METHODS.md)
+- Related: [System Transactions](../TRANSACTIONS.md)
 
 ---
 

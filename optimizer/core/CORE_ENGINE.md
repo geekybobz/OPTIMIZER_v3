@@ -1,14 +1,11 @@
 ---
-title: Core Engine
-type: engine_policy
-module: optimizer/core
-tags:
-  - optimizer
-  - core
-  - engine
-  - api
+role: topic
+parent: CORE_HUB.md
+summary: "run_chunk: arguments, starting point, stopping, acceptance, checkpoints, and records."
+read_when: "Read when calling run_chunk directly or interpreting what a chunk records."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Core Engine
 
 This file documents `run_chunk`: its argument surface, how a chunk chooses its

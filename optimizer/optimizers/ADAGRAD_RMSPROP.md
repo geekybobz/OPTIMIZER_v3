@@ -1,17 +1,11 @@
 ---
-title: AdaGrad and RMSProp
-type: method_reference
-module: optimizer/optimizers
-method: adagrad_rmsprop
-source: optimizer/optimizers/adaptive.py
-tags:
-  - optimizer
-  - adagrad
-  - rmsprop
-  - adaptive
-  - first_order
+role: topic
+parent: OPTIMIZERS_HUB.md
+summary: "AdaGrad and RMSProp: per-coordinate scaling by squared-gradient history, arguments, and state."
+read_when: "Read when calling adagrad or rmsprop."
+status: active
+reviewed: 2026-10-12
 ---
-
 # AdaGrad and RMSProp
 
 `adagrad` and `rmsprop` are adaptive first-order methods without Adam's first-moment
@@ -63,15 +57,17 @@ AdaGrad's accumulator only grows. RMSProp's accumulator is a moving average.
 ## Important Arguments
 
 ```text
-step_size
+step_size            float or schedule object (see the Schedules Hub)
 eps
 initial_accumulator
 max_step_norm
+gradient_tolerance   stationarity stop, default 1e-8
 state
 warmstart
-accept_metric
-accept_mode
-accept_tolerance
+accept               default: accept every trial that evaluates successfully
+accept_metric        metric for best-so-far tracking
+accept_mode          min or max for best-so-far tracking
+accept_tolerance     used only by the engine default (accept=opt.core.default_accept)
 ```
 
 RMSProp additionally accepts:

@@ -1,3 +1,11 @@
+---
+role: front-door
+parent: ../README.md
+summary: "Read-only reader for tracker run folders: receipts, timelines, state, and checkpoint references."
+read_when: "Read when inspecting a tracker run folder."
+status: active
+reviewed: 2026-10-12
+---
 # Standalone optimization-log reader
 
 `optimizer_log` is the read-only boundary for tracker run files. It reads and

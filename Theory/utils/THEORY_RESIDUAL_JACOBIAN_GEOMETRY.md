@@ -1,17 +1,11 @@
 ---
-title: THEORY_RESIDUAL_JACOBIAN_GEOMETRY
-type: theory_reference
-module: Theory/utils
-related_method: optimizer/utils/UTIL_RESIDUAL_GEOMETRY.md
-tags:
-  - optimizer
-  - utils
-  - theory
-  - residual
-  - jacobian
-  - geometry
+role: topic
+parent: UTILS_THEORY_HUB.md
+summary: "Local residual linearization: rank, singular values, condition number, and nullspace dimension."
+read_when: "Read when interpreting a geometry probe."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Residual Jacobian Geometry Theory
 
 This note gives the mathematical context for:

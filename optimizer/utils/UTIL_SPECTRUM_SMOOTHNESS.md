@@ -1,19 +1,11 @@
 ---
-title: UTIL_SPECTRUM_SMOOTHNESS
-type: category_reference
-module: optimizer/utils
-source: optimizer/utils/spectrum.py
-methods:
-  - control_spectrum
-  - smoothness_report
-tags:
-  - optimizer
-  - utils
-  - spectrum
-  - smoothness
-  - diagnostics
+role: topic
+parent: UTILS_HUB.md
+summary: "Control spectra and smoothness measures that leave controls unchanged."
+read_when: "Read when checking how smooth or band-limited a control is."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Spectrum and Smoothness
 
 Spectrum and smoothness utilities measure pulse shape without changing controls.

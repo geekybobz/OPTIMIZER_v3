@@ -1,14 +1,11 @@
 ---
-title: GUESS_COMMON_API
-type: common_api
-module: optimizer/guesses
-source: optimizer/guesses/base.py
-tags:
-  - optimizer
-  - guesses
-  - common_api
+role: topic
+parent: GUESSES_HUB.md
+summary: "Shared guess options: target resolution, time grid, channels, envelopes, endpoints, and scaling."
+read_when: "Read when a guess option behaves differently than expected."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Guess Common API
 
 `base.py` owns shared behavior used by simple, harmonic, random, and composite guess

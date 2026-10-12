@@ -1,14 +1,11 @@
 ---
-title: OLGS Computation Lifecycle
-type: computation_flow
-module: optimizer/system_olgs
-tags:
-  - optimizer
-  - system
-  - olgs
-  - lifecycle
+role: topic
+parent: SYSTEM_OLGS_HUB.md
+summary: "How an OLGS system goes from controls to metrics and gradients, with one propagation per iteration."
+read_when: "Read when implementing evaluate and gradient for an OLGS system."
+status: active
+reviewed: 2026-10-12
 ---
-
 # OLGS Computation Lifecycle
 
 This file defines how an OLGS system should move from controls to metrics and
@@ -38,6 +35,25 @@ value_and_gradient(controls)
 ```
 
 but this is optional.
+
+## One propagation per iteration
+
+Each optimizer iteration evaluates a trial and, once it is accepted, asks for the
+gradient at the same controls. Keep the last forward propagation, keyed by the
+control values, and reuse it in `back_prop` and `gradient`:
+
+```text
+evaluate(trial)    -> forward_prop runs and is kept
+gradient(trial)    -> forward_prop reused, back_prop runs, gradient assembled
+```
+
+An iteration then costs one forward and one backward propagation. Without the
+cache the forward propagation runs again inside `gradient`. The scaffold from
+`optimizer-system` already has this structure: `forward_prop` with the cache,
+`_propagate_forward`, `back_prop`, `evaluate`, `gradient`, and `cache_reset`.
+`with_secondary` returns a new system, so a parameter change never reuses a
+stale propagation. A system that provides `value_and_gradient` instead is
+evaluated through it under standard acceptance, with the same effect.
 
 ## `forward_prop`
 

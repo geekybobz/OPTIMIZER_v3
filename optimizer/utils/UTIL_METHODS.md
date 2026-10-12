@@ -1,13 +1,11 @@
 ---
-title: UTIL_METHODS
-type: method_index
-module: optimizer/utils
-tags:
-  - optimizer
-  - utils
-  - methods
+role: topic
+parent: UTILS_HUB.md
+summary: "Index of the public utilities by category."
+read_when: "Read to find a utility quickly."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Util Methods
 
 This note is the compact index of public utilities.
@@ -18,6 +16,10 @@ This note is the compact index of public utilities.
 |---|---|---|
 | `metric_report` | Evaluate and summarize current metrics. | [Diagnostics](UTIL_DIAGNOSTICS.md) |
 | `diagnostic_report` | Summarize system hooks, controls, metrics, gradient, and residuals. | [Diagnostics](UTIL_DIAGNOSTICS.md) |
+| `diagnose_run` | Classify a short OLGS or OLSS history without rerunning the system. | [Diagnostics](UTIL_DIAGNOSTICS.md) |
+| `curvature_probe` | Estimate local curvature, negative-curvature evidence, and a suggested gradient step. | [Diagnostics](UTIL_DIAGNOSTICS.md) |
+| `compare_methods` | Run selected optimizers briefly from identical controls and rank their declared objective. | [Diagnostics](UTIL_DIAGNOSTICS.md) |
+| `shooting_geometry_probe` | Report OLSS Jacobian rank, conditioning, weak blocks, and residual groups. | [Diagnostics](UTIL_DIAGNOSTICS.md) |
 
 ## Derivative Checks
 

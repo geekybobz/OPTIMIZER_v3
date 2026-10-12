@@ -1,16 +1,11 @@
 ---
-title: L-BFGS Optimizer
-type: method_reference
-module: optimizer/optimizers
-method: lbfgs
-source: optimizer/optimizers/lbfgs.py
-tags:
-  - optimizer
-  - lbfgs
-  - quasi_newton
-  - polish
+role: topic
+parent: OPTIMIZERS_HUB.md
+summary: "L-BFGS polish: arguments, rejection shrink, and curvature-history state."
+read_when: "Read when calling lbfgs or switching to it from another method."
+status: active
+reviewed: 2026-10-12
 ---
-
 # L-BFGS
 
 `lbfgs` is a limited-memory quasi-Newton polish method.
@@ -45,6 +40,8 @@ history_size
 step_size
 curvature_eps
 max_step_norm
+reject_shrink        step multiplier after a rejected trial, default 0.5
+gradient_tolerance   stationarity stop, default 1e-8
 state
 warmstart
 accept_metric

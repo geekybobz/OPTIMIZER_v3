@@ -90,7 +90,7 @@ def _workspace_inventory() -> dict[str, Any]:
 
     documentation = [
         ROOT / "README.md",
-        ROOT / "STABILIZATION.md",
+        ROOT / "INDEX.md",
         ROOT / "optimizer" / "tracker" / "TRACKER_HUB.md",
         ROOT / "optimizer" / "system_olgs" / "CONTRACT.md",
         ROOT / "optimizer" / "core" / "CORE_ENGINE.md",

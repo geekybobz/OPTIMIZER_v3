@@ -118,9 +118,9 @@ class ShootingVerification:
             "residual_max_abs": self.residual_max_abs,
             "metrics": _plain(self.metrics),
             "options": _plain(self.options),
-            "numerical_success": self.numerical_success,
+            "numerical_success": bool(self.numerical_success),
             "message": self.message,
-            "independent": self.independent,
+            "independent": bool(self.independent),
             "independence_source": self.independence_source,
             "checks": [check.to_dict() for check in self.checks],
         }
@@ -141,6 +141,9 @@ class ShootingResult:
     verification: ShootingVerification | None = None
     counters: dict[str, int] = field(default_factory=dict)
     history: list[dict[str, Any]] = field(default_factory=list)
+    error: str | None = None
+    verification_tolerance: float | None = None
+    verification_tolerance_source: str | None = None
 
     @property
     def residual_norm(self) -> float:
@@ -157,16 +160,19 @@ class ShootingResult:
             "residual_norm": self.residual_norm,
             "residual_max_abs": self.residual_max_abs,
             "metrics": _plain(self.metrics),
-            "solver_converged": self.solver_converged,
-            "verified": self.verified,
-            "qualified": self.qualified,
-            "iterations": self.iterations,
+            "solver_converged": bool(self.solver_converged),
+            "verified": bool(self.verified),
+            "qualified": bool(self.qualified),
+            "iterations": int(self.iterations),
             "method": self.method,
             "stop_reason": self.stop_reason,
             "jacobian_source": self.jacobian_source,
             "verification": None if self.verification is None else self.verification.to_dict(),
-            "counters": dict(self.counters),
+            "verification_tolerance": _plain(self.verification_tolerance),
+            "verification_tolerance_source": self.verification_tolerance_source,
+            "counters": _plain(self.counters),
             "history": _plain(self.history),
+            "error": self.error,
         }
 
 
@@ -178,6 +184,7 @@ class MultiStartResult:
     ranked: list[ShootingResult]
     selection_metric: str | None
     selection_direction: str | None
+    selection_source: str | None = None
 
     @property
     def best(self) -> ShootingResult | None:
@@ -191,6 +198,7 @@ class MultiStartResult:
             "ranked": [result.to_dict() for result in self.ranked],
             "selection_metric": self.selection_metric,
             "selection_direction": self.selection_direction,
+            "selection_source": self.selection_source,
         }
 
 
@@ -206,11 +214,11 @@ class ContinuationPoint:
     def to_dict(self) -> dict[str, Any]:
         return {
             "variables": self.variables.to_dict(),
-            "residual_norm": self.residual_norm,
-            "tangent": self.tangent.tolist(),
-            "corrector_iterations": self.corrector_iterations,
-            "verified": self.verified,
-            "verification_independent": self.verification_independent,
+            "residual_norm": _plain(self.residual_norm),
+            "tangent": _plain(self.tangent),
+            "corrector_iterations": int(self.corrector_iterations),
+            "verified": bool(self.verified),
+            "verification_independent": bool(self.verification_independent),
         }
 
 
@@ -222,15 +230,19 @@ class ShootingContinuationResult:
     stop_reason: str
     step_size: float
     step_history: list[dict[str, Any]] = field(default_factory=list)
+    verification_tolerance: float | None = None
+    verification_tolerance_source: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "points": [point.to_dict() for point in self.points],
-            "completed_steps": self.completed_steps,
-            "requested_steps": self.requested_steps,
+            "completed_steps": int(self.completed_steps),
+            "requested_steps": int(self.requested_steps),
             "stop_reason": self.stop_reason,
-            "step_size": self.step_size,
+            "step_size": _plain(self.step_size),
             "step_history": _plain(self.step_history),
+            "verification_tolerance": _plain(self.verification_tolerance),
+            "verification_tolerance_source": self.verification_tolerance_source,
         }
 
 
@@ -242,8 +254,8 @@ class ParameterContinuationPoint:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "parameter": self.parameter,
-            "attempted_step": self.attempted_step,
+            "parameter": _plain(self.parameter),
+            "attempted_step": _plain(self.attempted_step),
             "result": self.result.to_dict(),
         }
 
@@ -255,6 +267,7 @@ class ParameterContinuationResult:
     points: list[ParameterContinuationPoint]
     stop_reason: str
     reached_target: bool
+    step_history: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def final(self) -> ShootingResult | None:
@@ -263,8 +276,9 @@ class ParameterContinuationResult:
     def to_dict(self) -> dict[str, Any]:
         return {
             "parameter": self.parameter,
-            "target": self.target,
+            "target": _plain(self.target),
             "points": [point.to_dict() for point in self.points],
             "stop_reason": self.stop_reason,
-            "reached_target": self.reached_target,
+            "reached_target": bool(self.reached_target),
+            "step_history": _plain(self.step_history),
         }

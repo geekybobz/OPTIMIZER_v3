@@ -1,13 +1,11 @@
 ---
-title: UTIL_BOUNDARY
-type: boundary
-module: optimizer/utils
-tags:
-  - optimizer
-  - utils
-  - boundary
+role: topic
+parent: UTILS_HUB.md
+summary: "What belongs in utils versus optimizers, guesses, systems, core, and theory."
+read_when: "Read before adding a utility."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Util Boundary
 
 This note keeps the utils module from absorbing unrelated behavior.

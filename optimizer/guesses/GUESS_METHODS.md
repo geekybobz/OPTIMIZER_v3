@@ -1,13 +1,11 @@
 ---
-title: GUESS_METHODS
-type: method_index
-module: optimizer/guesses
-tags:
-  - optimizer
-  - guesses
-  - methods
+role: topic
+parent: GUESSES_HUB.md
+summary: "Lookup table of the implemented guess families with a suggested workflow."
+read_when: "Read to pick a guess family quickly."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Guess Methods
 
 This is the compact lookup table for implemented guess families.

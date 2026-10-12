@@ -1,15 +1,11 @@
 ---
-title: NUMERICAL_CAPABILITIES
-type: api_reference
-module: optimizer/optimizers
-tags:
-  - optimizer
-  - constraints
-  - proximal
-  - second-order
-  - continuation
+role: topic
+parent: OPTIMIZERS_HUB.md
+summary: "Optional system capabilities that unlock projected, second-order, and proximal methods."
+read_when: "Read when a method needs a hook beyond the five required OLGS calls."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Conditional Numerical Capabilities
 
 The five required OLGS hooks remain:

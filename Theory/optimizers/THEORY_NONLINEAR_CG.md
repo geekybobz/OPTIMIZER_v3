@@ -1,16 +1,11 @@
 ---
-title: THEORY_NONLINEAR_CG
-type: theory_reference
-module: Theory/optimizers
-related_method: optimizer/optimizers/NONLINEAR_CG.md
-tags:
-  - optimizer
-  - theory
-  - nonlinear_cg
-  - conjugate_gradient
-  - low_memory
+role: topic
+parent: OPTIMIZER_THEORY_HUB.md
+summary: "Fletcher-Reeves, Polak-Ribiere, and Hestenes-Stiefel directions and restart logic."
+read_when: "Read when choosing a nonlinear CG variant."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Nonlinear Conjugate Gradient Theory
 
 This note gives the mathematical context for:

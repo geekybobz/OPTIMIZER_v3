@@ -1,16 +1,11 @@
 ---
-title: THEORY_LBFGS
-type: theory_reference
-module: Theory/optimizers
-related_method: optimizer/optimizers/LBFGS.md
-tags:
-  - optimizer
-  - theory
-  - lbfgs
-  - quasi_newton
-  - curvature
+role: topic
+parent: OPTIMIZER_THEORY_HUB.md
+summary: "Quasi-Newton curvature pairs, limited memory, the two-loop recursion, and restarts."
+read_when: "Read when using L-BFGS or interpreting its history state."
+status: active
+reviewed: 2026-10-12
 ---
-
 # L-BFGS Theory
 
 This note gives the mathematical context for:

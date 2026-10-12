@@ -1,17 +1,11 @@
 ---
-title: CMA-ES Optimizer
-type: method_reference
-module: optimizer/optimizers
-method: cma_es
-source: optimizer/optimizers/cma_es.py
-tags:
-  - optimizer
-  - cma_es
-  - derivative_free
-  - population
-  - global_search
+role: topic
+parent: OPTIMIZERS_HUB.md
+summary: "Derivative-free population search: variants, arguments, and sampling state."
+read_when: "Read when calling cma_es."
+status: active
+reviewed: 2026-10-12
 ---
-
 # CMA-ES
 
 `cma_es` is a compact derivative-free population search method.
@@ -69,6 +63,11 @@ seed
 accept_metric
 accept_mode
 accept_tolerance
+state
+warmstart
+stopping
+target_value / target_metric / target_mode
+stall_patience / stall_tolerance / stall_metric / stall_mode
 trace
 create_trace
 stage
@@ -78,8 +77,8 @@ use_cache
 Current distinction:
 
 ```text
-cma_es requires explicit controls
-cma_es does not expose state or warmstart arguments
+cma_es accepts controls, state, or warmstart through the standard start-state convention
+cma_es exposes standard target and stall stopping controls
 ```
 
 ## Optimizer State

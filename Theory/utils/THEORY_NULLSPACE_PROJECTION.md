@@ -1,17 +1,11 @@
 ---
-title: THEORY_NULLSPACE_PROJECTION
-type: theory_reference
-module: Theory/utils
-related_method: optimizer/utils/UTIL_RESIDUAL_GEOMETRY.md
-tags:
-  - optimizer
-  - utils
-  - theory
-  - projection
-  - nullspace
-  - residual
+role: topic
+parent: UTILS_THEORY_HUB.md
+summary: "Constraint-preserving directions: gradient decomposition and the J J^T residual-space solve."
+read_when: "Read when projecting a gradient onto the tangent space of constraints."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Nullspace Projection Theory
 
 This note gives the mathematical context for:

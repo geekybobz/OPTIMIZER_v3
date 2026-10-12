@@ -43,7 +43,7 @@ from uuid import uuid4
 import numpy as np
 
 from optimizer.controls import Controls
-from optimizer.core.evaluate import GradientOutcome, SystemEvaluator
+from optimizer.core.evaluate import EvaluationOutcome, GradientOutcome, SystemEvaluator
 from optimizer.core.observer import (
     CheckpointEvent,
     ChunkEvent,
@@ -1035,6 +1035,12 @@ def run_chunk(
     stop_reason = "maxiter"
     accepted_any = False
     consecutive_failed_trials = 0
+    # When every evaluated trial will be accepted, evaluate a trial together with
+    # its gradient: the gradient is the next iteration's, so the system's forward
+    # propagation is not repeated for a system without its own forward cache.
+    prefetch_trial_gradient = bool(
+        use_combined and getattr(accept, "accepts_every_finite_trial", False)
+    )
 
     def record_terminal_selection(reason: str) -> None:
         """Persist bounded selected evidence from already-owned run state."""
@@ -1229,8 +1235,30 @@ def run_chunk(
             )
             break
 
+        trial_gradient: Controls | None = None
         try:
-            trial_outcome = evaluator.try_evaluate(proposal.controls)
+            if prefetch_trial_gradient:
+                combined_trial = evaluator.try_value_and_gradient(proposal.controls)
+                if combined_trial.ok and combined_trial.value_gradient is not None:
+                    trial_gradient = combined_trial.value_gradient.gradient
+                    trial_outcome = EvaluationOutcome(
+                        evaluation=Evaluation.from_metrics(
+                            proposal.controls.copy(name=proposal.controls.name),
+                            combined_trial.value_gradient.metrics,
+                            objective_metric=objective_metric,
+                        ),
+                        ok=True,
+                        reason="ok",
+                    )
+                else:
+                    trial_outcome = EvaluationOutcome(
+                        evaluation=None,
+                        ok=False,
+                        reason=combined_trial.reason,
+                        error=combined_trial.error,
+                    )
+            else:
+                trial_outcome = evaluator.try_evaluate(proposal.controls)
         except KeyboardInterrupt:
             close_interrupted_run()
             raise
@@ -1338,6 +1366,8 @@ def run_chunk(
                 iteration_increment=1,
             )
             current_eval = trial_outcome.evaluation
+            if trial_gradient is not None:
+                prefetched_gradient = trial_gradient
             accepted_any = True
             improved = run_state.update_best_by_metric(
                 metric=resolved_accept_metric,

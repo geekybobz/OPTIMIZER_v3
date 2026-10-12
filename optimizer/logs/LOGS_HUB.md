@@ -1,13 +1,11 @@
 ---
-title: LOGS_HUB
-type: module_hub
-module: optimizer/logs
-tags:
-  - optimizer
-  - logs
-  - hub
+role: front-door
+parent: ../../README.md
+summary: "The in-memory Trace that optimizers fill by default, and its checkpoints."
+read_when: "Read when inspecting result.trace or its checkpoints."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Logs Hub
 
 Lightweight, in-memory run records: the `Trace` that optimizers fill by default
@@ -45,7 +43,7 @@ Optimizers create a `Trace` unless `create_trace=False`; see
 
 ## Connections
 
-- Parent: [the V4 entry](../../README.md)
+- Related: [the V4 entry](../../README.md)
 - Related: [Base API Hub](../BASE_HUB.md), [Optimizer State and Warmstart](../optimizers/OPTIMIZER_STATE_WARMSTART.md), [OLGS Logging Boundary](../system_olgs/LOGGING_BOUNDARY.md), [Core Engine](../core/CORE_ENGINE.md)
 
 ---

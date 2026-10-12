@@ -1,13 +1,11 @@
 ---
-title: UTIL_COMMON_API
-type: common_api
-module: optimizer/utils
-tags:
-  - optimizer
-  - utils
-  - common_api
+role: topic
+parent: UTILS_HUB.md
+summary: "Shared utility arguments: residual selection, finite-difference scale and method, directions, fallback, rank, and spectra."
+read_when: "Read when a utility argument needs explaining."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Util Common API
 
 The utils package has several categories, but most system-aware calls share the same

@@ -7,6 +7,7 @@ from typing import Any, Mapping
 
 import numpy as np
 
+from optimizer.core._cache import DEFAULT_CACHE_SIZE, BoundedCache
 from optimizer.system_olss import (
     ShootingEvaluation,
     ShootingVariables,
@@ -48,6 +49,33 @@ def resolve_verification_request(
     return working, False, "working_options_reused"
 
 
+def resolve_verification_tolerance(
+    system_spec: Mapping[str, Any],
+    *,
+    working_tolerance: float,
+    verification_tolerance: float | None,
+) -> tuple[float, str]:
+    """Resolve the qualification tolerance and record where it came from.
+
+    Precedence: the caller's explicit value, then the system's declared
+    ``verification.default_tolerance``, then the working solver tolerance.
+    Verification re-evaluates at distinct accuracy, so its residual includes
+    the working discretization error; a system states that scale once here.
+    """
+
+    if verification_tolerance is not None:
+        value, source = float(verification_tolerance), "explicit"
+    else:
+        declared = dict(system_spec.get("verification") or {}).get("default_tolerance")
+        if declared is not None:
+            value, source = float(declared), "system_default"
+        else:
+            value, source = float(working_tolerance), "working_tolerance"
+    if not np.isfinite(value) or value < 0.0:
+        raise ValueError("verification_tolerance must be finite and nonnegative.")
+    return value, source
+
+
 def _json_default(value: Any) -> str:
     if isinstance(value, np.generic):
         return repr(value.item())
@@ -72,14 +100,20 @@ def _candidate_key(variables: ShootingVariables, options: Mapping[str, Any] | No
 class ShootingEvaluator:
     """Own OLSS validation, caches, and numerical-call counters."""
 
-    def __init__(self, system: Any, *, use_cache: bool = True) -> None:
+    def __init__(
+        self,
+        system: Any,
+        *,
+        use_cache: bool = True,
+        cache_size: int | None = DEFAULT_CACHE_SIZE,
+    ) -> None:
         self.system = require_shooting_system(system)
         self.system_spec = get_shooting_system_spec(system)
         self.use_cache = bool(use_cache)
-        self._residuals: dict[tuple[Any, ...], np.ndarray] = {}
-        self._jacobians: dict[tuple[Any, ...], np.ndarray] = {}
-        self._metrics: dict[tuple[Any, ...], dict[str, Any]] = {}
-        self._verification: dict[tuple[Any, ...], ShootingVerification] = {}
+        self._residuals = BoundedCache(cache_size)
+        self._jacobians = BoundedCache(cache_size)
+        self._metrics = BoundedCache(cache_size)
+        self._verification = BoundedCache(cache_size)
         self._counts = {
             "residual": 0,
             "residual_attempt": 0,

@@ -1,3 +1,11 @@
+---
+role: front-door
+parent: ../../README.md
+summary: "Multi-stage campaigns that coordinate existing optimizer calls into evidence-preserving modes."
+read_when: "Read when running scout, comparison, refinement, challenge, or validation campaigns."
+status: active
+reviewed: 2026-10-12
+---
 # Campaign Modes
 
 `optimizer.campaigns` coordinates existing optimizer calls into an explicit,
@@ -23,6 +31,8 @@ scout = campaign.scout(guesses, method=short)
 
 The required `amplitude` above is intentional: a generic campaign library cannot
 choose a physically meaningful control scale for a research system.
+
+## Details
 
 ## The six modes
 

@@ -1,138 +1,100 @@
 ---
-title: SYSTEM_OLSS_HUB
-type: module_hub
-module: optimizer/system_olss
-tags:
-  - optimizer
-  - system
-  - olss
-  - shooting
+role: front-door
+parent: ../../README.md
+summary: "Entry point for implementing, validating, and using Open Loop Shooting Systems."
+read_when: "Start here when a project is formulated through shooting variables and boundary residuals."
+status: active
+reviewed: 2026-10-12
 ---
-
 # OLSS System Hub
 
-OLSS means **Open Loop Shooting System**. It is the project-facing contract for
-single shooting, multiple shooting, multistart root discovery, continuation, and
-cost-aware direct shooting.
+OLSS means **Open Loop Shooting System**. It is the project contract for
+problems solved by finding shooting variables whose complete boundary residual
+vector vanishes.
 
-Each project owns its complete shooting formulation and physics. OLSS does not
-derive PMP equations, boundary conditions, costates, gauges, or continuation
-parameters from a Hamiltonian.
-
-## Stable boundary
-
-The project system supplies:
+## In brief
 
 ```text
-ordered shooting variables
-unscaled residual equations
-the residual Jacobian
-declared metrics
-higher-accuracy verification
-immutable secondary-parameter updates
-optional bounds, cost gradient, reconstruction, and exports
+project owns
+  shooting variables, residual equations, residual Jacobian,
+  metrics, independent verification, and optional reconstruction
+
+library owns
+  validation, root solving, continuation, multistart, seed tools,
+  diagnostics, replay, and structured evidence
 ```
 
-The library supplies:
-
-```text
-variable containers and validation
-accuracy-aware evaluation and caching
-Newton and damped least-squares root solving
-Jacobian verification
-multistart, deduplication, and ranking
-pseudo-arclength and natural-parameter continuation
-scale-aware seed clouds and focused refinement
-cross-family OLSS-to-OLGS replay comparison
-cost-aware direct shooting
-structured result evidence
-```
-
-Solver convergence, residual acceptance, tighter verification, candidate
-qualification, candidate ranking, and optimality certification are separate facts.
+OLSS is separate from OLGS because a residual Jacobian is not an objective
+gradient, and shooting variables are not necessarily waveform controls.
 
 ## Start here
 
-- [OLSS Contract](CONTRACT.md)
-- [Issues found and remaining validation](OLSS_ISSUES_FOUND.md)
-- [Independent shooting problem fixtures](../../tests/fixtures/shooting_systems.py)
-- [OLSS robustness tests](../../tests/test_olss.py)
+1. Read the [OLSS Contract](CONTRACT.md).
+2. Define the [OLSS Data Model](DATA_MODEL.md) for the problem.
+3. Define independent acceptance evidence using
+   [OLSS Verification](VERIFICATION.md).
+4. Select numerical operations from the [Shooting Hub](../shooting/SHOOTING_HUB.md).
+5. Use the [System Transaction](../TRANSACTIONS.md) boundary only when a generic
+   consumer needs request-response execution.
 
 ## Details
 
-Minimal use:
+## Required surface
 
-```python
-import optimizer as opt
-
-system = ProjectShootingSystem(primary={...}, secondary={...})
-z0 = opt.ShootingVariables.from_blocks(
-    system.shooting_spec(),
-    {"initial_costate": [...], "continuation_parameter": 0.2},
-)
-
-check = opt.verify_shooting_jacobian(system, z0)
-result = opt.solve_shooting(
-    system,
-    z0,
-    verification_options={"rtol": 1e-11, "atol": 1e-13},
-)
+```text
+system_spec()
+shooting_spec()
+residuals(variables, options=...)
+jacobian(variables, options=...)
+evaluate(variables, options=...)
+verify(variables, options=...)
+with_secondary(**updates)
 ```
 
-The system decides which evaluation options it supports. The library passes those
-options explicitly and includes them in its cache key.
+All numerical calls receive complete immutable `ShootingVariables`. A call must
+not depend on a hidden preparatory call or mutate the candidate.
 
-## Numerical operations
-
-| Call | Purpose |
-|---|---|
-| `opt.solve_shooting` | Solve and independently verify one residual root |
-| `opt.solve_shooting_multistart` | Run independent seeds, deduplicate qualified roots, and rank them |
-| `opt.continue_shooting` | Follow a one-dimensional branch with pseudo-arclength continuation |
-| `opt.continue_parameter` | Continue one secondary parameter with adaptive steps and exact target landing |
-| `opt.solve_direct_shooting` | Optimize a declared cost along the feasible residual set |
-| `opt.verify_shooting_jacobian` | Compare the declared Jacobian with explicit finite differences |
-| `opt.shooting_geometry_probe` | Inspect rank, condition, weak blocks, and residual groups |
-| `opt.random_shooting_seeds` / `opt.perturb_shooting_seeds` | Build scale-aware reproducible seed clouds |
-| `opt.refine_shooting_seeds` | Refine an elite subset without project-specific policy in OLSS |
-| `opt.compare_shooting_replay` | Recover controls and compare an OLSS candidate in a separate OLGS system |
-| `opt.system_info` | Inspect OLSS declarations and hooks without propagation |
-
-Parallel multistart requires a system factory. Each worker owns a reconstructed
-system instance; one mutable system is never silently shared between workers.
-When a picklable factory is supplied, process execution is the default parallel
-choice; otherwise execution remains serial.
-
-`solve_shooting(..., previous_result=...)` continues one history, while
-`on_event=` receives stable start/iteration/terminal dictionaries for future
-terminal and MCP rendering. This lifecycle hook is intentionally independent of
-the later logging redesign.
-
-Create an OLSS starting point with the same scaffold command used for OLGS:
+## Scaffold
 
 ```bash
 optimizer-system my_problem/system.py --family olss
 ```
 
-## Implementation map
+The scaffold creates `system.py` and an initial contract test. It uses the
+standard `System(primary=..., secondary=...)` construction convention and
+leaves physics-specific residual and Jacobian definitions as explicit TODOs.
 
-```text
-optimizer/system_olss/
-  variables.py     ShootingBlock, ShootingSpec, ShootingVariables
-  specs.py         static system declaration and validation
-  contract.py      protocol, discovery, and capability probe
-  validation.py    validated numerical transactions
-  results.py       evaluation, verification, solver, campaign, and continuation evidence
-  olss.py          optional base class with default metric and verification behavior
+## Implementation ownership
 
-optimizer/shooting/
-  evaluator.py     caching, counters, and combined evaluation
-  derivatives.py   finite-difference Jacobian and verification
-  solvers.py       root solving and direct shooting
-  campaigns.py     multistart, deduplication, and ranking
-  continuation.py  pseudo-arclength and natural-parameter continuation
-  replay.py        explicit OLSS-to-OLGS replay comparison
-```
+| Area | Source |
+|---|---|
+| Contract discovery and optional hooks | `contract.py` |
+| Variable layouts and values | `variables.py` |
+| Static system declarations | `specs.py` |
+| Return validation | `validation.py` |
+| Evidence and result objects | `results.py` |
+| Optional base implementation | `olss.py` |
+| Project templates | `templates/` |
+
+## Limitations
+
+- Dense Jacobians are consumed by current solvers; sparse and operator hooks are
+  declarations for later numerical methods.
+- Variable scales guide seed and root-comparison tools but do not yet
+  precondition every solver step.
+- The direct constrained-cost method is first-order rather than SQP.
+- Qualification is evidence of a verified root, not a local- or global-minimum
+  certificate.
+
+## Connections
+
+- Related: [V4 entry](../../README.md)
+- Prerequisite: [System Transactions](../TRANSACTIONS.md)
+- Related: [OLSS Contract](CONTRACT.md)
+- Related: [OLSS Data Model](DATA_MODEL.md)
+- Related: [OLSS Verification](VERIFICATION.md)
+- Related: [Shooting Hub](../shooting/SHOOTING_HUB.md)
+- Related: [OLGS System Hub](../system_olgs/SYSTEM_OLGS_HUB.md)
 
 ---
 

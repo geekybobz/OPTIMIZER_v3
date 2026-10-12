@@ -43,6 +43,7 @@ from typing import Any
 import numpy as np
 
 from optimizer.controls import Controls
+from optimizer.core._cache import DEFAULT_CACHE_SIZE, BoundedCache
 from optimizer.result import Evaluation
 from optimizer.system_olgs import (
     ControlBounds,
@@ -118,7 +119,13 @@ class SystemEvaluator:
     # Construction and cache ownership
     # ------------------------------------------------------------------
 
-    def __init__(self, system: Any, *, use_cache: bool = True) -> None:
+    def __init__(
+        self,
+        system: Any,
+        *,
+        use_cache: bool = True,
+        cache_size: int | None = DEFAULT_CACHE_SIZE,
+    ) -> None:
         self.system: OptimizerSystem = require_system(system)
         self.system_spec = get_system_spec(self.system)
         control_spec = validate_control_spec(self.system)
@@ -128,8 +135,8 @@ class SystemEvaluator:
         ) != control_spec.control_dim:
             raise ValueError("system_spec controls do not match system.control_spec().")
         self.use_cache = bool(use_cache)
-        self._evaluations: dict[ControlCacheKey, Evaluation] = {}
-        self._value_gradients: dict[ControlCacheKey, ValueGradient] = {}
+        self._evaluations = BoundedCache(cache_size)
+        self._value_gradients = BoundedCache(cache_size)
         self.evaluation_count = 0
         self.gradient_count = 0
         self.evaluation_attempt_count = 0
@@ -229,7 +236,7 @@ class SystemEvaluator:
         """Return a validated combined value/gradient result, cached by controls."""
 
         key = controls_cache_key(controls)
-        if self.use_cache and key in self._value_gradients:
+        if self.use_cache and key in self._value_gradients and key in self._evaluations:
             pair = self._value_gradients[key]
             evaluation = self._evaluations[key]
             return evaluation.copy(name=controls.name), pair.gradient.copy(name=pair.gradient.name)

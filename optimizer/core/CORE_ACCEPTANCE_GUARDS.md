@@ -1,14 +1,11 @@
 ---
-title: Core Acceptance and Guards
-type: engine_policy
-module: optimizer/core
-tags:
-  - optimizer
-  - core
-  - acceptance
-  - guards
+role: topic
+parent: CORE_HUB.md
+summary: "Engine acceptance: the default rule, each method's default, metric guards, and failure reporting."
+read_when: "Read when a trial is rejected unexpectedly or a stricter acceptance rule is needed."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Core Acceptance and Guards
 
 This file documents how the engine decides whether a trial replaces the current
@@ -52,6 +49,32 @@ accept_metric, accept_mode, current_value, trial_value, improvement, tolerance
 ```
 
 Rejection uses `reason="rejected_worse_metric"`.
+
+## Method Defaults
+
+The rule above is the engine default for a `run_chunk` call without `accept`.
+The shipped methods choose their own default:
+
+```text
+adam, momentum, adagrad, rmsprop    standard acceptance: every trial that
+                                    evaluates successfully is accepted
+lbfgs, nonlinear_cg, newton_cg      engine default; a rejected step shrinks by
+                                    reject_shrink (0.5) and method memory is kept
+line_search, trust_region,          engine default or their own model-ratio and
+projected_gradient,                 backtracking rules
+proximal_gradient
+```
+
+Pass `accept=opt.core.default_accept`, a `metric_guard`, or any accept function
+to change a method's policy. Under standard acceptance the engine evaluates a
+trial together with its gradient when the system provides `value_and_gradient`
+and `prefer_value_and_gradient` is true: the trial will be accepted, so that
+gradient is the next iteration's and the forward propagation is not repeated.
+
+Before any accept function runs, the engine projects each proposal onto
+declared `control_bounds` (`enforce_bounds=True` by default) and rejects a trial
+whose evaluation fails validation; see
+[Core Stopping](CORE_STOPPING.md#stop-reasons) for the retry rule.
 
 ## Multi-Metric Guards
 
@@ -132,9 +155,10 @@ non-finite after an accepted move are caught at the end of that iteration.  The 
 is a metric that is finite at the current controls and non-finite only in the trial:
 there the guard sees it before any stopping rule does.
 
-Default acceptance performs no finiteness check at all, so the same trial merely
-compares `J` and lets [Core Stopping](CORE_STOPPING.md) end the chunk with
-`nonfinite`.
+Default acceptance performs no finiteness check itself. A trial whose
+evaluation fails validation, such as a non-finite `J`, never reaches the accept
+function: the engine rejects it and counts it toward `failed_trial_retries`
+([Core Stopping](CORE_STOPPING.md#stop-reasons)).
 
 If a system can emit `NaN` in a guarded metric, prefer stopping on finiteness over
 relying on the guard to absorb it.

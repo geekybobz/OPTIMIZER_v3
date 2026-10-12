@@ -1,13 +1,11 @@
 ---
-title: GUESS_BOUNDARY
-type: module_boundary
-module: optimizer/guesses
-tags:
-  - optimizer
-  - guesses
-  - boundary
+role: topic
+parent: GUESSES_HUB.md
+summary: "What belongs in optimizer/guesses and what belongs to systems, optimizers, and theory."
+read_when: "Read before adding a guess generator."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Guess Boundary
 
 This file defines what belongs in `optimizer/guesses`.

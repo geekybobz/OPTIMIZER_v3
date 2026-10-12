@@ -1,14 +1,11 @@
 ---
-title: OLGS Logging Boundary
-type: integration_boundary
-module: optimizer/system_olgs
-tags:
-  - optimizer
-  - system
-  - olgs
-  - logging
+role: topic
+parent: SYSTEM_OLGS_HUB.md
+summary: "What an OLGS system must not own: caches, logs, checkpoints, and tracker records."
+read_when: "Read before adding logging or caching to a system."
+status: active
+reviewed: 2026-10-12
 ---
-
 # OLGS Logging Boundary
 
 OLGS should not fully own cache, logs, checkpoints, or future tracker records.

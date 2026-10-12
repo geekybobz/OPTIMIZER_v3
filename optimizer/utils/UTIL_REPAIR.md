@@ -1,19 +1,11 @@
 ---
-title: UTIL_REPAIR
-type: category_reference
-module: optimizer/utils
-source: optimizer/utils/repairs.py
-methods:
-  - repair_newton
-  - RepairResult
-tags:
-  - optimizer
-  - utils
-  - residual
-  - repair
-  - newton
+role: topic
+parent: UTILS_HUB.md
+summary: "Newton and damped repair that reduces named residuals, with line search and RepairResult."
+read_when: "Read when controls must move back onto residual constraints."
+status: active
+reviewed: 2026-10-12
 ---
-
 # Repair
 
 Repair utilities move controls to reduce named residual violations.

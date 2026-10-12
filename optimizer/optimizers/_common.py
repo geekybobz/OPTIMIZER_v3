@@ -131,6 +131,11 @@ def accept_finite_trial(*_: Any) -> bool:
     return True
 
 
+# Marker read by the engine: every evaluated trial will be accepted, so a trial
+# may be evaluated together with its gradient when the system can do both at once.
+accept_finite_trial.accepts_every_finite_trial = True  # type: ignore[attr-defined]
+
+
 def require_probability_like(name: str, value: float) -> float:
     """Validate coefficients such as beta/momentum that must lie in ``[0, 1)``."""
 
