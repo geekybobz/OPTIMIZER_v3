@@ -24,15 +24,13 @@ surfaces and defaults.
 | [`guesses`](#guesses) | 13 | Initial Controls generators and restart helpers. |
 | [`utils`](#utils) | 17 | Diagnostics, derivative checks, residual geometry, repair, guards, and spectrum tools. |
 | [`schedules`](#schedules) | 5 | Small step-size policy objects for optimizer or repair workflows. |
-| [`base`](#base) | 47 | Base data objects and top-level entry points: Controls, results, warmstart state, trace, and bound context utilities. |
-| [`core`](#core) | 24 | Shared chunk engine: the proposal contract, validated system evaluation, acceptance guards, and stopping rules. |
-| [`campaigns`](#campaigns) | 10 | Durable multi-stage coordination using objective and provenance declared by system_spec(). |
-| [`tracker`](#tracker) | 29 | Passive durable run evidence; it records engine facts and never calls system numerics. |
+| [`base`](#base) | 41 | Base data objects and top-level entry points: Controls, results, warmstart state, diagnostics, and bound context utilities. |
+| [`core`](#core) | 16 | Shared chunk engine: the proposal contract, validated system evaluation, acceptance guards, and stopping rules. |
+| [`campaigns`](#campaigns) | 9 | Durable multi-stage coordination using objective and provenance declared by system_spec(). |
 | [`visualization`](#visualization) | 14 | Render explicit system-owned plot data; visualization never invents a trajectory. |
-| [`system_olgs`](#system-olgs) | 54 | Mandatory static system semantics and capability-gated numerical hooks owned by each problem. |
+| [`system_olgs`](#system-olgs) | 52 | Mandatory static system semantics and capability-gated numerical hooks owned by each problem. |
 | [`system_olss`](#system-olss) | 36 | Construction types, validation, and discovery for project-owned OLSS contracts. |
 | [`shooting`](#shooting) | 12 | Root solving, verification, multistart, continuation, and direct shooting for OLSS systems. |
-| [`optimizer_log`](#optimizer-log) | 13 | Standalone, read-only tracker reader package; it is not yet a portal UI or command-line application. |
 
 ## operations
 
@@ -133,7 +131,7 @@ adam(system: 'Any', controls: 'Controls | None' = None, *, variant: 'str' = 'ada
 | Name | Meaning |
 |---|---|
 | `type` | OptimizerResult |
-| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, trace, checkpoint_ids |
+| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, diagnostics |
 | `handoff` | Call result.warmstart(target_optimizer=...) before chaining methods. |
 
 #### Requires
@@ -208,7 +206,7 @@ momentum(system: 'Any', controls: 'Controls | None' = None, *, variant: 'str' = 
 | Name | Meaning |
 |---|---|
 | `type` | OptimizerResult |
-| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, trace, checkpoint_ids |
+| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, diagnostics |
 | `handoff` | Call result.warmstart(target_optimizer=...) before chaining methods. |
 
 #### Requires
@@ -277,7 +275,7 @@ line_search(system: 'Any', controls: 'Controls | None' = None, *, variant: 'str'
 | Name | Meaning |
 |---|---|
 | `type` | OptimizerResult |
-| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, trace, checkpoint_ids |
+| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, diagnostics |
 | `handoff` | Call result.warmstart(target_optimizer=...) before chaining methods. |
 
 #### Requires
@@ -344,7 +342,7 @@ adagrad(system: 'Any', controls: 'Controls | None' = None, *, maxiter: 'int' = 1
 | Name | Meaning |
 |---|---|
 | `type` | OptimizerResult |
-| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, trace, checkpoint_ids |
+| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, diagnostics |
 | `handoff` | Call result.warmstart(target_optimizer=...) before chaining methods. |
 
 #### Requires
@@ -460,7 +458,7 @@ rmsprop(system: 'Any', controls: 'Controls | None' = None, *, maxiter: 'int' = 1
 | Name | Meaning |
 |---|---|
 | `type` | OptimizerResult |
-| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, trace, checkpoint_ids |
+| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, diagnostics |
 | `handoff` | Call result.warmstart(target_optimizer=...) before chaining methods. |
 
 #### Requires
@@ -570,7 +568,7 @@ lbfgs(system: 'Any', controls: 'Controls | None' = None, *, maxiter: 'int' = 100
 | Name | Meaning |
 |---|---|
 | `type` | OptimizerResult |
-| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, trace, checkpoint_ids |
+| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, diagnostics |
 | `handoff` | Call result.warmstart(target_optimizer=...) before chaining methods. |
 
 #### Requires
@@ -636,7 +634,7 @@ nonlinear_cg(system: 'Any', controls: 'Controls | None' = None, *, variant: 'str
 | Name | Meaning |
 |---|---|
 | `type` | OptimizerResult |
-| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, trace, checkpoint_ids |
+| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, diagnostics |
 | `handoff` | Call result.warmstart(target_optimizer=...) before chaining methods. |
 
 #### Requires
@@ -703,7 +701,7 @@ nonlinear_cg(system: 'Any', controls: 'Controls | None' = None, *, variant: 'str
 | Name | Meaning |
 |---|---|
 | `type` | OptimizerResult |
-| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, trace, checkpoint_ids |
+| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, diagnostics |
 | `handoff` | Call result.warmstart(target_optimizer=...) before chaining methods. |
 
 #### Requires
@@ -750,7 +748,7 @@ Derivative-free population search with isotropic or diagonal sampling radius.
 Family: `olgs`. Root shortcut: `opt.cma_es`.
 
 ```python
-cma_es(system: 'Any', controls: 'Controls | None' = None, *, variant: 'str' = 'diagonal', maxiter: 'int' = 100, population_size: 'int | None' = None, elite_fraction: 'float' = 0.5, sigma: 'float' = 0.1, min_sigma: 'float' = 1e-08, covariance_lr: 'float' = 0.2, seed: 'int | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, state: 'RunState | None' = None, warmstart: 'Any | None' = None, stopping: 'StoppingConfig | None' = None, target_value: 'float | None' = None, target_metric: 'str | None' = None, target_mode: 'str | None' = None, stall_patience: 'int | None' = None, stall_tolerance: 'float' = 0.0, stall_metric: 'str | None' = None, stall_mode: 'str | None' = None, trace: 'Trace | None' = None, create_trace: 'bool' = True, observers: 'Iterable[RunObserver] | None' = None, api_context: 'Mapping[str, Any] | None' = None, system_params: 'Mapping[str, Any] | None' = None, stage: 'str | None' = None, chunk: 'int' = 0, use_cache: 'bool' = True, checkpoint_start: 'bool' = True, checkpoint_best: 'bool' = True, checkpoint_final: 'bool' = True) -> 'OptimizerResult'
+cma_es(system: 'Any', controls: 'Controls | None' = None, *, variant: 'str' = 'diagonal', maxiter: 'int' = 100, population_size: 'int | None' = None, elite_fraction: 'float' = 0.5, sigma: 'float' = 0.1, min_sigma: 'float' = 1e-08, covariance_lr: 'float' = 0.2, seed: 'int | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, state: 'RunState | None' = None, warmstart: 'Any | None' = None, stopping: 'StoppingConfig | None' = None, target_value: 'float | None' = None, target_metric: 'str | None' = None, target_mode: 'str | None' = None, stall_patience: 'int | None' = None, stall_tolerance: 'float' = 0.0, stall_metric: 'str | None' = None, stall_mode: 'str | None' = None, system_params: 'Mapping[str, Any] | None' = None, stage: 'str | None' = None, use_cache: 'bool' = True) -> 'OptimizerResult'
 ```
 
 #### Inputs
@@ -772,7 +770,7 @@ cma_es(system: 'Any', controls: 'Controls | None' = None, *, variant: 'str' = 'd
 | Name | Meaning |
 |---|---|
 | `type` | OptimizerResult |
-| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, trace, checkpoint_ids |
+| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, diagnostics |
 | `handoff` | Call result.warmstart(target_optimizer=...) before chaining methods. |
 
 #### Requires
@@ -839,7 +837,7 @@ projected_gradient(system: 'Any', controls: 'Controls | None' = None, *, maxiter
 | Name | Meaning |
 |---|---|
 | `type` | OptimizerResult |
-| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, trace, checkpoint_ids |
+| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, diagnostics |
 | `handoff` | Call result.warmstart(target_optimizer=...) before chaining methods. |
 
 #### Requires
@@ -897,7 +895,7 @@ newton_cg(system: 'Any', controls: 'Controls | None' = None, *, maxiter: 'int' =
 | Name | Meaning |
 |---|---|
 | `type` | OptimizerResult |
-| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, trace, checkpoint_ids |
+| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, diagnostics |
 | `handoff` | Call result.warmstart(target_optimizer=...) before chaining methods. |
 
 #### Requires
@@ -952,7 +950,7 @@ trust_region(system: 'Any', controls: 'Controls | None' = None, *, maxiter: 'int
 | Name | Meaning |
 |---|---|
 | `type` | OptimizerResult |
-| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, trace, checkpoint_ids |
+| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, diagnostics |
 | `handoff` | Call result.warmstart(target_optimizer=...) before chaining methods. |
 
 #### Requires
@@ -1005,7 +1003,7 @@ proximal_gradient(system: 'Any', controls: 'Controls | None' = None, *, maxiter:
 | Name | Meaning |
 |---|---|
 | `type` | OptimizerResult |
-| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, trace, checkpoint_ids |
+| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, diagnostics |
 | `handoff` | Call result.warmstart(target_optimizer=...) before chaining methods. |
 
 #### Requires
@@ -2490,7 +2488,7 @@ Source: `optimizer/schedules/step_size.py`.
 
 ## base
 
-Base data objects and top-level entry points: Controls, results, warmstart state, trace, and bound context utilities.
+Base data objects and top-level entry points: Controls, results, warmstart state, diagnostics, and bound context utilities.
 
 ### `base.ControlSpec`
 
@@ -2708,7 +2706,7 @@ Standard return object from optimizer calls.
 Family: `olgs`.
 
 ```python
-OptimizerResult(controls: 'Controls', metrics: 'dict[str, Any]', stop_reason: 'str', iterations: 'int', optimizer: 'str', objective_metric: 'str' = 'J', state: 'RunState | None' = None, trace: 'Any | None' = None, system_params: 'dict[str, Any]' = <factory>, trace_id: 'str | None' = None, checkpoint_ids: 'dict[str, str]' = <factory>, tracking_failures: 'tuple[dict[str, str], ...]' = ()) -> None
+OptimizerResult(controls: 'Controls', metrics: 'dict[str, Any]', stop_reason: 'str', iterations: 'int', optimizer: 'str', objective_metric: 'str' = 'J', state: 'RunState | None' = None, system_params: 'dict[str, Any]' = <factory>, diagnostics: 'dict[str, Any]' = <factory>) -> None
 ```
 
 #### Inputs
@@ -2722,7 +2720,7 @@ OptimizerResult(controls: 'Controls', metrics: 'dict[str, Any]', stop_reason: 's
 | Name | Meaning |
 |---|---|
 | `type` | OptimizerResult |
-| `fields` | controls, metrics, J, stop_reason, iterations, state, trace, warmstart() |
+| `fields` | controls, metrics, J, stop_reason, iterations, state, diagnostics, warmstart() |
 
 #### Requires
 
@@ -2750,7 +2748,7 @@ Safe handoff state for starting or continuing an optimizer.
 Family: `olgs`.
 
 ```python
-WarmStartState(controls: 'Controls', metrics: 'dict[str, Any]' = <factory>, step_size: 'float | None' = None, optimizer_state: 'dict[str, Any] | None' = None, source_optimizer: 'str | None' = None, target_optimizer: 'str | None' = None, trace_id: 'str | None' = None, checkpoint_ids: 'dict[str, str]' = <factory>, system_params: 'dict[str, Any]' = <factory>) -> None
+WarmStartState(controls: 'Controls', metrics: 'dict[str, Any]' = <factory>, step_size: 'float | None' = None, optimizer_state: 'dict[str, Any] | None' = None, source_optimizer: 'str | None' = None, target_optimizer: 'str | None' = None, system_params: 'dict[str, Any]' = <factory>) -> None
 ```
 
 #### Inputs
@@ -2906,47 +2904,6 @@ response = opt.transact(system, opt.SystemRequest('evaluate', {'controls': contr
 
 Source: `optimizer/transactions.py`.
 
-### `base.Trace`
-
-In-memory run ledger for iteration records, chunk records, events, and checkpoints.
-
-Family: `olgs`.
-
-```python
-Trace(run_id: 'str', iteration_records: 'list[IterationRecord]' = <factory>, chunk_records: 'list[ChunkRecord]' = <factory>, event_records: 'list[EventRecord]' = <factory>, checkpoints: 'dict[str, Checkpoint]' = <factory>, labels: 'dict[str, list[str]]' = <factory>) -> None
-```
-
-#### Inputs
-
-| Name | Meaning |
-|---|---|
-| `run_id` | String id for a run ledger. |
-
-#### Returns
-
-| Name | Meaning |
-|---|---|
-| `type` | Trace |
-| `methods` | record_iteration, record_chunk, checkpoint, restore, to_dict |
-
-#### Requires
-
-- run id
-
-#### Best for
-
-- closed-loop inspection
-- rollback checkpoints
-- technical logs
-
-#### Example
-
-```python
-trace = opt.trace('my-run')
-```
-
-Source: `optimizer/logs/trace.py`.
-
 ### `base.context`
 
 Bind a system once for notebook/curriculum convenience.
@@ -2954,7 +2911,7 @@ Bind a system once for notebook/curriculum convenience.
 Family: `olgs`.
 
 ```python
-context(system: '_Any', *, trace: 'Trace | str | None' = None, **defaults: '_Any') -> 'OptimizerContext'
+context(system: '_Any', **defaults: '_Any') -> 'OptimizerContext'
 ```
 
 #### Inputs
@@ -2962,7 +2919,6 @@ context(system: '_Any', *, trace: 'Trace | str | None' = None, **defaults: '_Any
 | Name | Meaning |
 |---|---|
 | `system` | System object to bind. |
-| `trace` | Optional Trace or run id. |
 | `defaults` | Default kwargs for bound runs. |
 
 #### Returns
@@ -2985,7 +2941,7 @@ context(system: '_Any', *, trace: 'Trace | str | None' = None, **defaults: '_Any
 #### Example
 
 ```python
-ctx = opt.context(system, trace='run'); result = ctx.adam(controls, maxiter=10)
+ctx = opt.context(system); result = ctx.adam(controls, maxiter=10)
 ```
 
 Source: `optimizer/library.py`.
@@ -3020,7 +2976,7 @@ system_info(system: '_Any') -> 'dict[str, _Any]'
 
 #### Watch out
 
-- describe() and tracking_spec() must themselves be static hooks.
+- describe() and system_spec() must themselves be static hooks.
 
 #### Example
 
@@ -3079,7 +3035,7 @@ Source: `optimizer/core/evaluate.py`.
 
 ### `base.context_info`
 
-Return the current registered optimizer, OLGS contract, and tracker capability surface.
+Return the current registered optimizer, OLGS contract, capability surface.
 
 Family: `olgs`, `olss`.
 
@@ -3104,7 +3060,7 @@ context_info(system: '_Any | None' = None) -> 'dict[str, _Any]'
 
 - agent handoff
 - API discovery
-- checking tracker readiness
+- checking operation availability
 
 #### Watch out
 
@@ -3325,7 +3281,7 @@ Mutable state of one active optimization run: controls, metrics, step size, and 
 Family: `olgs`.
 
 ```python
-RunState(controls: 'Controls', metrics: 'dict[str, Any]' = <factory>, iteration: 'int' = 0, global_iteration: 'int' = 0, step_size: 'float | None' = None, optimizer_name: 'str | None' = None, optimizer_state: 'dict[str, Any]' = <factory>, best_controls: 'Controls | None' = None, best_metrics: 'dict[str, Any] | None' = None, stop_reason: 'str | None' = None, trace_id: 'str | None' = None, checkpoint_ids: 'dict[str, str]' = <factory>, system_params: 'dict[str, Any]' = <factory>) -> None
+RunState(controls: 'Controls', metrics: 'dict[str, Any]' = <factory>, iteration: 'int' = 0, global_iteration: 'int' = 0, step_size: 'float | None' = None, optimizer_name: 'str | None' = None, optimizer_state: 'dict[str, Any]' = <factory>, best_controls: 'Controls | None' = None, best_metrics: 'dict[str, Any] | None' = None, stop_reason: 'str | None' = None, system_params: 'dict[str, Any]' = <factory>) -> None
 ```
 
 Source: `optimizer/state.py`.
@@ -3347,72 +3303,6 @@ warmstart(result_or_state: '_Any', *, target_optimizer: 'str | None' = None) -> 
 | `type` | WarmStartState |
 
 Source: `optimizer/state.py`.
-
-### `base.trace`
-
-Create an in-memory Trace ledger with the given or a random run id.
-
-Family: `olgs`.
-
-```python
-trace(run_id: 'str | None' = None) -> 'Trace'
-```
-
-#### Returns
-
-| Name | Meaning |
-|---|---|
-| `type` | Trace |
-
-Source: `optimizer/logs/trace.py`.
-
-### `base.Checkpoint`
-
-Restorable snapshot of controls plus optional run state in a Trace.
-
-Family: `olgs`.
-
-```python
-Checkpoint(id: 'str', label: 'str', controls: 'Controls', state: 'RunState | None' = None, metrics: 'dict[str, Any]' = <factory>, system_params: 'dict[str, Any]' = <factory>, optimizer_state: 'dict[str, Any]' = <factory>, iteration: 'int' = 0, stage: 'str | None' = None, previous_id: 'str | None' = None, random_state: 'dict[str, Any] | None' = None) -> None
-```
-
-Source: `optimizer/logs/checkpoint.py`.
-
-### `base.ChunkRecord`
-
-In-memory Trace record for one optimizer chunk.
-
-Family: `olgs`.
-
-```python
-ChunkRecord(run_id: 'str', optimizer: 'str', chunk: 'int', start_iteration: 'int', end_iteration: 'int', start_metrics: 'dict[str, Any]' = <factory>, end_metrics: 'dict[str, Any]' = <factory>, system_params: 'dict[str, Any]' = <factory>, stage: 'str | None' = None, accepted: 'bool | None' = None, reason: 'str | None' = None) -> None
-```
-
-Source: `optimizer/logs/records.py`.
-
-### `base.IterationRecord`
-
-In-memory Trace record for one optimizer iteration.
-
-Family: `olgs`.
-
-```python
-IterationRecord(run_id: 'str', optimizer: 'str', iteration: 'int', global_iteration: 'int', metrics: 'dict[str, Any]' = <factory>, system_params: 'dict[str, Any]' = <factory>, technical: 'dict[str, Any]' = <factory>, stage: 'str | None' = None, accepted: 'bool | None' = None, reason: 'str | None' = None) -> None
-```
-
-Source: `optimizer/logs/records.py`.
-
-### `base.EventRecord`
-
-In-memory Trace event for actions outside iterations, such as rollback.
-
-Family: `olgs`.
-
-```python
-EventRecord(run_id: 'str', event: 'str', payload: 'dict[str, Any]' = <factory>) -> None
-```
-
-Source: `optimizer/logs/records.py`.
 
 ### `base.parallel_map`
 
@@ -3451,7 +3341,7 @@ Bound-system facade returned by context() for notebook and curriculum workflows.
 Family: `olgs`.
 
 ```python
-OptimizerContext(system: 'Any', library: "'OptimizerLibrary'", trace: 'Trace | None' = None, defaults: 'dict[str, Any] | None' = None) -> None
+OptimizerContext(system: 'Any', library: "'OptimizerLibrary'", defaults: 'dict[str, Any] | None' = None) -> None
 ```
 
 Source: `optimizer/library.py`.
@@ -3537,7 +3427,7 @@ One completed continuation stage: its system, optimizer result, gate verdict, an
 Family: `olgs`.
 
 ```python
-StageResult(index: 'int', stage: 'ContinuationStage', system: 'Any', result: 'OptimizerResult', gate_passed: 'bool', gate_metrics: 'Mapping[str, Any]', transfer: 'str', parent_checkpoint_ids: 'Mapping[str, str]') -> None
+StageResult(index: 'int', stage: 'ContinuationStage', system: 'Any', result: 'OptimizerResult', gate_passed: 'bool', gate_metrics: 'Mapping[str, Any]', transfer: 'str') -> None
 ```
 
 Source: `optimizer/continuation.py`.
@@ -3655,7 +3545,7 @@ Shared optimizer engine for custom StepProposal functions.
 Family: `olgs`. Root shortcut: `opt.run_chunk`.
 
 ```python
-run_chunk(system: 'Any', controls: 'Controls | None' = None, *, step: 'StepFunction', optimizer_name: 'str', maxiter: 'int', state: 'RunState | None' = None, warmstart: 'WarmStartState | None' = None, trace: 'Trace | None' = None, create_trace: 'bool' = True, observers: 'Iterable[RunObserver] | None' = None, step_size: 'float | None' = None, stopping: 'StoppingConfig | None' = None, target_value: 'float | None' = None, target_metric: 'str | None' = None, target_mode: 'str | None' = None, stall_patience: 'int | None' = None, stall_tolerance: 'float' = 0.0, stall_metric: 'str | None' = None, stall_mode: 'str | None' = None, gradient_tolerance: 'float | None' = None, stationary_curvature_tolerance: 'float' = 1e-10, accept: 'AcceptFunction | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, system_params: 'Mapping[str, Any] | None' = None, api_context: 'Mapping[str, Any] | None' = None, random_state: 'RandomStateSource | None' = None, stage: 'str | None' = None, chunk: 'int' = 0, use_cache: 'bool' = True, enforce_bounds: 'bool' = True, failed_trial_retries: 'int' = 3, failed_trial_shrink: 'float' = 0.5, checkpoint_start: 'bool' = True, checkpoint_latest: 'bool' = True, checkpoint_accepted: 'bool' = True, checkpoint_best: 'bool' = True, checkpoint_final: 'bool' = True, gradient_source: 'str' = 'gradient', prefer_value_and_gradient: 'bool' = True) -> 'OptimizerResult'
+run_chunk(system: 'Any', controls: 'Controls | None' = None, *, step: 'StepFunction', optimizer_name: 'str', maxiter: 'int', state: 'RunState | None' = None, warmstart: 'WarmStartState | None' = None, step_size: 'float | None' = None, stopping: 'StoppingConfig | None' = None, target_value: 'float | None' = None, target_metric: 'str | None' = None, target_mode: 'str | None' = None, stall_patience: 'int | None' = None, stall_tolerance: 'float' = 0.0, stall_metric: 'str | None' = None, stall_mode: 'str | None' = None, gradient_tolerance: 'float | None' = None, stationary_curvature_tolerance: 'float' = 1e-10, accept: 'AcceptFunction | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, system_params: 'Mapping[str, Any] | None' = None, stage: 'str | None' = None, use_cache: 'bool' = True, enforce_bounds: 'bool' = True, failed_trial_retries: 'int' = 3, failed_trial_shrink: 'float' = 0.5, gradient_source: 'str' = 'gradient', prefer_value_and_gradient: 'bool' = True) -> 'OptimizerResult'
 ```
 
 #### Inputs
@@ -3665,7 +3555,7 @@ run_chunk(system: 'Any', controls: 'Controls | None' = None, *, step: 'StepFunct
 | `system` | Must provide evaluate(...) and usually gradient(...). |
 | `controls/state/warmstart` | Starting point for the chunk. |
 | `step` | Callable from StepContext to StepProposal or Controls. |
-| `optimizer_name` | Name recorded in result and trace. |
+| `optimizer_name` | Name recorded in the numerical result. |
 | `maxiter` | Chunk iteration budget. |
 
 #### Returns
@@ -3673,7 +3563,7 @@ run_chunk(system: 'Any', controls: 'Controls | None' = None, *, step: 'StepFunct
 | Name | Meaning |
 |---|---|
 | `type` | OptimizerResult |
-| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, trace, checkpoint_ids |
+| `fields` | controls, metrics, J, stop_reason, iterations, optimizer, state, diagnostics |
 | `handoff` | Call result.warmstart(target_optimizer=...) before chaining methods. |
 
 #### Requires
@@ -4096,102 +3986,6 @@ ValueGradientOutcome(value_gradient: 'ValueGradient | None', ok: 'bool', reason:
 
 Source: `optimizer/core/evaluate.py`.
 
-### `core.RunObserver`
-
-Passive sink for the engine lifecycle events.
-
-Family: `olgs`.
-
-```python
-RunObserver(*args, **kwargs)
-```
-
-Source: `optimizer/core/observer.py`.
-
-### `core.ObserverAdapter`
-
-No-op observer base class; override only the event methods you need.
-
-Family: `olgs`.
-
-```python
-ObserverAdapter()
-```
-
-Source: `optimizer/core/observer.py`.
-
-### `core.SnapshotFacts`
-
-Compact facts known at one point of the engine lifecycle.
-
-Family: `olgs`.
-
-```python
-SnapshotFacts(metrics: 'dict[str, Any]' = <factory>, metric_sources: 'dict[str, str]' = <factory>, counters: 'dict[str, int]' = <factory>) -> None
-```
-
-Source: `optimizer/core/observer.py`.
-
-### `core.RunStartEvent`
-
-The first validated state of one engine chunk, passed to observers.
-
-Family: `olgs`.
-
-```python
-RunStartEvent(optimizer: 'str', phase: 'str', initial: 'SnapshotFacts', chunk: 'int' = 0, stage: 'str | None' = None, system_params: 'dict[str, Any]' = <factory>, api_context: 'dict[str, Any]' = <factory>) -> None
-```
-
-Source: `optimizer/core/observer.py`.
-
-### `core.IterationEvent`
-
-One attempted outer iteration, including a rejected or failed trial, passed to observers.
-
-Family: `olgs`.
-
-```python
-IterationEvent(optimizer: 'str', iteration: 'int', global_iteration: 'int', stage: 'str | None', system_params: 'dict[str, Any]', before: 'SnapshotFacts', trial: 'SnapshotFacts | None', after: 'SnapshotFacts', best_after: 'SnapshotFacts | None', technical: 'dict[str, Any]', accepted: 'bool | None', reason: 'str | None', chunk: 'int' = 0) -> None
-```
-
-Source: `optimizer/core/observer.py`.
-
-### `core.CheckpointEvent`
-
-Engine-selected reproducibility point carrying already-owned state, passed to observers.
-
-Family: `olgs`.
-
-```python
-CheckpointEvent(label: 'str', reason: 'str', controls: 'Controls', snapshot: 'SnapshotFacts', optimizer: 'str', optimizer_state: 'dict[str, Any]', system_params: 'dict[str, Any]', api_context: 'dict[str, Any]', iteration: 'int', global_iteration: 'int', chunk: 'int', stage: 'str | None' = None, random_state: 'dict[str, Any]' = <factory>, random_state_source: 'str' = 'not_supplied') -> None
-```
-
-Source: `optimizer/core/observer.py`.
-
-### `core.ChunkEvent`
-
-A completed engine chunk, passed to observers and the in-memory compatibility trace.
-
-Family: `olgs`.
-
-```python
-ChunkEvent(optimizer: 'str', chunk: 'int', start_iteration: 'int', end_iteration: 'int', start_metrics: 'dict[str, Any]', end_metrics: 'dict[str, Any]', system_params: 'dict[str, Any]', stage: 'str | None', accepted: 'bool | None', reason: 'str | None') -> None
-```
-
-Source: `optimizer/core/observer.py`.
-
-### `core.TerminalEvent`
-
-The final fact produced by one engine chunk, passed to observers.
-
-Family: `olgs`.
-
-```python
-TerminalEvent(optimizer: 'str', status: 'str', reason: 'str', final: 'SnapshotFacts', best: 'SnapshotFacts | None', iteration: 'int', global_iteration: 'int', stage: 'str | None', chunk: 'int' = 0, system_params: 'dict[str, Any]' = <factory>, certification: 'dict[str, Any]' = <factory>) -> None
-```
-
-Source: `optimizer/core/observer.py`.
-
 ## campaigns
 
 Durable multi-stage coordination using objective and provenance declared by system_spec().
@@ -4203,7 +3997,7 @@ Campaign object with durable stage, system-fingerprint, and selection evidence.
 Family: `olgs`.
 
 ```python
-Campaign(system: 'Any', root: 'str | Path', *, system_factory: 'SystemFactory | None' = None, campaign_id: 'str | None' = None) -> 'None'
+Campaign(system: 'Any', root: 'str | Path | None' = None, *, system_factory: 'SystemFactory | None' = None, campaign_id: 'str | None' = None) -> 'None'
 ```
 
 Source: `optimizer/campaigns/__init__.py`.
@@ -4215,7 +4009,7 @@ Create a new campaign rooted at a new directory.
 Family: `olgs`.
 
 ```python
-create(system: 'Any', root: 'str | Path', *, system_factory: 'SystemFactory | None' = None, campaign_id: 'str | None' = None) -> 'Campaign'
+create(system: 'Any', root: 'str | Path | None' = None, *, system_factory: 'SystemFactory | None' = None, campaign_id: 'str | None' = None) -> 'Campaign'
 ```
 
 #### Inputs
@@ -4234,36 +4028,6 @@ create(system: 'Any', root: 'str | Path', *, system_factory: 'SystemFactory | No
 #### Requires
 
 - system.system_spec
-
-Source: `optimizer/campaigns/__init__.py`.
-
-### `campaigns.open`
-
-Open saved campaign evidence with a caller-owned system resolver.
-
-Family: `olgs`.
-
-```python
-open(root: 'str | Path', *, system_resolver: 'SystemResolver') -> 'Campaign'
-```
-
-#### Inputs
-
-| Name | Meaning |
-|---|---|
-| `root` | Existing campaign path. |
-| `system_resolver` | Callable from saved SystemReference to matching system. |
-
-#### Returns
-
-| Name | Meaning |
-|---|---|
-| `type` | Campaign |
-
-#### Requires
-
-- system resolver
-- verified checkpoint artifacts
 
 Source: `optimizer/campaigns/__init__.py`.
 
@@ -4310,7 +4074,7 @@ One selected stage result tied to an exact system and checkpoint.
 Family: `olgs`.
 
 ```python
-CandidateRef(candidate_id: 'str', mode: 'str', stage_dir: 'Path', result: 'OptimizerResult', system: 'SystemReference', selection: 'SelectionSpec', checkpoint: 'dict[str, Any]', source_id: 'str | None' = None) -> None
+CandidateRef(candidate_id: 'str', mode: 'str', result: 'OptimizerResult', system: 'SystemReference', selection: 'SelectionSpec', source_id: 'str | None' = None) -> None
 ```
 
 Source: `optimizer/campaigns/__init__.py`.
@@ -4334,7 +4098,7 @@ Explicit validation of a candidate against the system that produced it.
 Family: `olgs`.
 
 ```python
-ValidationResult(source_id: 'str', system_fingerprint: 'str', metrics: 'Mapping[str, Any]', gradient_norm: 'float | None', counters: 'Mapping[str, int]', artifact: 'Path') -> None
+ValidationResult(source_id: 'str', system_fingerprint: 'str', metrics: 'Mapping[str, Any]', gradient_norm: 'float | None', counters: 'Mapping[str, int]') -> None
 ```
 
 Source: `optimizer/campaigns/__init__.py`.
@@ -4360,358 +4124,6 @@ random_smooth_guesses(system: 'Any', count: 'int', *, amplitude: 'Any', seed: 'i
 - guesses.random_smooth_guess
 
 Source: `optimizer/campaigns/__init__.py`.
-
-## tracker
-
-Passive durable run evidence; it records engine facts and never calls system numerics.
-
-### `tracker.RunJournal`
-
-Append-only receipt, timeline, checkpoint, live, and terminal writer.
-
-Family: `olgs`.
-
-```python
-RunJournal(run_dir: 'Path', receipt: 'RunReceipt', *, _create_token: 'object | None' = None) -> 'None'
-```
-
-Source: `optimizer/tracker/journal.py`.
-
-### `tracker.JournalObserver`
-
-Passive bridge from already-computed core facts to a RunJournal.
-
-Family: `olgs`.
-
-```python
-JournalObserver(journal: 'RunJournal', *, save_all_checkpoints: 'bool' = False, checkpoint_policy: 'CheckpointPolicy | None' = None) -> 'None'
-```
-
-Source: `optimizer/tracker/bridge.py`.
-
-### `tracker.CheckpointPolicy`
-
-Bound durable control artifacts while retaining every scalar iteration record.
-
-Family: `olgs`.
-
-```python
-CheckpointPolicy(save_all: 'bool' = False, persist_start: 'bool' = True, persist_selected_best: 'bool' = True, persist_failure: 'bool' = True, persist_final: 'bool' = True) -> None
-```
-
-Source: `optimizer/tracker/bridge.py`.
-
-### `tracker.read_timeline`
-
-Validate and read append-only tracker events without optimizer imports.
-
-Family: `olgs`.
-
-```python
-read_timeline(run_dir: 'str | Path') -> 'TimelineReadResult'
-```
-
-Source: `optimizer/tracker/reader.py`.
-
-### `tracker.load_checkpoint`
-
-Load a SHA-256 verified control artifact without a system object.
-
-Family: `olgs`.
-
-```python
-load_checkpoint(run_dir: 'str | Path', reference: 'CheckpointReference | Mapping[str, Any]', *, verify: 'bool' = True) -> 'CheckpointData'
-```
-
-Source: `optimizer/tracker/artifacts.py`.
-
-### `tracker.RunReceipt`
-
-Small immutable receipt for one run, without redefining its problem.
-
-Family: `olgs`.
-
-```python
-RunReceipt(run_id: 'str', objective_label: 'str', direction: 'str', references: 'dict[str, SourceReference]', objective_metric: 'str' = 'J', selection_rule: 'str' = 'best_finite_value', metric_descriptors: 'dict[str, MetricDescriptor]' = <factory>, api_context: 'dict[str, Any]' = <factory>, method_config: 'dict[str, Any]' = <factory>, provenance: 'dict[str, Any]' = <factory>, seed: 'int | None' = None, created_utc: 'str' = <factory>, schema_version: 'str' = 'optimizer.tracker/v3') -> None
-```
-
-Source: `optimizer/tracker/model.py`.
-
-### `tracker.MetricDescriptor`
-
-Declared meaning of one scalar metric saved by the tracker.
-
-Family: `olgs`.
-
-```python
-MetricDescriptor(metric_id: 'str', label: 'str', role: 'str' = 'diagnostic', direction: 'str | None' = None, unit: 'str | None' = None, source: 'str | None' = None) -> None
-```
-
-Source: `optimizer/tracker/model.py`.
-
-### `tracker.SourceReference`
-
-Small pointer to an authority owned outside the tracker.
-
-Family: `olgs`.
-
-```python
-SourceReference(identifier: 'str', path: 'str | None' = None, content_hash: 'str | None' = None, version: 'str | None' = None) -> None
-```
-
-Source: `optimizer/tracker/model.py`.
-
-### `tracker.ScalarSnapshot`
-
-Compact state view at one causal point in a run.
-
-Family: `olgs`.
-
-```python
-ScalarSnapshot(metrics: 'dict[str, Any]' = <factory>, metric_sources: 'dict[str, str]' = <factory>, counters: 'dict[str, int]' = <factory>, omitted_metrics: 'tuple[str, ...]' = ()) -> None
-```
-
-Source: `optimizer/tracker/model.py`.
-
-### `tracker.IterationRecord`
-
-Raw before, proposal, trial, and after record for one outer iteration.
-
-Family: `olgs`.
-
-```python
-IterationRecord(iteration: 'int', method: 'str', before: 'ScalarSnapshot', after: 'ScalarSnapshot', accepted: 'bool', reason: 'str', trial: 'ScalarSnapshot | None' = None, proposal: 'dict[str, Any]' = <factory>, phase: 'str | None' = None, best_after: 'ScalarSnapshot | None' = None, global_iteration: 'int | None' = None, chunk: 'int' = 0, system_params: 'dict[str, Any]' = <factory>) -> None
-```
-
-Source: `optimizer/tracker/model.py`.
-
-### `tracker.ChunkRecord`
-
-One completed optimizer chunk with its resolved method and system facts.
-
-Family: `olgs`.
-
-```python
-ChunkRecord(method: 'str', chunk: 'int', start_iteration: 'int', end_iteration: 'int', start_metrics: 'dict[str, Any]', end_metrics: 'dict[str, Any]', start_omitted_metrics: 'tuple[str, ...]' = (), end_omitted_metrics: 'tuple[str, ...]' = (), system_params: 'dict[str, Any]' = <factory>, phase: 'str | None' = None, accepted: 'bool | None' = None, reason: 'str | None' = None) -> None
-```
-
-Source: `optimizer/tracker/model.py`.
-
-### `tracker.InterventionRecord`
-
-An action between normal iterations, linked to its numerical evidence.
-
-Family: `olgs`.
-
-```python
-InterventionRecord(action_code: 'str', reason: 'str', before: 'ScalarSnapshot', after: 'ScalarSnapshot', outcome_code: 'str', parameters: 'dict[str, Any]' = <factory>, analysis_event_id: 'str | None' = None) -> None
-```
-
-Source: `optimizer/tracker/model.py`.
-
-### `tracker.AnalysisRecord`
-
-A derived, explicitly scheduled analysis of a raw iteration window.
-
-Family: `olgs`.
-
-```python
-AnalysisRecord(analysis_code: 'str', start_iteration: 'int', end_iteration: 'int', inputs: 'dict[str, Any]' = <factory>, findings: 'dict[str, Any]' = <factory>, counters: 'dict[str, int]' = <factory>) -> None
-```
-
-Source: `optimizer/tracker/model.py`.
-
-### `tracker.LiveSnapshot`
-
-Replaceable progress view for a local observer; not the scientific source.
-
-Family: `olgs`.
-
-```python
-LiveSnapshot(status: 'str', phase: 'str', iteration: 'int | None', method: 'str | None', current: 'ScalarSnapshot | None', best: 'ScalarSnapshot | None') -> None
-```
-
-Source: `optimizer/tracker/model.py`.
-
-### `tracker.TerminalRecord`
-
-The selected terminal result and any explicitly requested certificate.
-
-Family: `olgs`.
-
-```python
-TerminalRecord(status: 'str', reason: 'str', final: 'ScalarSnapshot', best: 'ScalarSnapshot | None' = None, selected_checkpoint: 'dict[str, Any] | None' = None, selection_fallback: 'str | None' = None, certification: 'dict[str, Any]' = <factory>, method: 'str | None' = None, phase: 'str | None' = None, iteration: 'int | None' = None, global_iteration: 'int | None' = None, chunk: 'int | None' = None, system_params: 'dict[str, Any]' = <factory>) -> None
-```
-
-Source: `optimizer/tracker/model.py`.
-
-### `tracker.CheckpointReference`
-
-Small JSON-safe pointer to a separately stored control artifact.
-
-Family: `olgs`.
-
-```python
-CheckpointReference(checkpoint_id: 'str', label: 'str', relative_path: 'str', shape: 'tuple[int, int]', sha256: 'str | None' = None) -> None
-```
-
-Source: `optimizer/tracker/artifacts.py`.
-
-### `tracker.CheckpointData`
-
-Loaded controls plus caller-supplied JSON metadata.
-
-Family: `olgs`.
-
-```python
-CheckpointData(reference: 'CheckpointReference', controls: 'Controls', optimizer_state: 'dict[str, Any]', snapshot: 'dict[str, Any]', api_context: 'dict[str, Any]', metadata: 'dict[str, Any]') -> None
-```
-
-Source: `optimizer/tracker/artifacts.py`.
-
-### `tracker.TimelineReadResult`
-
-Complete timeline records and, if present, one ignored damaged tail line.
-
-Family: `olgs`.
-
-```python
-TimelineReadResult(records: 'tuple[dict[str, Any], ...]', recovered_tail: 'dict[str, Any] | None' = None, next_offset: 'int' = 0, last_sequence: 'int | None' = None, unsupported_events: 'tuple[dict[str, Any], ...]' = (), stalled: 'bool' = False, reason: 'str | None' = None, corrupt_at_offset: 'int | None' = None) -> None
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `tracker.follow_timeline`
-
-Read complete appended events and distinguish partial tails from corruption.
-
-Family: `olgs`.
-
-```python
-follow_timeline(run_dir: 'str | Path', *, offset: 'int' = 0, previous_sequence: 'int | None' = None) -> 'TimelineReadResult'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `tracker.read_receipt`
-
-Read the stored run receipt exactly as written.
-
-Family: `olgs`.
-
-```python
-read_receipt(run_dir: 'str | Path') -> 'dict[str, Any]'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `tracker.read_live`
-
-Read the current replaceable observer snapshot, if the run has started.
-
-Family: `olgs`.
-
-```python
-read_live(run_dir: 'str | Path') -> 'dict[str, Any] | None'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `tracker.read_terminal`
-
-Read the direct terminal-result index, if the run has ended.
-
-Family: `olgs`.
-
-```python
-read_terminal(run_dir: 'str | Path') -> 'dict[str, Any] | None'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `tracker.read_writer`
-
-Read explicit writer ownership and heartbeat state, if present.
-
-Family: `olgs`.
-
-```python
-read_writer(run_dir: 'str | Path') -> 'dict[str, Any] | None'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `tracker.inspect_writer`
-
-Report local writer liveness without taking ownership or modifying files.
-
-Family: `olgs`.
-
-```python
-inspect_writer(run_dir: 'str | Path') -> 'dict[str, Any]'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `tracker.metric_coverage`
-
-Compare declared metrics with observed and explicitly omitted metrics.
-
-Family: `olgs`.
-
-```python
-metric_coverage(receipt: 'Mapping[str, Any]', records: 'tuple[dict[str, Any], ...] | list[dict[str, Any]]') -> 'dict[str, tuple[str, ...]]'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `tracker.project_timeline`
-
-Create a generic read-only projection for API or interface consumers.
-
-Family: `olgs`.
-
-```python
-project_timeline(records: 'tuple[dict[str, Any], ...] | list[dict[str, Any]]', *, kind: 'str | None' = None, fields: 'Mapping[str, str] | None' = None) -> 'tuple[dict[str, Any], ...]'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `tracker.validate_event`
-
-Validate one causal event envelope without importing optimizer code.
-
-Family: `olgs`.
-
-```python
-validate_event(payload: 'Mapping[str, Any]', *, expected_run_id: 'str | None' = None, previous_sequence: 'int | None' = None) -> 'bool'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `tracker.validate_receipt`
-
-Validate the generic receipt fields required by read-only consumers.
-
-Family: `olgs`.
-
-```python
-validate_receipt(payload: 'Mapping[str, Any]') -> 'None'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `tracker.validate_timeline`
-
-Validate the one-start, one-terminal lifecycle of a complete prefix.
-
-Family: `olgs`.
-
-```python
-validate_timeline(records: 'tuple[dict[str, Any], ...] | list[dict[str, Any]]') -> 'None'
-```
-
-Source: `optimizer_log/reader.py`.
 
 ## visualization
 
@@ -5017,14 +4429,6 @@ validate_declared_metrics(metrics: 'Mapping[str, Any]', system_spec: 'Mapping[st
 
 Source: `optimizer/system_olgs/specs.py`.
 
-### `system_olgs.TRACKING_SPEC_SCHEMA`
-
-Schema identifier of the optional tracking specification.
-
-Family: `olgs`. Root shortcut: `opt.TRACKING_SPEC_SCHEMA`.
-
-Source: `optimizer/system_olgs/contract.py`.
-
 ### `system_olgs.TrackingSpec`
 
 Type of the optional static tracking specification mapping.
@@ -5045,18 +4449,6 @@ Family: `olgs`.
 
 ```python
 Metrics(*args, **kwargs)
-```
-
-Source: `optimizer/system_olgs/contract.py`.
-
-### `system_olgs.get_tracking_spec`
-
-Return optional static tracking metadata declared by a system.
-
-Family: `olgs`. Root shortcut: `opt.get_tracking_spec`.
-
-```python
-get_tracking_spec(system: 'Any') -> 'dict[str, Any] | None'
 ```
 
 Source: `optimizer/system_olgs/contract.py`.
@@ -5092,7 +4484,7 @@ Presence of required, recommended, and optional OLGS hooks.
 Family: `olgs`. Root shortcut: `opt.SystemProbe`.
 
 ```python
-SystemProbe(has_system_spec: 'bool', has_control_spec: 'bool', has_evaluate: 'bool', has_gradient: 'bool', has_with_secondary: 'bool', has_forward_prop: 'bool', has_back_prop: 'bool', has_metrics: 'bool', has_describe: 'bool', has_tracking_spec: 'bool', has_constraint_spec: 'bool', has_value_and_gradient: 'bool', has_residuals: 'bool', has_jacobian: 'bool', has_control_bounds: 'bool', has_control_transfer: 'bool', has_hessian: 'bool', has_hvp: 'bool', has_smooth_gradient: 'bool', has_prox: 'bool', has_second_derivative: 'bool', has_simulate: 'bool', has_plot_data: 'bool', has_cache_reset: 'bool', has_cache_status: 'bool') -> None
+SystemProbe(has_system_spec: 'bool', has_control_spec: 'bool', has_evaluate: 'bool', has_gradient: 'bool', has_with_secondary: 'bool', has_forward_prop: 'bool', has_back_prop: 'bool', has_metrics: 'bool', has_describe: 'bool', has_constraint_spec: 'bool', has_value_and_gradient: 'bool', has_residuals: 'bool', has_jacobian: 'bool', has_control_bounds: 'bool', has_control_transfer: 'bool', has_hessian: 'bool', has_hvp: 'bool', has_smooth_gradient: 'bool', has_prox: 'bool', has_second_derivative: 'bool', has_simulate: 'bool', has_plot_data: 'bool', has_cache_reset: 'bool', has_cache_status: 'bool') -> None
 ```
 
 Source: `optimizer/system_olgs/contract.py`.
@@ -6264,166 +5656,6 @@ ShootingEvaluator(system: 'Any', *, use_cache: 'bool' = True, cache_size: 'int |
 ```
 
 Source: `optimizer/shooting/evaluator.py`.
-
-## optimizer log
-
-Standalone, read-only tracker reader package; it is not yet a portal UI or command-line application.
-
-### `optimizer_log.read_timeline`
-
-Read validated tracker events without importing optimizer numerics.
-
-Family: `olgs`.
-
-```python
-read_timeline(run_dir: 'str | Path') -> 'TimelineReadResult'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `optimizer_log.follow_timeline`
-
-Incrementally follow appended complete JSONL events.
-
-Family: `olgs`.
-
-```python
-follow_timeline(run_dir: 'str | Path', *, offset: 'int' = 0, previous_sequence: 'int | None' = None) -> 'TimelineReadResult'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `optimizer_log.inspect_writer`
-
-Inspect writer ownership/liveness without taking ownership.
-
-Family: `olgs`.
-
-```python
-inspect_writer(run_dir: 'str | Path') -> 'dict[str, Any]'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `optimizer_log.TimelineReadResult`
-
-Complete timeline records and, if present, one ignored damaged tail line.
-
-Family: `olgs`.
-
-```python
-TimelineReadResult(records: 'tuple[dict[str, Any], ...]', recovered_tail: 'dict[str, Any] | None' = None, next_offset: 'int' = 0, last_sequence: 'int | None' = None, unsupported_events: 'tuple[dict[str, Any], ...]' = (), stalled: 'bool' = False, reason: 'str | None' = None, corrupt_at_offset: 'int | None' = None) -> None
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `optimizer_log.read_receipt`
-
-Read the stored run receipt exactly as written.
-
-Family: `olgs`.
-
-```python
-read_receipt(run_dir: 'str | Path') -> 'dict[str, Any]'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `optimizer_log.read_live`
-
-Read the current replaceable observer snapshot, if the run has started.
-
-Family: `olgs`.
-
-```python
-read_live(run_dir: 'str | Path') -> 'dict[str, Any] | None'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `optimizer_log.read_terminal`
-
-Read the direct terminal-result index, if the run has ended.
-
-Family: `olgs`.
-
-```python
-read_terminal(run_dir: 'str | Path') -> 'dict[str, Any] | None'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `optimizer_log.read_writer`
-
-Read explicit writer ownership and heartbeat state, if present.
-
-Family: `olgs`.
-
-```python
-read_writer(run_dir: 'str | Path') -> 'dict[str, Any] | None'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `optimizer_log.metric_coverage`
-
-Compare declared metrics with observed and explicitly omitted metrics.
-
-Family: `olgs`.
-
-```python
-metric_coverage(receipt: 'Mapping[str, Any]', records: 'tuple[dict[str, Any], ...] | list[dict[str, Any]]') -> 'dict[str, tuple[str, ...]]'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `optimizer_log.project_timeline`
-
-Create a generic read-only projection for API or interface consumers.
-
-Family: `olgs`.
-
-```python
-project_timeline(records: 'tuple[dict[str, Any], ...] | list[dict[str, Any]]', *, kind: 'str | None' = None, fields: 'Mapping[str, str] | None' = None) -> 'tuple[dict[str, Any], ...]'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `optimizer_log.validate_event`
-
-Validate one causal event envelope without importing optimizer code.
-
-Family: `olgs`.
-
-```python
-validate_event(payload: 'Mapping[str, Any]', *, expected_run_id: 'str | None' = None, previous_sequence: 'int | None' = None) -> 'bool'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `optimizer_log.validate_receipt`
-
-Validate the generic receipt fields required by read-only consumers.
-
-Family: `olgs`.
-
-```python
-validate_receipt(payload: 'Mapping[str, Any]') -> 'None'
-```
-
-Source: `optimizer_log/reader.py`.
-
-### `optimizer_log.validate_timeline`
-
-Validate the one-start, one-terminal lifecycle of a complete prefix.
-
-Family: `olgs`.
-
-```python
-validate_timeline(records: 'tuple[dict[str, Any], ...] | list[dict[str, Any]]') -> 'None'
-```
-
-Source: `optimizer_log/reader.py`.
 
 ## Stop reasons
 

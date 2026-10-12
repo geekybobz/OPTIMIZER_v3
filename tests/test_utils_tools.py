@@ -109,7 +109,7 @@ class UtilityToolTests(unittest.TestCase):
         )
 
         self.assertLess(result.J, opt.evaluate(system, controls).J)
-        self.assertTrue(result.trace.iteration_records[0].accepted)
+        self.assertGreater(result.diagnostics['accepted'], 0)
 
     def test_schedules_spectrum_and_smoothness_reports(self):
         system = small_system()

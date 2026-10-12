@@ -34,16 +34,6 @@ from optimizer.core.engine import (
 )
 from optimizer.core.evaluate import EvaluationOutcome, GradientOutcome, SystemEvaluator, ValueGradientOutcome
 from optimizer.core.guards import MetricGuard, metric_guard
-from optimizer.core.observer import (
-    CheckpointEvent,
-    ChunkEvent,
-    IterationEvent,
-    ObserverAdapter,
-    RunObserver,
-    RunStartEvent,
-    SnapshotFacts,
-    TerminalEvent,
-)
 from optimizer.core.stop_reasons import STOP_REASONS, StopReason
 from optimizer.core.stopping import StopDecision, StoppingConfig, StopTracker
 from optimizer.catalog import attach_namespace_helpers, exports

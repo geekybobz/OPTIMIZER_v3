@@ -57,10 +57,9 @@ Read and change them with `channel(key)`, `set_channel(key, values)`,
 | Type | Holds |
 |---|---|
 | `Evaluation` | `controls`, `metrics`, `system_state`, `objective_metric`, and the derived `objective_value` |
-| `OptimizerResult` | `controls`, `metrics`, `stop_reason`, `iterations`, `optimizer`, `objective_metric`, `state`, `trace`, `system_params`, `trace_id`, `checkpoint_ids`, `tracking_failures` |
+| `OptimizerResult` | `controls`, `metrics`, `stop_reason`, `iterations`, `optimizer`, `objective_metric`, `state`, `system_params`, `diagnostics` |
 | `RunState` | The live run: current and best controls and metrics, iteration counters, step size, optimizer state, and stop reason |
 | `WarmStartState` | A handoff: controls, metrics, step size, optimizer state, and the source and target optimizer |
-| `Trace` | In-memory iteration, chunk, event, and checkpoint records |
 
 `OptimizerResult.warmstart()` returns the `WarmStartState` for the next method.
 
@@ -71,10 +70,10 @@ Read and change them with `channel(key)`, `set_channel(key, values)`,
 | `opt.evaluate(system, controls)` | Evaluate the system and wrap its metrics in an `Evaluation` |
 | `opt.gradient(system, controls)` | Call and validate the analytical gradient |
 | `opt.value_and_gradient(system, controls)` | Use the system's combined objective and gradient, when it offers one |
-| `opt.context(system, trace=None, **defaults)` | Bind a system once for notebook or curriculum use |
+| `opt.context(system, **defaults)` | Bind a system once for notebook or curriculum use |
 | `opt.system_info(system)` | Report declared capabilities and metadata without evaluating controls |
 | `opt.plot_data(system, controls, kind=...)` | Request one system-owned visualization data product |
-| `opt.context_info(system=None)` | Report the registered optimizers, the OLGS contract, and tracker capabilities |
+| `opt.context_info(system=None)` | Report the registered optimizers, the OLGS contract, and native numerical capabilities |
 | `opt.continuation(system, controls, stages=...)` | Run explicit parameter stages with safe control transfer |
 | `opt.system_family(system)` | Return `"olgs"` or `"olss"` from the system's `system_spec()`; a missing family means OLGS |
 | `opt.to_plain(value)` | Convert a result, report, or other library value to strict JSON data (see [Transactions](TRANSACTIONS.md#serialization)) |
@@ -97,7 +96,6 @@ identical controls.
 | [transactions.py](transactions.py) | Family-aware request and response envelopes for OLGS and OLSS |
 | [serialization.py](serialization.py) | `to_plain`, the one JSON policy for results, reports, and responses |
 | [families.py](families.py) | `system_family`, the one rule for telling OLGS and OLSS apart |
-| [logs/trace.py](logs/trace.py) | `Trace` |
 
 OLSS uses `ShootingSpec`, `ShootingVariables`, `ShootingEvaluation`, and
 `ShootingResult` rather than `ControlSpec`, `Controls`, and `OptimizerResult`.
@@ -108,7 +106,7 @@ discovery, serialization, family detection, and the
 ## Connections
 
 - Related: [the V4 entry](../README.md)
-- Related: [Core Hub](core/CORE_HUB.md), [Transactions](TRANSACTIONS.md), [Optimizer State and Warmstart](optimizers/OPTIMIZER_STATE_WARMSTART.md), [Logs Hub](logs/LOGS_HUB.md)
+- Related: [Core Hub](core/CORE_HUB.md), [Transactions](TRANSACTIONS.md), [Optimizer State and Warmstart](optimizers/OPTIMIZER_STATE_WARMSTART.md), [Command history](history/HISTORY.md)
 
 ---
 

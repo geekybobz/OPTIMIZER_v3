@@ -13,7 +13,7 @@ How it fits the architecture
 - ``metric_report`` is a lightweight alias when only current scalar/vector metrics are
   needed.
 - ``geometry_probe`` adds residual/Jacobian rank and conditioning information.
-- repair and projected methods can use the same report shape for trace records.
+- repair and projected methods can use the same numerical report shape.
 
 What this file deliberately does not do
 ---------------------------------------

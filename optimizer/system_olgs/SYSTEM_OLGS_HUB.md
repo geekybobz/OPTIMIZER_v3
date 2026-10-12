@@ -68,7 +68,7 @@ finite-difference diagnostics, or result ranking.
 - Related: [Parameters](PARAMS.md)
 - Related: [Lifecycle](LIFECYCLE.md)
 - Related: [Derivative capabilities](DERIVATIVES.md)
-- Related: [Logging boundary](LOGGING_BOUNDARY.md)
+- Deeper: [Interaction boundary](LOGGING_BOUNDARY.md)
 - Related: [Transactions](../TRANSACTIONS.md), [Optimizer methods](../optimizers/OPTIMIZERS_HUB.md), [OLSS](../system_olss/SYSTEM_OLSS_HUB.md)
 
 ---

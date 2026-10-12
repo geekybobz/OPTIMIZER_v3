@@ -197,26 +197,3 @@ def coerce_warmstart(value: Any, *, target_optimizer: str) -> WarmStartState | N
     if isinstance(value, RunState):
         return WarmStartState.from_run_state(value, target_optimizer=target_optimizer)
     return WarmStartState.from_result(value, target_optimizer=target_optimizer)
-
-
-def method_api_context(
-    engine_kwargs: Mapping[str, Any],
-    *,
-    method: str,
-    config: Any,
-) -> dict[str, Any]:
-    """Attach the resolved method configuration to tracker-facing API context."""
-
-    kwargs = dict(engine_kwargs)
-    caller = dict(kwargs.pop("api_context", {}) or {})
-    config_payload = asdict(config) if is_dataclass(config) else dict(config)
-    for key, value in list(config_payload.items()):
-        if isinstance(value, StepSizeSchedule):
-            payload = asdict(value) if is_dataclass(value) else {}
-            config_payload[key] = {"schedule": type(value).__name__, **payload}
-    supplied_method = caller.get("method_config")
-    merged_method = dict(supplied_method) if isinstance(supplied_method, Mapping) else {}
-    merged_method.update({"name": str(method), **config_payload})
-    caller["method_config"] = merged_method
-    kwargs["api_context"] = caller
-    return kwargs

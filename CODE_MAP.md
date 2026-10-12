@@ -33,11 +33,12 @@ project system
 | Foreground service | `optimizer/operations/`, `optimizer/session.py` | Catalog dispatch, contexts, owned candidates, atomic activation and retention limits | `test_operation_service.py` |
 | Structured terminal | `optimizer/cli/` | Restricted AST commands, reference binding, prompt/scripts, discovery and compact responses | `test_cli_language.py`, `test_cli.py` |
 | Durable experiments | `optimizer/persistence/`, `optimizer/checkpoints/` | Independent stores, typed state, rollback, leases, quotas and atomic recovery | `test_persistence.py` |
-| Shared gradient engine | `optimizer/core/` | Evaluation, proposal validation, bounds, acceptance, stopping, trace, and checkpoints | `test_engine.py` |
+| Shared gradient engine | `optimizer/core/` | Evaluation, proposal validation, bounds, acceptance, stopping and numerical aggregates | `test_engine.py` |
 | Gradient methods | `optimizer/optimizers/` | Method-specific updates and private state | `test_optimizers.py`, `test_advanced_optimizers.py` |
 | Shooting methods | `optimizer/shooting/` | Root solving, direct shooting, continuation, multistart, seeds, and replay | `test_olss.py`, `test_olss_scenarios.py` |
 | Diagnostics and repair | `optimizer/utils/` | Short-run diagnosis, derivatives, geometry, repair, and control inspection | `test_utils_tools.py`, `test_run_diagnostics.py` |
-| Coordination and persistence | `campaigns/`, `tracker/`, `logs/` | Multi-stage workflows, journals, observers, traces, and artifacts | tracker and campaign tests |
+| Campaign coordination | `campaigns/` | In-memory typed candidates and explicit validation | `test_campaigns.py` |
+| Command history | `history/` | Frontend statement transactions, recorded outcomes, recovery and replay | `test_history.py` |
 
 ## OLGS execution path
 
@@ -46,7 +47,7 @@ project system
 | 1 | `system_olgs` validation | project system and `Controls` | validated declaration and layout |
 | 2 | optimizer wrapper | controls, state, or warm start plus method parameters | method-specific proposal function and engine options |
 | 3 | `core.run_chunk` | system, current state, proposal function | accepted/rejected iterations and named stop reason |
-| 4 | `OptimizerResult` | terminal run state and trace | controls, metrics, state, history, and warm-start boundary |
+| 4 | `OptimizerResult` | terminal run state and numerical aggregates | controls, metrics, state, diagnostics and warm-start boundary |
 | 5 | utils or another method | result controls/state | diagnosis, repair, continuation, or another chunk |
 
 ## OLSS execution path
@@ -81,7 +82,7 @@ Terminal parsing and the MCP transport remain separate adapters.
 | Required OLGS method | `system_olgs/contract.py` | validation, catalog, scaffold, fixtures | contract and integration tests |
 | Required OLSS method | `system_olss/contract.py` | validation, evaluator, catalog, scaffold | OLSS and integration tests |
 | Transaction field or operation | `transactions.py` | catalog, serialization, future adapters | integration tests |
-| Shared acceptance or stopping | `core/engine.py` | optimizer wrappers and trace evidence | engine and optimizer tests |
+| Shared acceptance or stopping | `core/engine.py` | optimizer wrappers and numerical diagnostics | engine and optimizer tests |
 | One optimizer's update rule | its module under `optimizers/` | state/warm-start documentation | optimizer tests |
 | Shooting root behavior | `shooting/solvers.py` | evaluator, result evidence, campaigns | OLSS scenarios |
 | Public API name or metadata | its declaration in `catalog.py`; exports follow | generated API reference | catalog coverage and reference-freshness tests |

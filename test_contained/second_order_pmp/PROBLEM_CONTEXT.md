@@ -1,12 +1,12 @@
 ---
 role: topic
 parent: ../../tests/TESTING_HUB.md
-summary: "Contained second-order robust qubit-transfer system used as a tracker trial and campaign case."
+summary: "Contained second-order qubit-transfer system and historical tracker-campaign provenance."
 read_when: "Read when running or changing the second-order PMP trial."
 status: active
 reviewed: 2026-10-12
 ---
-# Second-order PMP tracker trial
+# Second-order PMP contained system
 
 This contained system is derived from
 `/Users/billabobz/phd/rob_unversal_article/second_order/latex/pmp_secondorder.tex`.
@@ -28,8 +28,12 @@ unverified generic-optimizer gradient.
 
 Finite-\(\alpha\) directional robustness is a post-run diagnostic, never a
 hidden per-iteration tracker calculation.  This short run checks system and
-tracker plumbing only; it is not a certificate of robust transfer, constrained
+historical tracker plumbing only; it is not a certificate of robust transfer, constrained
 stationarity, or global optimality.
+
+The tracker-specific harnesses are retired and preserved under workspace
+`temp/task5-retired-logging-docs/`. Numerical system equations and saved scientific
+results are preserved; current logging uses frontend command history only.
 
 ---
 

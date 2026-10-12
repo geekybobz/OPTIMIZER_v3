@@ -11,7 +11,8 @@ read_when: Read when integrating the operation service or preparing a terminal/M
 existing library tools. `Session` owns independent named contexts, versioned
 objects and active heads. Native OLGS and OLSS contracts remain separate.
 The service exposes optional [persistent experiments](../persistence/PERSISTENCE.md)
-through `project.init/open`; it has no automatic history writer.
+through `project.init/open`; ordinary Python installs no automatic history writer.
+Frontends attach the [command recorder](../history/HISTORY.md) around statements.
 
 ## Calls and results
 
@@ -126,10 +127,10 @@ context names and variables in the shooting context. It does not infer costates
 from waveforms. Raw system transactions are available as `base.transact`; use
 `session.update` for secondary changes. Plot options remain system-owned.
 
-Live renderers, runtime/evaluator objects, durable campaign factories and the
+Live renderers, runtime/evaluator objects, live campaign factories and the
 OLGS coordinator returning live systems require lifecycle adapters. They remain
 available through native Python and are discoverable with explicit reasons here.
-Legacy logger entries are classified for later retirement. No generic serializer
+Retired logger entries are removed. No generic serializer
 or `deepcopy` is used as a physics-system reconstruction policy.
 
 All state-changing numerical tools require reconstruction/clone isolation. A
@@ -168,8 +169,9 @@ Structured error codes include `invalid_request`, `invalid_arguments`,
   candidates, layouts, ownership, quotas, revisions and Python history boundary.
 
 The [structured terminal](../cli/TERMINAL.md) now calls this service. Named on-disk experiments/checkpoints are implemented through the
-[persistence service](../persistence/PERSISTENCE.md). Full CLI/MCP history and old logger removal, new control conversion helpers and managed
-parallel/pause/cancel workflows have separate delivery gates.
+[persistence service](../persistence/PERSISTENCE.md). Frontend [history](../history/HISTORY.md) is implemented. The MCP transport, new
+control conversion helpers and managed parallel/pause/cancel workflows retain
+separate delivery gates.
 
 ## Connections
 

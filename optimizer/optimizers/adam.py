@@ -12,7 +12,7 @@ How it fits the architecture
 ----------------------------
 - the physical system provides the analytical gradient.
 - this module owns Adam-family moment updates and trial control proposals.
-- ``core.engine.run_chunk`` owns the loop, logging, checkpoints, and acceptance.
+- ``core.engine.run_chunk`` owns the loop, numerical state, and acceptance.
 - moment buffers live in ``RunState.optimizer_state`` and transfer by warmstart.
 
 What this file deliberately does not do
@@ -47,7 +47,6 @@ from optimizer.optimizers._common import (
     coerce_warmstart,
     controls_from_flat_like,
     flat_state_array,
-    method_api_context,
     next_scheduled_step,
     require_finite,
     require_probability_like,
@@ -351,5 +350,5 @@ def adam(
         accept_metric=accept_metric,
         accept_mode=accept_mode,
         accept_tolerance=accept_tolerance,
-        **method_api_context(engine_kwargs, method="adam", config=config),
+        **engine_kwargs,
     )

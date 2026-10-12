@@ -9,7 +9,6 @@ import unittest
 from pathlib import Path
 
 import optimizer as opt
-from optimizer.tracker import read_terminal
 from optimizer.system_olgs import ControlBounds
 from optimizer.utils.parallel import ParallelConfig
 from tests.fixtures.quadratic_system import QuadraticVectorSystem, system
@@ -71,7 +70,7 @@ class CampaignTests(unittest.TestCase):
             for index in range(count)
         ]
 
-    def test_all_six_modes_close_independent_tracker_stages(self) -> None:
+    def test_all_six_modes_retain_owned_numerical_candidates(self) -> None:
         base = system()
         short_adam = opt.campaigns.MethodSpec("adam", {"maxiter": 3, "step_size": 0.1})
         short_lbfgs = opt.campaigns.MethodSpec("lbfgs", {"maxiter": 2, "step_size": 0.1})
@@ -109,11 +108,7 @@ class CampaignTests(unittest.TestCase):
             self.assertEqual(report["stage_count"], 13)
             self.assertEqual(validation.counters["evaluation"], 1)
             self.assertEqual(validation.counters["gradient"], 1)
-            self.assertEqual(len(list(campaign.root.glob("stages/*/terminal.json"))), 13)
-            self.assertTrue(all(
-                read_terminal(path.parent)["status"] == "completed"
-                for path in campaign.root.glob("stages/*/terminal.json")
-            ))
+            self.assertFalse(campaign.root.exists())
             self.assertEqual(report["selected"]["candidate_id"], continued.best.candidate_id)
 
     def test_report_is_passive_and_parallel_requires_an_isolated_factory(self) -> None:
@@ -190,20 +185,15 @@ class CampaignTests(unittest.TestCase):
         self.assertEqual(current.fingerprint, legacy.fingerprint)
         opt.campaigns.SystemReference.from_dict(current.to_dict())
 
-    def test_reopen_loads_hash_checked_candidate_and_requires_explicit_system_resolver(self) -> None:
+    def test_load_candidate_is_owned_and_validation_uses_its_system(self):
         base = system()
-        method = opt.campaigns.MethodSpec("adam", {"maxiter": 2, "step_size": 0.1})
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / "campaign"
-            campaign = opt.campaigns.create(base, root)
-            produced = campaign.scout(self._guesses(base, 1), method=method).best
-            reopened = opt.campaigns.open(root, system_resolver=_quadratic_resolver)
-            restored = reopened.load_candidate(produced.candidate_id)
-            validation = reopened.validate(restored, gradient=False)
-
-            self.assertEqual(restored.system.fingerprint, produced.system.fingerprint)
-            self.assertEqual(restored.checkpoint["sha256"], produced.checkpoint["sha256"])
-            self.assertAlmostEqual(validation.metrics["J"], produced.result.metrics["J"])
+        campaign = opt.campaigns.create(base)
+        method = opt.campaigns.MethodSpec('adam', {'maxiter': 2})
+        produced = campaign.scout(self._guesses(base, 1), method=method).best
+        restored = campaign.load_candidate(produced.candidate_id)
+        self.assertIsNot(restored.result.controls, produced.result.controls)
+        self.assertEqual(campaign.validate(restored, gradient=False).metrics, produced.result.metrics)
+        self.assertFalse(hasattr(opt.campaigns, 'open'))
 
     def test_worker_failure_closes_campaign_and_constrained_challenge_requires_system_transfer(self) -> None:
         base = system()
@@ -216,8 +206,8 @@ class CampaignTests(unittest.TestCase):
                     method=method,
                     parallel=ParallelConfig(backend="thread", workers=2),
                 )
-            terminal = json.loads((campaign.root / "campaign_terminal.json").read_text(encoding="utf-8"))
-            self.assertEqual(terminal["status"], "failed")
+            self.assertEqual(campaign.report()["status"], "failed")
+            self.assertFalse(campaign.root.exists())
 
         bounded = BoundedQuadraticWithoutTransfer()
         with tempfile.TemporaryDirectory() as directory:

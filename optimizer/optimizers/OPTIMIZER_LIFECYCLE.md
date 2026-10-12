@@ -26,7 +26,7 @@ start controls
   -> evaluate proposed controls
   -> accept or reject trial
   -> update RunState and optimizer_state
-  -> record trace/checkpoints when enabled
+  -> update compact numerical aggregates
   -> check stopping rules
   -> return OptimizerResult
 ```
@@ -81,8 +81,8 @@ accept_tolerance = 0.0
 For minimization, the trial is accepted when the selected metric does not get worse
 beyond tolerance.
 
-`line_search` has a custom accept wrapper so backtracking and Armijo details are
-recorded inside the normal engine trace.
+`line_search` uses a custom accept wrapper for backtracking and Armijo checks.
+Its numerical method memory retains accepted/rejected counts and step information.
 
 ## Stopping
 
@@ -113,12 +113,12 @@ start controls as population mean
   -> compute elite mean and spread
   -> accept generation if best candidate improves
   -> adapt sigma (accepted: blend toward elite spread; rejected: shrink by 0.9)
-  -> record standard trace records where practical
+  -> finalize compact numerical aggregates
   -> return OptimizerResult
 ```
 
-`cma_es` still returns the standard result shape, but it does not use gradient
-proposals or warmstart state in the current implementation.
+`cma_es` still returns the standard result shape, without gradient proposals. Native physical starts and compatible warmstart
+fields remain available; exact RNG restoration is not promised.
 
 ## Related Notes
 

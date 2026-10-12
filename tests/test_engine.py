@@ -7,7 +7,6 @@ from optimizer.core.engine import StepProposal, run_chunk
 from optimizer.core.evaluate import SystemEvaluator
 from optimizer.core.stopping import StoppingConfig
 from optimizer.utils.parallel import ParallelConfig, parallel_map
-from optimizer.logs.trace import Trace
 from optimizer.system_olgs import basic_system_spec
 
 
@@ -117,10 +116,9 @@ def square(value):
 
 
 class EngineTests(unittest.TestCase):
-    def test_run_chunk_moves_down_quadratic_and_records_trace(self):
+    def test_run_chunk_moves_down_quadratic_and_reports_numerical_counters(self):
         system = QuadraticSystem(target=0.0)
         controls = Controls.constant(system.control_spec(), 1.0, name="initial")
-        trace = Trace(run_id="test-run")
 
         result = run_chunk(
             system,
@@ -129,20 +127,15 @@ class EngineTests(unittest.TestCase):
             optimizer_name="gradient_descent",
             maxiter=3,
             step_size=0.25,
-            trace=trace,
-            create_trace=False,
             stage="phase5-test",
         )
 
         self.assertEqual(result.stop_reason, "maxiter")
         self.assertEqual(result.iterations, 3)
         self.assertLess(result.J, 4.0)
-        self.assertIs(result.trace, trace)
-        self.assertEqual(len(trace.iteration_records), 3)
-        self.assertEqual(len(trace.chunk_records), 1)
-        self.assertIn("chunk_start", trace.labels)
-        self.assertIn("accepted", trace.labels)
-        self.assertIn("best_J", trace.labels)
+        self.assertEqual(result.diagnostics['attempts'], 3)
+        self.assertEqual(result.diagnostics['accepted'], 3)
+        self.assertFalse(hasattr(result, 'trace'))
         self.assertEqual(result.state.optimizer_state["calls"], 3)
 
     def test_default_accept_rejects_worse_trial_without_moving_controls(self):
@@ -160,7 +153,7 @@ class EngineTests(unittest.TestCase):
 
         np.testing.assert_allclose(result.controls.as_matrix(), controls.as_matrix())
         self.assertEqual(result.stop_reason, "maxiter")
-        self.assertFalse(result.trace.iteration_records[0].accepted)
+        self.assertEqual(result.diagnostics['accepted'], 0)
 
     def test_declared_maximization_uses_system_objective_for_direction_and_acceptance(self):
         system = MaximizingQuadraticSystem(target=1.0)
@@ -176,7 +169,7 @@ class EngineTests(unittest.TestCase):
         )
 
         self.assertGreater(result.J, -4.0)
-        self.assertTrue(result.trace.iteration_records[0].accepted)
+        self.assertGreater(result.diagnostics['accepted'], 0)
 
         targeted = run_chunk(
             system,
@@ -203,9 +196,9 @@ class EngineTests(unittest.TestCase):
 
         self.assertEqual(result.stop_reason, "nonfinite_trial")
         self.assertEqual(result.iterations, 3)
-        self.assertTrue(all(record.accepted is False for record in result.trace.iteration_records))
-        self.assertEqual(result.trace.iteration_records[0].reason, "trial_evaluation_rejected")
-        self.assertIn("ValueError", result.trace.iteration_records[-1].technical["error"])
+        self.assertEqual(result.diagnostics['rejected'], 3)
+        self.assertEqual(result.diagnostics['last_failure'], 'nonfinite_trial')
+        np.testing.assert_array_equal(result.controls.as_matrix(), controls.as_matrix())
 
     def test_target_can_stop_before_iterations(self):
         system = QuadraticSystem(target=0.0)
@@ -222,7 +215,7 @@ class EngineTests(unittest.TestCase):
 
         self.assertEqual(result.stop_reason, "target")
         self.assertEqual(result.iterations, 0)
-        self.assertEqual(len(result.trace.iteration_records), 0)
+        self.assertEqual(result.diagnostics['attempts'], 0)
 
     def test_stall_stops_when_metric_does_not_improve(self):
         system = QuadraticSystem(target=0.0)
@@ -239,7 +232,7 @@ class EngineTests(unittest.TestCase):
 
         self.assertEqual(result.stop_reason, "stall")
         self.assertEqual(result.iterations, 2)
-        self.assertEqual(len(result.trace.iteration_records), 2)
+        self.assertEqual(result.diagnostics['attempts'], 2)
 
     def test_evaluation_cache_reuses_identical_control_content(self):
         system = QuadraticSystem(target=0.0)

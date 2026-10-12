@@ -146,7 +146,7 @@ class _Halt(Exception):
 
 
 class _Terminal:
-    """Foreground coordinator with an optional explicit future-history observer.
+    """Foreground coordinator with an optional explicit informational observer.
 
     The observer receives raw text, canonical request and terminal response. It
     is an informational hook, not a durable commit protocol or installed writer.
@@ -163,8 +163,15 @@ class _Terminal:
         self._interrupted = False
         self._request = None
         self._operation_name = None
+        from optimizer.history.recorder import _Recorder
+        self.history = _Recorder(self.service)
+        self._buffer = None
 
     def _output(self, response: OperationResponse, request: OperationRequest | None = None) -> None:
+        if self._buffer is not None:
+            self.history.capture(response,request)
+            self._buffer.append((response,request))
+            return
         self.emit(response)
         if self.observer is not None:
             self.observer({"raw_command": self._raw, "request": request,
@@ -193,8 +200,8 @@ class _Terminal:
                       for name, method in _SESSION_METHODS.items()],
                     *[f"opt.{name}{inspect.signature(method)}" for name,method in self.service._persistence.methods.items()], "opt.session.exit()"],
                 "lifetime": "RAM unless project.init/open selects a durable experiment; project.status reports storage.",
-                "deferred": ["CLI/MCP command history and legacy logger retirement (Task 5)",
-                             "managed parallel jobs/control transforms (Task 6)"]}
+                "history": [entry['id'] for entry in self.history.descriptors()],
+                "deferred": ["managed parallel jobs/control transforms (Task 6)", "MCP transport"]}
 
     def _info(self, operation: str) -> dict:
         if not isinstance(operation, str):
@@ -258,6 +265,10 @@ class _Terminal:
         args = [self._value(value) for value in node.args]
         kwargs = {keyword.arg: self._value(keyword.value) for keyword in node.keywords}
         self._operation_name, self._request = operation, None
+        if self.service._history and operation in self.service._history.methods:
+            method=self.service._history.methods[operation]
+            bound=inspect.signature(method).bind(*args, **kwargs)
+            return self._send(OperationRequest(operation, dict(bound.arguments), bind=binding))
         if operation in self.service._persistence.methods:
             method=self.service._persistence.methods[operation]
             bound=inspect.signature(method).bind(*args, **kwargs)
@@ -326,7 +337,7 @@ class _Terminal:
                 arguments[name] = value
         return self._send(OperationRequest(item.id, arguments, **options))
 
-    def submit(self, source: str) -> int:
+    def _execute_submission(self, source: str) -> int:
         """Execute a bounded submission; 0 success, 2 input/dispatch, 130 interrupt."""
         self._raw, self._interrupted = source, False
         self._request = None
@@ -371,6 +382,53 @@ class _Terminal:
             self._output(response, self._request)
             return 2
 
+    def submit(self, source: str) -> int:
+        """Validate the batch, then record and atomically execute each statement."""
+        try:
+            commands=_parse(source)
+        except Exception:
+            commands=[(None,None,source)]
+        for expression,binding,raw in commands:
+            if self.closed: break
+            # Lifecycle transitions are whole statements, never nested children.
+            forbidden={'project.init','project.open','project.close','project.fork','session.exit','history.replay'}
+            lifecycle_error=False
+            if expression is not None:
+                lifecycle_error=any(isinstance(n,ast.Call) and n is not expression and _operation(n.func) in forbidden for n in ast.walk(expression))
+            root=self.service
+            was_closed=self.closed
+            buffer=[]
+            def execute(staged):
+                self.service=staged;self._buffer=buffer
+                try:
+                    if lifecycle_error:
+                        response=OperationResponse(uuid4().hex,None,'error',state_before=root.session.snapshot(),state_after=root.session.snapshot(),error={'code':'unsupported_syntax','message':'Project transitions and replay must be standalone calls.'})
+                        self._output(response);return 2
+                    return self._execute_submission(raw.strip())
+                finally:self.service=root;self._buffer=None
+            before=root.session.snapshot()
+            try:
+                code=self.history.run(raw,ast.dump(expression,include_attributes=False) if expression is not None else None,execute)
+            except BaseException as exc:
+                code=130 if isinstance(exc,KeyboardInterrupt) else 2
+                buffer=[(OperationResponse(uuid4().hex,None,'error',state_before=before,state_after=root.session.snapshot(),error={'code':getattr(exc,'code','history_failed'),'type':type(exc).__name__,'message':str(exc)}),None)]
+            if code:
+                self.closed=was_closed
+                buffer=[pair for pair in buffer if not pair[0].ok][-1:]
+            for response,request in buffer:
+                metadata={**response.metadata,'command_id':self.history.command_id,
+                          'durability':'persistent' if self.history.targets else 'ephemeral'}
+                if code:
+                    response=replace(response,state_before=before,state_after=root.session.snapshot(),metadata={**metadata,'rolled_back':True})
+                else:
+                    store=root._persistence.store
+                    response=replace(response,state_after=root.session.snapshot(),metadata={**metadata,
+                        'store_generation':store.index['generation'] if store else None,
+                        'durability_warning':store.warning if store else None})
+                self._output(response,request)
+            if code:return code
+        return 0
+
     def completions(self) -> list[str]:
         entries = self.service.list()
         names = ["opt." + entry["id"] for entry in entries if entry["classification"] in {"tool", "constructor", "lifecycle"}]
@@ -379,3 +437,18 @@ class _Terminal:
         names += ["opt." + name for name in (*_SESSION_METHODS, *self._conveniences())]
         names += list(self.service.session.snapshot()["bindings"])
         return sorted(set(names))
+
+    def finish(self,reason='frontend_close'):
+        """Record an EOF/script lifecycle action without inventing user text."""
+        if self.service._persistence.store is None:return
+        root=self.service
+        def close(staged):
+            request=OperationRequest('project.close')
+            response=staged.execute(request)
+            self.history.capture(response,request)
+            return 0 if response.ok else 2
+        try:self.history.run('',None,close,origin=reason)
+        except (OSError,_ServiceError) as exc:
+            self.emit(OperationResponse('frontend-close','project.close','error',error={
+                'code':getattr(exc,'code','history_failed'),'message':str(exc)}))
+        finally:root._persistence.close()

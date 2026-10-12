@@ -57,7 +57,14 @@ class _Store:
         try:
             fcntl.flock(self.lock.fileno(), (fcntl.LOCK_SH if read_only else fcntl.LOCK_EX)|fcntl.LOCK_NB)
             self.project=self.read_json('project.json')
-            self.index=self.read_json('session.json')
+            try:
+                self.index=self.read_json('session.json')
+            except _ServiceError:
+                if not self._path('history.jsonl').exists(): raise
+                self.index={'generation':-1}
+            if self._path('history.jsonl').exists():
+                from optimizer.history.journal import _Journal
+                _Journal(self).recover()
             if set(self.project)!={'schema','id','name','origin'} or self.project['schema']!='optimizer-project/1':
                 raise _ServiceError('checkpoint_corrupt','Unknown project schema/fields.')
             required={'schema','project_id','generation','contexts','selected','bindings','objects','bookmarks','pins','ancestry','cursor','redo','policy','environment'}
@@ -229,12 +236,19 @@ class _Store:
             if path.is_dir() and not path.is_symlink() and len(path.name)==64 and _ID.fullmatch(path.name) and path.name not in live:
                 shutil.rmtree(path)
 
-    def commit(self,index,files,guard=None):
+    def commit(self,index,files,guard=None,*,history=None):
         if self.read_only: raise _ServiceError('read_only','Experiment is open read-only.')
+        if self._path('history.jsonl').exists() and history is None:
+            raise _ServiceError('history_owned','This experiment requires a recorded frontend transaction; open read-only or fork an index-owned experiment.')
         self.index_check=index['generation']==self.index['generation']+1
         if not self.index_check: raise _ServiceError('revision_conflict','Store generation changed.')
         # Count all physical preparation bytes including the replacement index.
+        outcome=None
+        if history is not None:
+            journal,data,command_id,session_id=history
+            outcome={**data,'index':index}
         extra=sum(len(data) for relative,data in files.items() if not self._path(relative).exists())+len(_json(index))
+        if outcome is not None: extra+=len(_json(outcome))+1024
         if self.usage()+extra > index['policy']['max_bytes']:
             raise _ServiceError('storage_full','Insufficient preparation capacity; prune/unpin or raise the explicit byte limit.')
         created=[]
@@ -249,9 +263,17 @@ class _Store:
                     raise _ServiceError('checkpoint_corrupt','Immutable payload collision.')
             if guard is not None: guard()
             self.warning=None
+            if outcome is not None:
+                journal.outcome(outcome,command_id,session_id)
+                # The durable outcome precedes the replaceable session index.
+                committed=True
+                self.index=index
             try: _atomic(self.path/'session.json',_json(index))
             except _CommittedWriteError as exc:
                 self.warning='Index committed; directory fsync failed: '+str(exc)
+            except (OSError,KeyboardInterrupt) as exc:
+                if not committed: raise
+                self.warning='History committed; index recovery required: '+str(exc)
             committed=True
             self.index=index
         finally:
@@ -265,7 +287,7 @@ class _Store:
                     self._path(f'checkpoints/manifests/{oid}.json').unlink(missing_ok=True)
             self._collect_blobs()
             self._collect_inputs()
-        except (OSError,_ServiceError) as exc:
+        except (OSError,_ServiceError,KeyboardInterrupt) as exc:
             self.warning=(self.warning+"; " if self.warning else "")+"Committed; cleanup deferred: "+str(exc)
 
     def clone(self,name,root=None):

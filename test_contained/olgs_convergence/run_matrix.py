@@ -93,13 +93,11 @@ def initial(system, start: str) -> np.ndarray:
 
 
 def _counters(result) -> dict:
-    records = list(getattr(result.trace, "iteration_records", []) or []) if result.trace is not None else []
-    if not records:
-        return {"accepted": 0, "rejected": 0, "counters": {}}
+    data = result.diagnostics
     return {
-        "accepted": sum(1 for r in records if r.accepted is True),
-        "rejected": sum(1 for r in records if r.accepted is False),
-        "counters": dict(records[-1].technical.get("counters", {})),
+        "accepted": data.get("accepted", 0),
+        "rejected": data.get("rejected", 0),
+        "counters": dict(data.get("counters", {})),
     }
 
 

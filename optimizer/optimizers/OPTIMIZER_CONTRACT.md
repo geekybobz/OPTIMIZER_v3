@@ -48,9 +48,6 @@ warmstart
 accept_metric
 accept_mode
 accept_tolerance
-trace
-create_trace
-observers
 stage
 use_cache
 target_value
@@ -62,20 +59,16 @@ stall_tolerance
 Not every optimizer exposes every method-specific argument. Read the method file for
 the exact surface.
 
-## Run Recording
+## Numerical context
 
 | Argument | Accepts | Effect |
 |---|---|---|
-| `trace` | `Trace` or `None` | Append in-memory records to this trace |
-| `create_trace` | `bool`, default `True` | Create a new in-memory `Trace` when none is passed |
-| `observers` | Iterable of run observers | Receive the `on_start`, `on_iteration`, `on_chunk`, `on_checkpoint`, and `on_terminal` events; `JournalObserver` writes a durable run folder |
-| `stage` | `str` or `None` | Name the phase recorded for this chunk |
+| `stage` | `str` or `None` | Supply a phase label to StepContext |
 | `use_cache` | `bool`, default `True` | Reuse the cached evaluation for identical controls |
 
-Observers are passive: they receive facts the engine has already computed and
-never call the system. An observer implements all five callbacks, or subclasses
-`optimizer.core.ObserverAdapter` and overrides only the ones it needs. See the
-[Tracker Hub](../tracker/TRACKER_HUB.md) for durable run folders.
+Numerical calls create no automatic logs or files. The frontend
+[command recorder](../history/HISTORY.md) owns interaction history; explicit
+[checkpoints](../persistence/PERSISTENCE.md) own durable numerical state.
 
 ## Return Object
 
@@ -95,8 +88,7 @@ stop_reason
 iterations
 optimizer
 state
-trace
-checkpoint_ids
+diagnostics
 ```
 
 ## Gradient-Based Methods

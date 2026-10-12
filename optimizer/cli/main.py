@@ -51,7 +51,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return _run(terminal,options)
     finally:
-        terminal.service._persistence.close()
+        terminal.finish('frontend_close')
 
 
 def _run(terminal,options):
@@ -79,6 +79,8 @@ def _run(terminal,options):
             except EOFError:
                 return terminal.submit(buffer) if buffer.strip() else status
             except KeyboardInterrupt:
+                if buffer.strip():
+                    terminal.history.run(buffer,None,lambda service:130,origin='input_cancelled')
                 buffer = ""
                 if not interactive:
                     return 130

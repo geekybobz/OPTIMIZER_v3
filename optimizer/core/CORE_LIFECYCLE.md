@@ -21,12 +21,11 @@ Before the loop runs:
 ```text
 validate that step is callable
 build the SystemEvaluator
-resolve trace
 choose starting controls
 validate controls against system.control_spec()
 evaluate starting controls
 build RunState
-record the chunk_start checkpoint
+initialize compact numerical aggregates
 check initial stopping rules
 ```
 
@@ -55,7 +54,7 @@ evaluate the proposed controls
 decide acceptance
 apply optimizer-private state for the chosen branch
 update controls and best-so-far, or count a rejection
-record the iteration
+update compact numerical aggregates
 check target, stall, and finiteness rules
 ```
 
@@ -68,12 +67,10 @@ requesting a gradient.
 accepted   controls and metrics are replaced
            step_size updated from the accept branch
            best-so-far updated when the metric improved
-           latest / accepted / best checkpoints written
            iteration and global_iteration advance by one
 
 rejected   controls and metrics are left untouched
            step_size updated from the reject branch
-           no checkpoint written
            iteration and global_iteration still advance by one
 ```
 
@@ -92,12 +89,12 @@ a normal `OptimizerResult` carrying the reason:
 gradient_failed    the system's gradient call raised or failed validation
                    controls and metrics unchanged
                    the failing iteration is counted
-                   technical payload carries the error string
+                   diagnostics retain the last failure
 
 proposal_failed    the step function raised, or its controls failed validation
                    controls and metrics unchanged
                    the failing iteration is counted
-                   technical payload carries "TypeName: message"
+                   diagnostics retain "TypeName: message"
 
 nonfinite_trial    the trial controls evaluated to a failure or non-finite metrics
                    controls and metrics unchanged
@@ -114,7 +111,7 @@ Every exit path converges on the same tail:
 
 ```text
 set state.stop_reason
-record the chunk record on the trace
+finalize numerical aggregates and evaluator counters
 build OptimizerResult from state
 ```
 

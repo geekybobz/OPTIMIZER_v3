@@ -29,7 +29,7 @@ optimizer = "optimizer.cli.main:main"
 optimizer-system = "optimizer.system_olgs.scaffold:main"
 
 [tool.setuptools.packages.find]
-include = ["optimizer", "optimizer.*", "optimizer_log", "optimizer_log.*"]
+include = ["optimizer", "optimizer.*"]
 
 [tool.setuptools.package-data]
 "optimizer.system_olgs.templates" = ["*.tmpl"]

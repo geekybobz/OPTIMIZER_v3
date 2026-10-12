@@ -147,16 +147,6 @@ class HOPurificationTrackerSystem:
             "discretization": "left piecewise-constant controls; N propagator steps",
         }
 
-    def tracking_spec(self) -> dict[str, Any]:
-        return {
-            "schema_version": "optimizer.tracking-spec/v1",
-            "objective": {"metric_id": "J", "direction": "minimize"},
-            "metrics": {
-                "fidelity": {"label": "target-state fidelity", "direction": "maximize", "source": "evaluate"},
-                "infidelity": {"label": "target infidelity", "direction": "minimize", "source": "evaluate"},
-                "control_fluence": {"label": "quadratic control fluence", "source": "evaluate"},
-            },
-        }
 
     def with_secondary(self, **updates: Any) -> "HOPurificationTrackerSystem":
         return type(self)(replace(self.params, **updates))

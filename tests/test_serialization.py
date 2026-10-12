@@ -92,7 +92,7 @@ class StrictJsonResultTests(unittest.TestCase):
         system = QuadraticVectorSystem()
         controls = system.reference_controls(amplitude=0.5)
         result = opt.adam(system, controls, maxiter=3)
-        strict_json(result.to_dict(include_state=True, include_trace=True))
+        strict_json(result.to_dict(include_state=True))
         strict_json(opt.diagnose_run(result))
         strict_json(opt.diagnostic_report(system, controls))
 

@@ -68,8 +68,6 @@ warmstart
 stopping
 target_value / target_metric / target_mode
 stall_patience / stall_tolerance / stall_metric / stall_mode
-trace
-create_trace
 stage
 use_cache
 ```

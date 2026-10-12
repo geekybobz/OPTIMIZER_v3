@@ -4,7 +4,7 @@ Why this file exists
 --------------------
 The optimizer library needs stable public output objects before the engine exists.
 Users should be able to inspect the final controls, metrics, stop reason, iteration
-count, warmstart state, and trace/checkpoint context in a predictable way.  Later
+count, warmstart state, and compact numerical diagnostics in a predictable way.  Later
 modules should not invent separate result shapes for each optimizer.
 
 This module defines two public containers:
@@ -34,191 +34,95 @@ Reviewer invariants
 - controls export includes both spec metadata and matrix values.
 - optimizer-private run state stays in ``RunState`` and is not flattened accidentally.
 """
-
 from __future__ import annotations
-
 import copy as _copy
 from dataclasses import dataclass, field
 from typing import Any, Mapping
-
 import numpy as np
-
 from optimizer.controls import Controls
 from optimizer.state import RunState, WarmStartState
 from optimizer.system_olgs import validate_metrics
 from optimizer.serialization import to_plain
 
-
 def controls_to_dict(controls: Controls) -> dict[str, Any]:
     """Serialize controls into a plain dictionary for result exports."""
-
-    return {
-        "name": controls.name,
-        "spec": controls.spec.to_dict(),
-        "matrix": controls.as_matrix(copy=True).tolist(),
-        "meta": dict(controls.meta),
-    }
-
+    return {'name': controls.name, 'spec': controls.spec.to_dict(), 'matrix': controls.as_matrix(copy=True).tolist(), 'meta': dict(controls.meta)}
 
 @dataclass(frozen=True)
 class Evaluation:
     """Snapshot of one system evaluation."""
-
     controls: Controls
     metrics: dict[str, Any]
     system_state: dict[str, Any] | None = None
-    objective_metric: str = "J"
+    objective_metric: str = 'J'
 
     @classmethod
-    def from_metrics(
-        cls,
-        controls: Controls,
-        metrics: Mapping[str, Any],
-        *,
-        system_state: Mapping[str, Any] | None = None,
-        objective_metric: str = "J",
-    ) -> "Evaluation":
+    def from_metrics(cls, controls: Controls, metrics: Mapping[str, Any], *, system_state: Mapping[str, Any] | None=None, objective_metric: str='J') -> 'Evaluation':
         """Validate metrics and create an evaluation snapshot."""
-
-        return cls(
-            controls=controls,
-            metrics=validate_metrics(metrics, objective_metric=objective_metric),
-            system_state=None if system_state is None else dict(system_state),
-            objective_metric=str(objective_metric),
-        )
+        return cls(controls=controls, metrics=validate_metrics(metrics, objective_metric=objective_metric), system_state=None if system_state is None else dict(system_state), objective_metric=str(objective_metric))
 
     @property
     def objective_value(self) -> float:
         """Return the scalar selected by this evaluation's declared objective."""
-
         return float(self.metrics[self.objective_metric])
 
     @property
     def J(self) -> float:
         """Legacy accessor for a metric literally named ``J``."""
+        return float(self.metrics['J'])
 
-        return float(self.metrics["J"])
-
-    def to_dict(self, *, include_controls: bool = True) -> dict[str, Any]:
+    def to_dict(self, *, include_controls: bool=True) -> dict[str, Any]:
         """Return a JSON-friendly evaluation payload."""
-
-        payload: dict[str, Any] = {"metrics": to_plain(self.metrics)}
+        payload: dict[str, Any] = {'metrics': to_plain(self.metrics)}
         if include_controls:
-            payload["controls"] = controls_to_dict(self.controls)
+            payload['controls'] = controls_to_dict(self.controls)
         if self.system_state is not None:
-            payload["system_state"] = to_plain(self.system_state)
+            payload['system_state'] = to_plain(self.system_state)
         return payload
 
-    def copy(self, *, name: str | None = None) -> "Evaluation":
+    def copy(self, *, name: str | None=None) -> 'Evaluation':
         """Return an independent evaluation snapshot safe for public consumers."""
-
-        return Evaluation(
-            controls=self.controls.copy(name=self.controls.name if name is None else name),
-            metrics=_copy.deepcopy(self.metrics),
-            system_state=None if self.system_state is None else _copy.deepcopy(self.system_state),
-            objective_metric=self.objective_metric,
-        )
-
+        return Evaluation(controls=self.controls.copy(name=self.controls.name if name is None else name), metrics=_copy.deepcopy(self.metrics), system_state=None if self.system_state is None else _copy.deepcopy(self.system_state), objective_metric=self.objective_metric)
 
 @dataclass
 class OptimizerResult:
     """Public result returned by an optimizer call."""
-
     controls: Controls
     metrics: dict[str, Any]
     stop_reason: str
     iterations: int
     optimizer: str
-    objective_metric: str = "J"
+    objective_metric: str = 'J'
     state: RunState | None = None
-    trace: Any | None = None
     system_params: dict[str, Any] = field(default_factory=dict)
-    trace_id: str | None = None
-    checkpoint_ids: dict[str, str] = field(default_factory=dict)
-    tracking_failures: tuple[dict[str, str], ...] = ()
+    diagnostics: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_state(
-        cls,
-        state: RunState,
-        *,
-        stop_reason: str,
-        optimizer: str | None = None,
-        trace: Any | None = None,
-        tracking_failures: tuple[dict[str, str], ...] = (),
-        objective_metric: str = "J",
-    ) -> "OptimizerResult":
+    def from_state(cls, state: RunState, *, stop_reason: str, optimizer: str | None=None, objective_metric: str='J', diagnostics: dict[str, Any] | None=None) -> 'OptimizerResult':
         """Create a public result from a final run state."""
-
-        return cls(
-            controls=state.controls.copy(name=state.controls.name),
-            metrics=validate_metrics(state.metrics, objective_metric=objective_metric),
-            stop_reason=str(stop_reason),
-            iterations=int(state.iteration),
-            optimizer=optimizer or state.optimizer_name or "unknown",
-            objective_metric=str(objective_metric),
-            state=state,
-            trace=trace,
-            system_params=dict(state.system_params),
-            trace_id=state.trace_id,
-            checkpoint_ids=dict(state.checkpoint_ids),
-            tracking_failures=tuple(dict(failure) for failure in tracking_failures),
-        )
+        return cls(controls=state.controls.copy(name=state.controls.name), metrics=validate_metrics(state.metrics, objective_metric=objective_metric), stop_reason=str(stop_reason), iterations=int(state.iteration), optimizer=optimizer or state.optimizer_name or 'unknown', objective_metric=str(objective_metric), state=state, system_params=dict(state.system_params), diagnostics=dict(diagnostics or {}))
 
     @property
     def J(self) -> float:
         """Legacy accessor for a metric literally named ``J``."""
-
-        return float(self.metrics["J"])
+        return float(self.metrics['J'])
 
     @property
     def objective_value(self) -> float:
         """Return the final value of the declared objective metric."""
-
         return float(self.metrics[self.objective_metric])
 
-    def warmstart(self, *, target_optimizer: str | None = None) -> WarmStartState:
+    def warmstart(self, *, target_optimizer: str | None=None) -> WarmStartState:
         """Return safe warmstart state for another optimizer call."""
-
         return WarmStartState.from_result(self, target_optimizer=target_optimizer)
 
-    def to_dict(
-        self,
-        *,
-        include_state: bool = False,
-        include_trace: bool = False,
-    ) -> dict[str, Any]:
+    def to_dict(self, *, include_state: bool=False) -> dict[str, Any]:
         """Return a JSON-friendly result payload.
 
         ``include_state`` intentionally keeps optimizer-private state shallow.  Full
         checkpoint persistence belongs to the future logs/checkpoint layer.
         """
-
-        payload: dict[str, Any] = {
-            "controls": controls_to_dict(self.controls),
-            "metrics": to_plain(self.metrics),
-            "objective_metric": self.objective_metric,
-            "objective_value": to_plain(self.objective_value),
-            "J": None if "J" not in self.metrics else to_plain(float(self.metrics["J"])),
-            "stop_reason": self.stop_reason,
-            "iterations": int(self.iterations),
-            "optimizer": self.optimizer,
-            "system_params": to_plain(self.system_params),
-            "trace_id": self.trace_id,
-            "checkpoint_ids": dict(self.checkpoint_ids),
-            "tracking_complete": not self.tracking_failures,
-            "tracking_failures": [dict(failure) for failure in self.tracking_failures],
-        }
+        payload: dict[str, Any] = {'controls': controls_to_dict(self.controls), 'metrics': to_plain(self.metrics), 'objective_metric': self.objective_metric, 'objective_value': to_plain(self.objective_value), 'J': None if 'J' not in self.metrics else to_plain(float(self.metrics['J'])), 'stop_reason': self.stop_reason, 'iterations': int(self.iterations), 'optimizer': self.optimizer, 'system_params': to_plain(self.system_params), 'diagnostics': to_plain(self.diagnostics)}
         if include_state and self.state is not None:
-            payload["state"] = {
-                "iteration": int(self.state.iteration),
-                "global_iteration": int(self.state.global_iteration),
-                "step_size": to_plain(self.state.step_size),
-                "optimizer_name": self.state.optimizer_name,
-                "stop_reason": self.state.stop_reason,
-                "best_metrics": to_plain(self.state.best_metrics),
-            }
-        if include_trace and self.trace is not None:
-            to_dict = getattr(self.trace, "to_dict", None)
-            payload["trace"] = to_plain(to_dict() if callable(to_dict) else self.trace)
+            payload['state'] = {'iteration': int(self.state.iteration), 'global_iteration': int(self.state.global_iteration), 'step_size': to_plain(self.state.step_size), 'optimizer_name': self.state.optimizer_name, 'stop_reason': self.state.stop_reason, 'best_metrics': to_plain(self.state.best_metrics)}
         return payload

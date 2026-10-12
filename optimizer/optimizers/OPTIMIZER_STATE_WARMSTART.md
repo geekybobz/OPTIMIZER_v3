@@ -30,8 +30,6 @@ optimizer_state
 best_controls
 best_metrics
 stop_reason
-trace_id
-checkpoint_ids
 system_params
 ```
 
@@ -57,7 +55,6 @@ Warmstart always carries:
 controls
 metrics
 step_size
-trace/checkpoint context
 system params
 ```
 

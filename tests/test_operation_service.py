@@ -76,7 +76,7 @@ class OperationServiceTests(unittest.TestCase):
         self.assertTrue(all(i["reason"] for i in entries if i["classification"] not in {"tool", "constructor"}))
         response = self.call("schedules.ConstantSchedule", {"value": 0.02}, bind="schedule")
         self.assertIsInstance(response.result, opt.ConstantSchedule)
-        self.reject("tracker.RunJournal", code="adapter_unavailable")
+        self.reject("tracker.RunJournal", code="unknown_operation")
         self.reject("does_not_exist", code="unknown_operation")
 
     def test_argument_typos_rejected_before_computation(self):

@@ -9,7 +9,6 @@ from pathlib import Path
 import numpy as np
 
 import optimizer as opt
-from optimizer.tracker import JournalObserver, RunJournal, RunReceipt, SourceReference, read_timeline
 
 
 class SmallQuadratic:
@@ -278,8 +277,8 @@ class NumericalCapabilityTests(unittest.TestCase):
         np.testing.assert_allclose(trust.controls.flatten(), system.target, atol=1.0e-7)
         self.assertEqual(newton.stop_reason, "gradient_converged")
         self.assertEqual(trust.stop_reason, "gradient_converged")
-        self.assertGreater(newton.trace.iteration_records[0].technical["counters"]["hvp"], 0)
-        self.assertGreater(trust.trace.iteration_records[0].technical["counters"]["hvp"], 0)
+        self.assertGreater(newton.diagnostics['counters']['hvp'], 0)
+        self.assertGreater(trust.diagnostics['counters']['hvp'], 0)
 
     def test_newton_cg_has_minimize_maximize_hvp_symmetry(self):
         minimizing = SmallQuadratic()
@@ -288,7 +287,7 @@ class NumericalCapabilityTests(unittest.TestCase):
         max_result = opt.newton_cg(maximizing, opt.Controls.zeros(maximizing.control_spec()), maxiter=3)
 
         np.testing.assert_allclose(min_result.controls.flatten(), max_result.controls.flatten(), atol=1.0e-12)
-        self.assertFalse(max_result.trace.iteration_records[0].technical["proposal"]["negative_curvature"])
+        self.assertEqual(max_result.stop_reason, 'gradient_converged')
 
     def test_proximal_gradient_uses_mapping_stationarity(self):
         system = L1Composite(weight=0.25)
@@ -337,49 +336,14 @@ class NumericalCapabilityTests(unittest.TestCase):
         with self.assertRaisesRegex(TypeError, "smooth_gradient"):
             opt.proximal_gradient(system, controls, maxiter=1)
 
-    def test_advanced_tracker_is_passive_and_preserves_hvp_counters(self):
-        baseline_system = SmallQuadratic()
-        tracked_system = SmallQuadratic()
-        baseline_controls = opt.Controls.zeros(baseline_system.control_spec())
-        tracked_controls = opt.Controls.zeros(tracked_system.control_spec())
-        baseline = opt.newton_cg(
-            baseline_system,
-            baseline_controls,
-            maxiter=3,
-            create_trace=False,
-        )
+    def test_advanced_numerical_counters_are_available_without_logging(self):
+        system = SmallQuadratic()
         with tempfile.TemporaryDirectory() as directory:
-            receipt = RunReceipt.create(
-                run_id="advanced-newton",
-                objective_label="J",
-                direction="minimize",
-                references={
-                    "problem": SourceReference.create("numerical-capability-test"),
-                    "system": SourceReference.create("small-quadratic"),
-                },
-                method_config={"name": "newton_cg"},
-            )
-            journal = RunJournal.create(Path(directory) / "run", receipt)
-            tracked = opt.newton_cg(
-                tracked_system,
-                tracked_controls,
-                maxiter=3,
-                create_trace=False,
-                observers=[JournalObserver(journal)],
-            )
-            np.testing.assert_allclose(tracked.controls.flatten(), baseline.controls.flatten())
-            self.assertEqual(tracked.metrics, baseline.metrics)
-            self.assertEqual(
-                (tracked_system.evaluate_calls, tracked_system.gradient_calls, tracked_system.hvp_calls),
-                (baseline_system.evaluate_calls, baseline_system.gradient_calls, baseline_system.hvp_calls),
-            )
-            iteration = next(
-                record["payload"]
-                for record in read_timeline(journal.run_dir).records
-                if record["kind"] == "iteration"
-            )
-            self.assertGreater(iteration["after"]["counters"]["hvp"], 0)
-            self.assertIn("cg_iterations", iteration["technical"]["proposal"])
+            before = set(Path(directory).iterdir())
+            result = opt.newton_cg(system, opt.Controls.zeros(system.control_spec()), maxiter=3)
+            self.assertGreater(result.diagnostics['counters']['hvp'], 0)
+            self.assertEqual(set(Path(directory).iterdir()), before)
+            self.assertFalse(hasattr(result, 'trace'))
 
     def test_continuation_requires_explicit_layout_transfer(self):
         system = SizedQuadratic(2)

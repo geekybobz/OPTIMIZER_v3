@@ -100,7 +100,7 @@ class AdvancedOptimizerTests(unittest.TestCase):
         self.assertEqual(result.optimizer, "cma_es")
         self.assertLess(result.J, initial)
         self.assertIn("population_size", result.state.optimizer_state)
-        self.assertGreaterEqual(len(result.trace.iteration_records), 1)
+        self.assertGreaterEqual(result.diagnostics['attempts'], 1)
 
     def test_public_advanced_optimizer_status(self):
         methods = opt.methods()

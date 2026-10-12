@@ -36,8 +36,7 @@ from __future__ import annotations
 
 from typing import Any as _Any, Callable as _Callable, Iterable as _Iterable
 
-from optimizer import campaigns, catalog, core, guesses, optimizers, schedules, shooting, tracker, utils, visualization
-import optimizer_log as optimizer_log
+from optimizer import campaigns, catalog, core, guesses, optimizers, schedules, shooting, utils, visualization
 from optimizer.catalog import base
 from optimizer.controls import ControlSpec, Controls
 from optimizer.continuation import ContinuationResult, ContinuationStage, StageGate, StageResult
@@ -51,9 +50,6 @@ from optimizer.core import (
 )
 from optimizer.utils.parallel import ParallelConfig
 from optimizer.library import DEFAULT_LIBRARY as _DEFAULT_LIBRARY, MethodInfo, OptimizerContext, OptimizerLibrary
-from optimizer.logs.checkpoint import Checkpoint
-from optimizer.logs.records import ChunkRecord, EventRecord, IterationRecord
-from optimizer.logs.trace import Trace
 from optimizer.result import Evaluation, OptimizerResult
 from optimizer.schedules import (
     AdaptiveStepSchedule,
@@ -79,7 +75,6 @@ from optimizer.system_olgs import (
     SupportsPlotData,
     SupportsProximalObjective,
     SupportsValueAndGradient,
-    TRACKING_SPEC_SCHEMA,
     SYSTEM_SPEC_SCHEMA,
     TrackingSpec,
     ValueGradient,
@@ -89,7 +84,6 @@ from optimizer.system_olgs import (
     evaluate_system,
     finite_difference_hessian,
     finite_difference_hvp,
-    get_tracking_spec,
     get_system_spec,
     gradient_system,
     optional_hessian,
@@ -226,8 +220,6 @@ def run_chunk(
     )
 
 
-def trace(run_id: str | None = None) -> Trace:
-    return library.trace(run_id=run_id)
 
 
 def warmstart(result_or_state: _Any, *, target_optimizer: str | None = None) -> WarmStartState:
@@ -243,12 +235,12 @@ def parallel_map(
     return library.parallel_map(function, items, config=config)
 
 
-def context(system: _Any, *, trace: Trace | str | None = None, **defaults: _Any) -> OptimizerContext:
-    return library.context(system, trace=trace, **defaults)
+def context(system: _Any, **defaults: _Any) -> OptimizerContext:
+    return library.context(system, **defaults)
 
 
-def bind(system: _Any, *, trace: Trace | str | None = None, **defaults: _Any) -> OptimizerContext:
-    return library.bind(system, trace=trace, **defaults)
+def bind(system: _Any, **defaults: _Any) -> OptimizerContext:
+    return library.bind(system, **defaults)
 
 
 def methods() -> dict[str, MethodInfo]:
@@ -262,7 +254,7 @@ def system_info(system: _Any) -> dict[str, _Any]:
 
 
 def context_info(system: _Any | None = None) -> dict[str, _Any]:
-    """Return registered optimizer/tracker capabilities and optional system metadata."""
+    """Return registered numerical capabilities and optional system metadata."""
 
     return library.context_info(system=system)
 
@@ -579,13 +571,11 @@ _NAVIGATION = (
     "guesses",
     "info",
     "list",
-    "optimizer_log",
     "optimizers",
     "path",
     "schedules",
     "search",
     "shooting",
-    "tracker",
     "util",
     "utils",
     "visualization",

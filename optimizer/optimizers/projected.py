@@ -9,7 +9,7 @@ import numpy as np
 
 from optimizer.controls import ControlSpec, Controls
 from optimizer.core.engine import AcceptanceDecision, StepContext, StepProposal, run_chunk
-from optimizer.optimizers._common import clip_vector, coerce_warmstart, method_api_context, require_finite
+from optimizer.optimizers._common import clip_vector, coerce_warmstart, require_finite
 from optimizer.result import Evaluation, OptimizerResult
 from optimizer.state import RunState
 from optimizer.system_olgs import ControlBounds, get_system_spec, probe_system
@@ -413,5 +413,5 @@ def projected_gradient(
         accept_metric=resolved_metric,
         accept_mode=resolved_mode,
         accept_tolerance=accept_tolerance,
-        **method_api_context(engine_kwargs, method="projected_gradient", config=config),
+        **engine_kwargs,
     )

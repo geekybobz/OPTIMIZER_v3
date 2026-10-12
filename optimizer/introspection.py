@@ -17,7 +17,6 @@ from optimizer.families import system_family
 from optimizer.core.engine import run_chunk
 from optimizer.system_olgs import contract_info, describe_system
 from optimizer.system_olss import describe_shooting_system, shooting_contract_info
-from optimizer.tracker import info as tracker_info
 
 
 SCHEMA_VERSION = "optimizer.context/v1"
@@ -45,7 +44,7 @@ def context_info(
 ) -> dict[str, Any]:
     """Return a current, read-only description of the registered library surface.
 
-    When system is supplied, only its optional describe() and tracking_spec()
+    When system is supplied, only its optional describe() and static system_spec()
     hooks are consulted through describe_system. Numerical hooks such as
     evaluate() and gradient() are never called.
     """
@@ -92,6 +91,5 @@ def context_info(
             },
         },
         "system_contract": selected_contract,
-        "tracker": tracker_info(),
         "system": described_system,
     }

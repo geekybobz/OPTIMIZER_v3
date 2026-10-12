@@ -43,7 +43,6 @@ from optimizer.optimizers._common import (
     coerce_warmstart,
     controls_from_flat_like,
     flat_state_array,
-    method_api_context,
     require_finite,
 )
 from optimizer.result import OptimizerResult
@@ -264,5 +263,5 @@ def lbfgs(
         accept_mode=accept_mode,
         accept_tolerance=accept_tolerance,
         gradient_tolerance=gradient_tolerance,
-        **method_api_context(engine_kwargs, method="lbfgs", config=config),
+        **engine_kwargs,
     )

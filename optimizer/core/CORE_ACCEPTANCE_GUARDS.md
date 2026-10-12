@@ -131,9 +131,9 @@ guard.requirements   every rule with metric, operator, threshold, tolerance, tri
 guard.failures       the subset that failed, plus an "improve" entry when relevant
 ```
 
-Rejection uses `reason="guard_failed"`.  Because the full requirement list is
-recorded, a trace shows which constraint was binding across a run, not merely that
-something was.
+Rejection uses `reason="guard_failed"`. The AcceptanceDecision contains the full
+requirement list for direct inspection by the caller. The engine does not retain
+a per-iteration guard log; compact numerical rejection counts remain available.
 
 ## One Sharp Edge
 

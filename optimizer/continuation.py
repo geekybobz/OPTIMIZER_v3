@@ -11,7 +11,6 @@ import numpy as np
 from optimizer import catalog
 from optimizer.controls import ControlSpec, Controls
 from optimizer.core.evaluate import SystemEvaluator
-from optimizer.logs.trace import Trace
 from optimizer.result import OptimizerResult
 from optimizer.system_olgs import get_secondary_update_hook, require_system
 from optimizer.serialization import to_plain
@@ -20,7 +19,6 @@ from optimizer.serialization import to_plain
 OptimizerCallable = Callable[..., OptimizerResult]
 SystemFactory = Callable[[Any], Any]
 ControlTransfer = Callable[[Any, Any, Controls], Controls]
-ObserverFactory = Callable[[int, "ContinuationStage"], Sequence[Any] | None]
 
 
 @dataclass(frozen=True)
@@ -79,7 +77,6 @@ class StageResult:
     gate_passed: bool
     gate_metrics: Mapping[str, Any]
     transfer: str
-    parent_checkpoint_ids: Mapping[str, str]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -92,7 +89,6 @@ class StageResult:
             "gate_passed": self.gate_passed,
             "gate_metrics": to_plain(self.gate_metrics),
             "transfer": self.transfer,
-            "parent_checkpoint_ids": dict(self.parent_checkpoint_ids),
         }
 
 
@@ -234,8 +230,6 @@ def continuation(
     *,
     stages: Sequence[ContinuationStage | Mapping[str, Any]],
     control_transfer: ControlTransfer | None = None,
-    trace: Trace | None = None,
-    observer_factory: ObserverFactory | None = None,
     stop_on_gate_failure: bool = True,
 ) -> ContinuationResult:
     """Run an explicit sequence of system transitions and optimizer segments."""
@@ -245,11 +239,9 @@ def continuation(
         raise ValueError("continuation requires at least one stage.")
     active_system = system
     active_controls = controls
-    active_trace = trace or Trace(run_id=uuid4().hex)
     stage_results: list[StageResult] = []
     stop_reason = "completed"
     plan_id = uuid4().hex
-    parent_checkpoint_ids: dict[str, str] = {}
     for index, raw_stage in enumerate(stages):
         stage = _coerce_stage(raw_stage)
         next_system = stage.system_factory(active_system) if stage.system_factory is not None else active_system
@@ -265,23 +257,6 @@ def continuation(
         method = _registered_optimizer(stage.optimizer) if isinstance(stage.optimizer, str) else stage.optimizer
         options = dict(stage.optimizer_options)
         options.setdefault("stage", stage.label)
-        options.setdefault("chunk", index)
-        options.setdefault("trace", active_trace)
-        options.setdefault("create_trace", False)
-        caller_context = dict(options.get("api_context", {}) or {})
-        caller_context["continuation"] = {
-            "plan_id": plan_id,
-            "stage_index": index,
-            "stage_label": stage.label,
-            "secondary_updates": dict(stage.secondary_updates),
-            "transfer": transfer_name,
-            "parent_checkpoint_ids": dict(parent_checkpoint_ids),
-        }
-        options["api_context"] = caller_context
-        if observer_factory is not None and "observers" not in options:
-            observers = observer_factory(index, stage)
-            if observers is not None:
-                options["observers"] = observers
         result = method(next_system, stage_controls, **options)
         gate_passed, gate_metrics = _stage_gate(next_system, result, stage.gate)
         stage_results.append(
@@ -293,12 +268,10 @@ def continuation(
                 gate_passed=gate_passed,
                 gate_metrics=gate_metrics,
                 transfer=transfer_name,
-                parent_checkpoint_ids=dict(parent_checkpoint_ids),
             )
         )
         active_system = next_system
         active_controls = result.controls.copy(name="continuation_stage_result")
-        parent_checkpoint_ids = dict(result.checkpoint_ids)
         if not gate_passed and stop_on_gate_failure:
             stop_reason = f"stage_gate_failed:{stage.label}"
             break

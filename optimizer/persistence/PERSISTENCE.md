@@ -50,8 +50,10 @@ Calls retain the same spelling in Python:
 `service.execute(opt.OperationRequest("project.init", {"name":"low-pulse"}))`.
 Persistence belongs to service operations; directly mutating `service.session`
 does not create a durable transaction. Ordinary numerical Python calls receive
-no automatic history writer. Full CLI/MCP command history and legacy logger
-retirement are the next phase; this implementation creates no `history.jsonl`.
+no automatic history writer. Frontends add [command history](../history/HISTORY.md).
+History-owned stores require the recorder for writes; ordinary Python can read
+them read-only or fork an index-owned store. Existing index-owned stores require
+explicit frontend migration with `project.open(..., migrate=True)`.
 
 ## Commands
 
@@ -61,7 +63,7 @@ are service descriptors, separate from numerical exports in the root catalog.
 | Command | Behavior and main options |
 |---|---|
 | `project.init(name, root=".")` | Create a safe unique name; `max_bytes=536870912`, `keep_recent=20`, `undo_depth=10` |
-| `project.open(path, read_only=False, mode="exact")` | Restore a committed store, without replaying optimization |
+| `project.open(path, read_only=False, mode="exact", migrate=False)` | Restore a committed store, without replaying optimization |
 | `project.list(root=".")` | List at most 256 candidate directories without importing systems |
 | `project.status()` / `storage.status()` | Identity, generation, bytes, policy, protection, resume levels and retained undo/redo availability |
 | `project.fork(name, root=None)` | Copy the committed store, assign a new identity and origin, select the copy |
@@ -118,8 +120,10 @@ dtype, shape and complex values. It rejects arbitrary classes/callbacks, object
 arrays, malformed containers, excessive nesting and decoded array budgets.
 Arrays use content hashes and `allow_pickle=False`. Diagnostic infinities/NaNs
 use explicit tags; active numerical controls/variables must remain finite.
-The legacy `OptimizerResult.trace` is omitted and restored as `None`; native
-state, metrics, history and method memory are the checkpoint data. Report saves
+Native state, metrics, numerical diagnostics and method memory are checkpoint
+data. The decoder strips retired logging fields from legacy tagged checkpoints
+without changing immutable IDs; exact restore still requires compatible source
+and environment identity. Report saves
 retain their recorded input references; cleanup can make those inputs unavailable.
 Opening a store reconstructs trusted project Python, just as `session.load` does.
 
@@ -137,10 +141,12 @@ atomically replaces `session.json` before adopting the prepared RAM state.
 Pre-commit failure leaves the old head/index intact. If replacement succeeds but
 directory fsync fails, the response reports `durability_warning`; the committed
 index and payloads are preserved. Reopening removes uncommitted preparation files
-and unreferenced blobs, never reruns optimization. The atomic index is the interim
-recovery authority; history-based index rebuilding is deferred to the next phase.
+and unreferenced blobs, never reruns optimization. For index-owned Python stores, the atomic index is recovery authority. In
+frontend history-owned stores, the fsynced successful command outcome is the
+commit point; index/RAM publication follows it. [History](../history/HISTORY.md)
+owns recorded-store recovery and failure behavior.
 
-The disk cap includes source capsules, manifests, blobs, metadata and preparation
+The disk cap includes permanent command history, source capsules, manifests, blobs, metadata and preparation
 space. A full store needs explicit cleanup or a larger byte limit before another
 write. Recent/undo counts are retention preferences; active heads and pins are
 hard protection. Explicit cleanup may sacrifice preferred undo paths, as shown

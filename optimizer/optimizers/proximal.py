@@ -9,7 +9,7 @@ import numpy as np
 
 from optimizer.controls import Controls
 from optimizer.core.engine import StepContext, StepProposal, run_chunk
-from optimizer.optimizers._common import clip_vector, coerce_warmstart, controls_from_flat_like, method_api_context, require_finite
+from optimizer.optimizers._common import clip_vector, coerce_warmstart, controls_from_flat_like, require_finite
 from optimizer.result import OptimizerResult
 from optimizer.state import RunState
 from optimizer.system_olgs import probe_system
@@ -126,5 +126,5 @@ def proximal_gradient(
         accept_metric=accept_metric,
         accept_mode="min",
         accept_tolerance=accept_tolerance,
-        **method_api_context(engine_kwargs, method="proximal_gradient", config=config),
+        **engine_kwargs,
     )

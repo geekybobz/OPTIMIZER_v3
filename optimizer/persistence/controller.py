@@ -181,6 +181,10 @@ class _Persistence:
         before=session.snapshot()
         self.guard=lambda: session._check_revision(before["revision"])
         try:
+            if (self.store is not None and self.store._path('history.jsonl').exists()
+                    and self.service._history is None and not self.store.read_only
+                    and request.operation not in {'project.close','project.fork','project.list','project.status','storage.status','checkpoints.list'}):
+                raise _ServiceError('history_owned','Unrecorded Python cannot mutate a history-owned experiment; open read-only or explicitly fork.')
             if request.operation in {'project.init','project.open','project.close','project.fork','project.list'}:
                 if request.bind is not None or request.activate is not None or request.context is not None:
                     raise _ServiceError('invalid_arguments','Project lifecycle changes run without binding/activation/context.')
@@ -230,6 +234,8 @@ class _Persistence:
     def init(self,name,root='.',max_bytes=536870912,keep_recent=20,undo_depth=10):
         if self.store: raise _ServiceError('project_open','Close the current experiment before opening another.')
         store=_Store.create(name,root,max_bytes=max_bytes,keep_recent=keep_recent,undo_depth=undo_depth)
+        if self.service._history is not None:
+            store=self.service._history.attach_store(store,created=True)
         self.store=store
         try:
             self.index=copy.deepcopy(store.index); self.files={}; self.track=True
@@ -239,7 +245,8 @@ class _Persistence:
         except BaseException:
             self.store=None; store.close()
             import shutil
-            shutil.rmtree(store.path); raise
+            if self.service._history is None: shutil.rmtree(store.path)
+            raise
         return self.status()
 
     def _context(self,session,name,record,mode='exact'):
@@ -270,13 +277,20 @@ class _Persistence:
             session._objects[c.head]=_Stored(value,_size(value)+_size(key)+_size(recipe),name,c.configuration,key,recipe,payload.get("inputs",()))
             c.method_key=key
 
-    def open(self,path,read_only=False,mode='exact'):
+    def open(self,path,read_only=False,mode='exact',migrate=False):
         if self.store: raise _ServiceError('project_open','Close current experiment first.')
         if self.service.session.snapshot()['contexts'] or self.service.session.snapshot()['bindings']:
             raise _ServiceError('unsaved_session','Opening would abandon foreground objects; use a fresh service or close an existing project.')
         if type(read_only) is not bool or mode not in ('exact','controls_only','variables_only'):
             raise _ServiceError('invalid_arguments','read_only must be bool; choose an explicit restore mode.')
-        store=_Store(path,read_only=read_only); self.store=store
+        if type(migrate) is not bool: raise _ServiceError('invalid_arguments','migrate must be bool.')
+        store=_Store(path,read_only=read_only)
+        if self.service._history is not None:
+            store=self.service._history.attach_store(store,migrate=migrate)
+        elif store._path('history.jsonl').exists() and not read_only:
+            store.close()
+            raise _ServiceError('history_owned','Open a history-owned experiment read_only=True, or use the terminal frontend.')
+        self.store=store
         try:
             if mode=='exact' and store.index['environment']!=_environment():
                 raise _ServiceError('environment_changed','Exact restoration requires the recorded numerical environment/source.')
@@ -312,6 +326,8 @@ class _Persistence:
 
     def fork(self,name,root=None):
         store=self.require(); fork=store.clone(name,root)
+        if self.service._history is not None:
+            fork=self.service._history.attach_store(fork,created=True)
         store.close(); self.store=fork
         return self.status()
 

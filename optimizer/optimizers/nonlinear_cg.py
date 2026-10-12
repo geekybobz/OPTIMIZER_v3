@@ -41,7 +41,6 @@ from optimizer.optimizers._common import (
     coerce_warmstart,
     controls_from_flat_like,
     flat_state_array,
-    method_api_context,
     require_finite,
     require_variant,
 )
@@ -256,7 +255,7 @@ def nonlinear_cg(
         accept_mode=accept_mode,
         accept_tolerance=accept_tolerance,
         gradient_tolerance=gradient_tolerance,
-        **method_api_context(engine_kwargs, method="nonlinear_cg", config=config),
+        **engine_kwargs,
     )
 
 

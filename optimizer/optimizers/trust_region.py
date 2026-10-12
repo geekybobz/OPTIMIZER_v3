@@ -9,7 +9,7 @@ import numpy as np
 
 from optimizer.controls import Controls
 from optimizer.core.engine import AcceptanceDecision, StepContext, StepProposal, run_chunk
-from optimizer.optimizers._common import coerce_warmstart, controls_from_flat_like, method_api_context, require_finite
+from optimizer.optimizers._common import coerce_warmstart, controls_from_flat_like, require_finite
 from optimizer.result import Evaluation, OptimizerResult
 from optimizer.state import RunState
 from optimizer.system_olgs import get_system_spec, probe_system
@@ -251,5 +251,5 @@ def trust_region(
         accept=_accept(config),
         accept_metric=config.objective_metric,
         accept_mode="min" if config.objective_direction == "minimize" else "max",
-        **method_api_context(engine_kwargs, method="trust_region", config=config),
+        **engine_kwargs,
     )

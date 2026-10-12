@@ -147,7 +147,7 @@ class IntegratedContractTests(unittest.TestCase):
         lower, upper = system.control_bounds()
         self.assertTrue(np.all(result.controls.flatten() >= np.asarray(lower).reshape(-1)))
         self.assertTrue(np.all(result.controls.flatten() <= np.asarray(upper).reshape(-1)))
-        self.assertTrue(all(record.accepted for record in result.trace.iteration_records))
+        self.assertEqual(result.diagnostics['rejected'], 0)
         self.assertLessEqual(result.state.step_size, schedule.initial())
 
         adaptive_schedule = opt.AdaptiveStepSchedule(initial_step=0.2, grow=0.5)
@@ -179,7 +179,7 @@ class IntegratedContractTests(unittest.TestCase):
             maxiter=1,
             accept=default_accept,
         )
-        self.assertFalse(guarded.trace.iteration_records[0].accepted)
+        self.assertEqual(guarded.diagnostics['accepted'], 0)
 
     def test_short_run_diagnostics_and_stationary_curvature(self):
         system = StationaryMaximum()
@@ -214,16 +214,12 @@ class IntegratedContractTests(unittest.TestCase):
 
         for method in (opt.lbfgs, opt.nonlinear_cg):
             result = method(system, controls, step_size=10.0, maxiter=3)
-            proposed = [
-                record.technical["proposal"]["step_size"]
-                for record in result.trace.iteration_records
-            ]
-            self.assertEqual(proposed, [10.0, 5.0, 2.5])
-            self.assertTrue(all(record.accepted is False for record in result.trace.iteration_records))
+            self.assertEqual(result.state.step_size, 1.25)
+            self.assertEqual(result.diagnostics['rejected'], 3)
             self.assertTrue(np.all(np.isfinite(result.controls.flatten())))
 
         newton = opt.newton_cg(system, controls, step_size=10.0, maxiter=4)
-        self.assertTrue(newton.trace.iteration_records[-1].accepted)
+        self.assertGreater(newton.diagnostics['accepted'], 0)
         self.assertEqual(newton.state.step_size, 10.0)
 
     def test_cma_es_supports_state_warmstart_and_standard_stopping(self):

@@ -59,7 +59,9 @@ The runtime catalog is the declared public API. Every export has exactly one
 catalog declaration, and the namespace exports, `opt.methods()`, and the
 [API Reference](API_REFERENCE.md) are built from those declarations. An entry is
 removed only after one release in which it still works, warns when used, and
-appears with its replacement in the release evidence. Use `opt.info()`,
+appears with its replacement in the release evidence. The explicitly approved
+logger retirement is an exception; [migration notes](optimizer/history/HISTORY.md#removed-logging-api)
+list its API removals. Use `opt.info()`,
 `opt.list()`, `opt.search()`, and `opt.path()` when exact runtime discovery is
 preferable to browsing documentation.
 
@@ -126,9 +128,9 @@ from the [Testing Hub](tests/TESTING_HUB.md).
 - Related: [Code map](CODE_MAP.md)
 - Related: [Core Hub](optimizer/core/CORE_HUB.md)
 - Related: [Utils Hub](optimizer/utils/UTILS_HUB.md)
-- Related: [Tracker Hub](optimizer/tracker/TRACKER_HUB.md)
+- Deeper: [Campaigns](optimizer/campaigns/CAMPAIGNS.md)
+- Deeper: [Command history](optimizer/history/HISTORY.md)
 - Related: [Schedules Hub](optimizer/schedules/SCHEDULES_HUB.md)
-- Related: [Logs Hub](optimizer/logs/LOGS_HUB.md)
 - Related: [Testing Hub](tests/TESTING_HUB.md)
 
 ---

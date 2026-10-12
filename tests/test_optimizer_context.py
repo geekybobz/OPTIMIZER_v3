@@ -34,8 +34,7 @@ class OptimizerContextTests(unittest.TestCase):
         )
         self.assertEqual(snapshot["context"]["schema_version"], "optimizer.context/v1")
         self.assertIn("run_chunk_parameters", snapshot["context"]["optimizer"]["core"])
-        self.assertIn("tracker", snapshot["context"])
-        self.assertIn("capabilities", snapshot["context"]["tracker"])
+        self.assertNotIn("tracker", snapshot["context"])
         self.assertIn("recommended_commands", snapshot)
 
 

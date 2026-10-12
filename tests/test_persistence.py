@@ -68,7 +68,7 @@ class PersistenceTests(unittest.TestCase):
         actual=self.service.session.get('r')
         np.testing.assert_array_equal(actual.controls.as_matrix(),native.controls.as_matrix())
         self.assertEqual(actual.state.global_iteration,4)
-        self.assertIsNone(actual.trace if actual.state.global_iteration==2 else None)
+        self.assertFalse(hasattr(actual, "trace"))
         self.call('session.restore',{'checkpoint':'baseline'})
         self.assertEqual(self.service.session.active().state.global_iteration,2)
     def test_momentum_exact_state_parity(self):
@@ -342,7 +342,7 @@ s.execute(opt.OperationRequest('adam',{{'maxiter':1,'step_size':0.01,'gradient_t
         self.assertEqual(second.returncode,0,second.stdout+second.stderr)
         records=[json.loads(line) for line in second.stdout.splitlines()]
         self.assertEqual(records[2]['metadata']['summary'],4)
-        self.assertFalse((self.root/'.optimizer/cli/history.jsonl').exists())
+        self.assertTrue((self.root/'.optimizer/cli/history.jsonl').exists())
 
 class CodecTests(unittest.TestCase):
     def test_complex_dtype_zero_dim_and_typed_roundtrip(self):

@@ -70,9 +70,6 @@ class _Codec:
             return {'$class': value.__name__}
         if dataclasses.is_dataclass(value) and type(value).__name__ in _TYPES and _TYPES[type(value).__name__] is type(value):
             fields = {f.name: getattr(value, f.name) for f in dataclasses.fields(value)}
-            # Legacy passive trace is deliberately not part of numerical state.
-            if isinstance(value, OptimizerResult):
-                fields['trace'] = None
             return {'$type': type(value).__name__, 'fields': self.encode(fields, depth+1)}
         if isinstance(value, dict):
             return {'$dict': [[self.encode(k, depth+1), self.encode(v, depth+1)] for k,v in value.items()]}
@@ -110,6 +107,12 @@ class _Codec:
         if keys == {'$type', 'fields'} and value['$type'] in _TYPES:
             cls = _TYPES[value['$type']]
             fields = self.decode(value['fields'], depth+1)
+            # One-way data migration only: never import or rebuild retired loggers.
+            retired = {'trace_id', 'checkpoint_ids'}
+            if cls is OptimizerResult: retired |= {'trace', 'tracking_failures'}
+            if cls in (OptimizerResult, RunState, WarmStartState) and retired <= set(fields):
+                for name in retired: fields.pop(name)
+                if cls is OptimizerResult: fields['diagnostics'] = {}
             if set(fields) != {f.name for f in dataclasses.fields(cls)}:
                 raise _ServiceError('checkpoint_corrupt', 'Dataclass fields do not match codec version.')
             return cls(**fields)

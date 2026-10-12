@@ -1,5 +1,5 @@
 """Structural probes on the qubit OLGS system: bounds, schedules, custom update,
-failed trials, transactions, and diagnosis without a trace.
+failed trials, transactions, and diagnosis from compact numerical aggregates.
 
 Probes (e) and (f) show the transaction and diagnosis fixes recorded in ../REPORT.md
 (issues T-1 to T-3 and G-2); before the fixes they failed.
@@ -42,8 +42,7 @@ for name in ("adam", "momentum", "line_search", "lbfgs", "nonlinear_cg"):
 # (b) schedules inside Adam and momentum
 for schedule in (opt.CosineDecaySchedule(0.05, 20), opt.ExponentialDecaySchedule(0.05, 0.9), opt.LinearWarmupSchedule(0.005, 0.05, 5)):
     res = opt.adam(system, u0, step_size=schedule, maxiter=6)
-    steps = [rec.technical.get("proposal", {}).get("step_size") for rec in res.trace.iteration_records]
-    line(f"(b) adam + {type(schedule).__name__}: step sizes", [round(s, 4) if s else s for s in steps])
+    line(f"(b) adam + {type(schedule).__name__}: final step size", res.state.optimizer_state.get("step_size"))
 res_m = opt.momentum(system, u0, step_size=opt.CosineDecaySchedule(0.05, 20), maxiter=4)
 line("(b) momentum + CosineDecaySchedule: stop", res_m.stop_reason)
 
@@ -67,8 +66,7 @@ class FragileQubit(QubitTransfer):
 
 
 res_d = opt.adam(FragileQubit(), u0, step_size=3.0, maxiter=8)
-reasons = [rec.reason for rec in res_d.trace.iteration_records]
-line("(d) adam with failing trials: stop / iteration reasons", (res_d.stop_reason, reasons[:6]))
+line("(d) adam with failing trials: stop / rejected attempts", (res_d.stop_reason, res_d.diagnostics["rejected"]))
 
 # (e) transaction adapter: direct objects, JSON-like payload, invalid output
 ok = opt.transact(system, opt.SystemRequest("evaluate", {"controls": u0}))
@@ -97,6 +95,6 @@ line("(e) transact value_and_gradient (optional hook)", (vg.ok, (vg.error or {})
 ws = opt.transact(system, opt.SystemRequest("with_secondary", {"energy_weight": 0.5}))
 line("(e) transact with_secondary: result type", type(ws.result).__name__)
 
-# (f) diagnosis of a run without a trace
-res_f = opt.adam(system, u0, step_size=0.05, maxiter=5, create_trace=False)
-line("(f) adam create_trace=False -> diagnose_run family/class", (opt.diagnose_run(res_f)["family"], opt.diagnose_run(res_f)["classification"]))
+# (f) diagnosis reads compact numerical aggregates, with no logger
+res_f = opt.adam(system, u0, step_size=0.05, maxiter=5)
+line("(f) adam -> diagnose_run family/class", (opt.diagnose_run(res_f)["family"], opt.diagnose_run(res_f)["classification"]))

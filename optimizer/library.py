@@ -65,7 +65,6 @@ from optimizer.guesses import (
     sine_guess as _sine_guess,
 )
 from optimizer.utils.parallel import ParallelConfig, parallel_map
-from optimizer.logs.trace import Trace
 from optimizer.optimizers import adagrad as _adagrad
 from optimizer.optimizers import adam as _adam
 from optimizer.optimizers import cma_es as _cma_es
@@ -110,7 +109,7 @@ from optimizer.utils import (
 
 
 def _system_params(system: Any) -> dict[str, Any]:
-    """Return best-effort system params for display/logging convenience."""
+    """Return best-effort system params for display convenience."""
 
     params = getattr(system, "params", None)
     if params is None:
@@ -157,7 +156,6 @@ class OptimizerContext:
 
     system: Any
     library: "OptimizerLibrary"
-    trace: Trace | None = None
     defaults: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
@@ -180,11 +178,6 @@ class OptimizerContext:
         hook = get_secondary_update_hook(self.system)
         return replace(self, system=hook(**updates))
 
-    def with_trace(self, trace: Trace | str | None) -> "OptimizerContext":
-        """Return a new context carrying the provided trace."""
-
-        next_trace = self.library.trace(trace) if isinstance(trace, str) else trace
-        return replace(self, trace=next_trace)
 
     def with_defaults(self, **defaults: Any) -> "OptimizerContext":
         """Return a new context with updated default keyword arguments."""
@@ -250,9 +243,6 @@ class OptimizerContext:
 
         call_kwargs = dict(self.defaults or {})
         call_kwargs.update(kwargs)
-        if self.trace is not None and "trace" not in call_kwargs:
-            call_kwargs["trace"] = self.trace
-            call_kwargs.setdefault("create_trace", False)
         return self.library.run_chunk(
             self.system,
             controls,
@@ -546,10 +536,6 @@ class OptimizerLibrary:
             **kwargs,
         )
 
-    def trace(self, run_id: str | None = None) -> Trace:
-        """Create an in-memory trace ledger."""
-
-        return Trace(run_id=run_id or uuid4().hex)
 
     def warmstart(self, result_or_state: Any, *, target_optimizer: str | None = None) -> WarmStartState:
         """Create safe warmstart state from a result or active run state."""
@@ -574,25 +560,20 @@ class OptimizerLibrary:
     def context(
         self,
         system: Any,
-        *,
-        trace: Trace | str | None = None,
         **defaults: Any,
     ) -> OptimizerContext:
         """Bind a system for notebook/curriculum convenience."""
 
-        trace_obj = self.trace(trace) if isinstance(trace, str) else trace
-        return OptimizerContext(system=system, library=self, trace=trace_obj, defaults=defaults)
+        return OptimizerContext(system=system, library=self, defaults=defaults)
 
     def bind(
         self,
         system: Any,
-        *,
-        trace: Trace | str | None = None,
         **defaults: Any,
     ) -> OptimizerContext:
         """Alias for ``context`` using action-oriented naming."""
 
-        return self.context(system, trace=trace, **defaults)
+        return self.context(system, **defaults)
 
     def system_info(self, system: Any) -> dict[str, Any]:
         """Return declared system metadata without evaluating controls."""

@@ -87,11 +87,14 @@ class OperationService:
         self._writer = threading.RLock()
         from optimizer.persistence.controller import _Persistence
         self._persistence = _Persistence(self)
+        self._history = None
 
     def list(self) -> list[dict[str, Any]]:
-        return [self._registry.describe(name) for name in self._registry.items] + self._persistence.descriptors()
+        return [self._registry.describe(name) for name in self._registry.items] + self._persistence.descriptors() + (self._history.descriptors() if self._history else [])
 
     def info(self, operation: str) -> dict[str, Any]:
+        if self._history and operation in self._history.methods:
+            return next(entry for entry in self._history.descriptors() if entry['id'] == operation)
         if operation in self._persistence.methods:
             return next(entry for entry in self._persistence.descriptors() if entry['id'] == operation)
         return self._registry.describe(operation)
@@ -166,8 +169,8 @@ class OperationService:
             args = self._resolve(dict(request.arguments))
         if "system" in args:
             raise _ServiceError("invalid_arguments", "Select a named context instead of supplying a live system.")
-        if any(name in args for name in ("evaluator", "trace", "observers")):
-            raise _ServiceError("invalid_arguments", "Live evaluator/trace/observer injection requires a lifecycle adapter.")
+        if any(name in args for name in ("evaluator",)):
+            raise _ServiceError("invalid_arguments", "Live evaluator injection requires a lifecycle adapter.")
         if item.id == "utils.compare_methods":
             methods = args.get("methods", ())
             nested = args.get("options", {}) or {}
@@ -383,6 +386,8 @@ class OperationService:
                     operation if isinstance(operation, str) else None, "error", state_before=before,
                     state_after=self.session.snapshot(), error={"code": "invalid_request", "type": type(exc).__name__, "message": str(exc)})
             try:
+                if self._history and request.operation in self._history.methods:
+                    return self._history.execute(request,self)
                 if request.operation in self._persistence.methods or self._persistence.store is not None:
                     return self._persistence.execute(request)
                 if request.operation.startswith("session."):

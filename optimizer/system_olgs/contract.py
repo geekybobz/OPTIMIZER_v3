@@ -24,7 +24,6 @@ from optimizer.system_olgs.specs import SYSTEM_SPEC_SCHEMA, validate_system_spec
 
 Metrics = Mapping[str, Any]
 TrackingSpec = Mapping[str, Any]
-TRACKING_SPEC_SCHEMA = "optimizer.tracking-spec/v1"
 
 
 @dataclass(frozen=True)
@@ -138,7 +137,6 @@ class SystemProbe:
     has_back_prop: bool
     has_metrics: bool
     has_describe: bool
-    has_tracking_spec: bool
     has_constraint_spec: bool
     has_value_and_gradient: bool
     has_residuals: bool
@@ -185,7 +183,6 @@ class SystemProbe:
             "has_back_prop": self.has_back_prop,
             "has_metrics": self.has_metrics,
             "has_describe": self.has_describe,
-            "has_tracking_spec": self.has_tracking_spec,
             "has_constraint_spec": self.has_constraint_spec,
             "has_value_and_gradient": self.has_value_and_gradient,
             "has_residuals": self.has_residuals,
@@ -218,7 +215,6 @@ def probe_system(system: Any) -> SystemProbe:
         has_back_prop=callable(getattr(system, "back_prop", None)),
         has_metrics=callable(getattr(system, "metrics", None)),
         has_describe=callable(getattr(system, "describe", None)),
-        has_tracking_spec=callable(getattr(system, "tracking_spec", None)),
         has_constraint_spec=callable(getattr(system, "constraint_spec", None)),
         has_value_and_gradient=callable(getattr(system, "value_and_gradient", None)),
         has_residuals=callable(getattr(system, "residuals", None)),
@@ -249,34 +245,6 @@ def get_system_spec(system: Any) -> dict[str, Any]:
     return validate_system_spec(value)
 
 
-def get_tracking_spec(system: Any) -> dict[str, Any] | None:
-    """Return optional static tracking metadata declared by a system.
-
-    tracking_spec() is deliberately not part of the required OLGS protocol. When
-    present, it must return a mapping of system-chosen metric identifiers and
-    metadata. It must not evaluate controls or trigger numerical work.
-    """
-
-    hook = getattr(system, "tracking_spec", None)
-    if not callable(hook):
-        spec = get_system_spec(system)
-        return {
-            "schema_version": TRACKING_SPEC_SCHEMA,
-            "objective": {
-                "metric_id": spec["objective"]["metric_id"],
-                "direction": spec["objective"]["direction"],
-            },
-            "metrics": dict(spec["metrics"]),
-        }
-    value = hook()
-    if not isinstance(value, Mapping):
-        raise TypeError("System tracking_spec() must return a mapping.")
-    payload = dict(value)
-    if "objective" in payload and not isinstance(payload["objective"], Mapping):
-        raise TypeError("System tracking_spec()['objective'] must be a mapping when provided.")
-    if "metrics" in payload and not isinstance(payload["metrics"], Mapping):
-        raise TypeError("System tracking_spec()['metrics'] must be a mapping when provided.")
-    return payload
 
 
 def _static_mapping_hook(system: Any, name: str) -> dict[str, Any]:
@@ -288,8 +256,6 @@ def _static_mapping_hook(system: Any, name: str) -> dict[str, Any]:
     try:
         if name == "system_spec":
             value = get_system_spec(system)
-        elif name == "tracking_spec":
-            value = get_tracking_spec(system)
         else:
             value = hook()
         if value is not None and not isinstance(value, Mapping):
@@ -321,10 +287,6 @@ def contract_info() -> dict[str, Any]:
         ],
         "optional_static_hooks": {
             "describe": "Legacy compact description; system_spec is canonical.",
-            "tracking_spec": (
-                f"Returns optional metric metadata with schema {TRACKING_SPEC_SCHEMA}; "
-                "it must not evaluate controls."
-            ),
             "constraint_spec": "Returns static constraint labels/scales without numerical work.",
         },
         "optional_numerical_hooks": [
@@ -345,7 +307,6 @@ def contract_info() -> dict[str, Any]:
             "plot_data",
         ],
         "system_spec_schema": SYSTEM_SPEC_SCHEMA,
-        "tracking_spec_schema": TRACKING_SPEC_SCHEMA,
         "capability_bundles": {
             "value_and_gradient": ["value_and_gradient"],
             "equality_constraints": ["residuals", "jacobian"],
@@ -400,7 +361,6 @@ def describe_system(system: Any) -> dict[str, Any]:
             "plot_data": {"available": probe.has_plot_data},
         },
         "description": _static_mapping_hook(system, "describe"),
-        "tracking_spec": _static_mapping_hook(system, "tracking_spec"),
         "constraint_spec": _static_mapping_hook(system, "constraint_spec"),
     }
 

@@ -428,12 +428,10 @@ _GROUP_FAMILIES: dict[str, tuple[str, ...]] = {
     "base": ("olgs",),
     "core": ("olgs",),
     "campaigns": ("olgs",),
-    "tracker": ("olgs",),
     "visualization": _BOTH,
     "system_olgs": ("olgs",),
     "system_olss": ("olss",),
     "shooting": ("olss",),
-    "optimizer_log": ("olgs",),
 }
 
 
@@ -446,12 +444,10 @@ _GROUP_MODULES = {
     "base": "optimizer",
     "core": "optimizer.core",
     "campaigns": "optimizer.campaigns",
-    "tracker": "optimizer.tracker",
     "visualization": "optimizer.visualization",
     "system_olgs": "optimizer.system_olgs",
     "system_olss": "optimizer.system_olss",
     "shooting": "optimizer.shooting",
-    "optimizer_log": "optimizer_log",
 }
 
 
@@ -468,7 +464,7 @@ _OPTIMIZER_COMMON_INPUTS = {
 
 _RESULT_RETURN = {
     "type": "OptimizerResult",
-    "fields": "controls, metrics, J, stop_reason, iterations, optimizer, state, trace, checkpoint_ids",
+    "fields": "controls, metrics, J, stop_reason, iterations, optimizer, state, diagnostics",
     "handoff": "Call result.warmstart(target_optimizer=...) before chaining methods.",
 }
 
@@ -484,7 +480,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
         common_returns=_RESULT_RETURN,
         workflow=(
             "Start from opt.guesses.* or an existing Controls object.",
-            "Run short chunks and inspect result.objective_value, result.metrics, and result.trace.",
+            "Run short chunks and inspect result.objective_value, result.metrics, and result.diagnostics.",
             "Use result.warmstart(...) when chaining optimizers.",
         ),
         items=(
@@ -1431,7 +1427,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
 
     base_group = CatalogGroup(
         name="base",
-        summary="Base data objects and top-level entry points: Controls, results, warmstart state, trace, and bound context utilities.",
+        summary="Base data objects and top-level entry points: Controls, results, warmstart state, diagnostics, and bound context utilities.",
         common_inputs={
             "system": "Project physics object satisfying the optimizer contract.",
             "controls": "Named dense control matrix represented by Controls.",
@@ -1439,12 +1435,11 @@ def _build_groups() -> dict[str, CatalogGroup]:
         common_returns={
             "Evaluation": "Single evaluate(...) snapshot.",
             "OptimizerResult": "Standard optimizer result.",
-            "Trace": "In-memory run records and checkpoints.",
         },
         workflow=(
             "Build or receive Controls matching system.control_spec().",
             "Call evaluate/gradient or a role namespace method.",
-            "Carry OptimizerResult, WarmStartState, or Trace across chunks.",
+            "Carry OptimizerResult or WarmStartState across chunks.",
         ),
         items=(
             _make_item(
@@ -1523,7 +1518,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 "result_object",
                 "Standard return object from optimizer calls.",
                 inputs={"constructor": "Usually produced by optimizer methods."},
-                returns={"type": "OptimizerResult", "fields": "controls, metrics, J, stop_reason, iterations, state, trace, warmstart()"},
+                returns={"type": "OptimizerResult", "fields": "controls, metrics, J, stop_reason, iterations, state, diagnostics, warmstart()"},
                 requires=("Controls", "metrics with J"),
                 best_for=("inspecting run outcome", "chaining via warmstart", "exporting to_dict(...)"),
                 example="warm = result.warmstart(target_optimizer='lbfgs')",
@@ -1592,30 +1587,17 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 tags=("transaction", "cli", "mcp", "system"),
                 family=("olgs", "olss"),
             ),
-            _make_item(
-                "Trace",
-                "base",
-                "data_object",
-                "In-memory run ledger for iteration records, chunk records, events, and checkpoints.",
-                inputs={"run_id": "String id for a run ledger."},
-                returns={"type": "Trace", "methods": "record_iteration, record_chunk, checkpoint, restore, to_dict"},
-                requires=("run id",),
-                best_for=("closed-loop inspection", "rollback checkpoints", "technical logs"),
-                example="trace = opt.trace('my-run')",
-                module="optimizer/logs/trace.py",
-                phase="Phase 4",
-                tags=("trace", "checkpoint", "logs"),
-            ),
+
             _make_item(
                 "context",
                 "base",
                 "helper",
                 "Bind a system once for notebook/curriculum convenience.",
-                inputs={"system": "System object to bind.", "trace": "Optional Trace or run id.", "defaults": "Default kwargs for bound runs."},
+                inputs={"system": "System object to bind.", "defaults": "Default kwargs for bound runs."},
                 returns={"type": "OptimizerContext", "methods": "ctx.adam, ctx.evaluate, ctx.with_secondary, ctx.*_guess"},
                 requires=("system contract",),
                 best_for=("notebooks", "curriculum workflows", "reducing repeated system arguments"),
-                example="ctx = opt.context(system, trace='run'); result = ctx.adam(controls, maxiter=10)",
+                example="ctx = opt.context(system); result = ctx.adam(controls, maxiter=10)",
                 module="optimizer/library.py",
                 phase="Phase 6",
                 aliases=("bind",),
@@ -1629,7 +1611,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 inputs={"system": "Any system object; required and optional hooks are probed structurally."},
                 returns={"type": "dict", "schema": "optimizer.system-info/v1"},
                 best_for=("checking a system API before an optimization run", "building generic tooling"),
-                watch_out=("describe() and tracking_spec() must themselves be static hooks.",),
+                watch_out=("describe() and system_spec() must themselves be static hooks.",),
                 example="system_info = opt.system_info(system)",
                 module="optimizer/library.py",
                 phase="Phase 13",
@@ -1659,16 +1641,16 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 "context_info",
                 "base",
                 "helper",
-                "Return the current registered optimizer, OLGS contract, and tracker capability surface.",
+                "Return the current registered optimizer, OLGS contract, capability surface.",
                 inputs={"system": "Optional system whose declared static metadata should be included."},
                 returns={"type": "dict", "schema": "optimizer.context/v1"},
-                best_for=("agent handoff", "API discovery", "checking tracker readiness"),
+                best_for=("agent handoff", "API discovery", "checking operation availability"),
                 watch_out=("It reports capabilities only; it does not run an optimization or evaluate a system.",),
                 related=("base.system_info",),
                 example="snapshot = opt.context_info(system)",
                 module="optimizer/introspection.py",
                 phase="Phase 13",
-                tags=("api", "introspection", "tracker"),
+                tags=("api", "introspection", "history"),
                 family=("olgs", "olss"),
             ),
             _make_item(
@@ -1700,11 +1682,11 @@ def _build_groups() -> dict[str, CatalogGroup]:
             _make_item("Evaluation", "base", "result_object", "Snapshot of one system evaluation: controls, metrics, and J.", module="optimizer/result.py", tags=("evaluation", "result")),
             _make_item("RunState", "base", "data_object", "Mutable state of one active optimization run: controls, metrics, step size, and optimizer memory.", module="optimizer/state.py", tags=("state", "warmstart")),
             _make_item("warmstart", "base", "helper", "Create a safe WarmStartState from a result or active run state, optionally for a target optimizer.", returns={"type": "WarmStartState"}, module="optimizer/state.py", phase="Phase 3", tags=("warmstart", "state")),
-            _make_item("trace", "base", "helper", "Create an in-memory Trace ledger with the given or a random run id.", returns={"type": "Trace"}, module="optimizer/logs/trace.py", phase="Phase 4", tags=("trace", "logs")),
-            _make_item("Checkpoint", "base", "data_object", "Restorable snapshot of controls plus optional run state in a Trace.", module="optimizer/logs/checkpoint.py", tags=("trace", "checkpoint")),
-            _make_item("ChunkRecord", "base", "data_object", "In-memory Trace record for one optimizer chunk.", module="optimizer/logs/records.py", tags=("trace", "logs")),
-            _make_item("IterationRecord", "base", "data_object", "In-memory Trace record for one optimizer iteration.", module="optimizer/logs/records.py", tags=("trace", "logs")),
-            _make_item("EventRecord", "base", "data_object", "In-memory Trace event for actions outside iterations, such as rollback.", module="optimizer/logs/records.py", tags=("trace", "logs")),
+
+
+
+
+
             _make_item("parallel_map", "base", "helper", "Map a function over items with local parallel execution configured by ParallelConfig.", returns={"type": "list"}, module="optimizer/utils/parallel.py", phase="Phase 5", family=("olgs", "olss"), tags=("parallel",)),
             _make_item("ParallelConfig", "base", "data_object", "Configuration for local map-style parallel execution.", module="optimizer/utils/parallel.py", family=("olgs", "olss"), tags=("parallel", "config")),
             _make_item("OptimizerContext", "base", "data_object", "Bound-system facade returned by context() for notebook and curriculum workflows.", module="optimizer/library.py", tags=("context", "notebook")),
@@ -1751,7 +1733,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                     "system": "Must provide evaluate(...) and usually gradient(...).",
                     "controls/state/warmstart": "Starting point for the chunk.",
                     "step": "Callable from StepContext to StepProposal or Controls.",
-                    "optimizer_name": "Name recorded in result and trace.",
+                    "optimizer_name": "Name recorded in the numerical result.",
                     "maxiter": "Chunk iteration budget.",
                 },
                 returns=_RESULT_RETURN,
@@ -1899,14 +1881,14 @@ def _build_groups() -> dict[str, CatalogGroup]:
             _make_item("EvaluationOutcome", "core", "data_object", "Structured result of an evaluation attempt that may fail; returned by SystemEvaluator.try_evaluate.", module="optimizer/core/evaluate.py", tags=("evaluation", "outcome")),
             _make_item("GradientOutcome", "core", "data_object", "Structured result of a gradient attempt that may fail; returned by SystemEvaluator.try_gradient.", module="optimizer/core/evaluate.py", tags=("gradient", "outcome")),
             _make_item("ValueGradientOutcome", "core", "data_object", "Structured result of a combined value and gradient attempt that may fail.", module="optimizer/core/evaluate.py", tags=("evaluation", "gradient", "outcome")),
-            _make_item("RunObserver", "core", "protocol", "Passive sink for the engine lifecycle events.", module="optimizer/core/observer.py", tags=("observer", "events")),
-            _make_item("ObserverAdapter", "core", "base_class", "No-op observer base class; override only the event methods you need.", module="optimizer/core/observer.py", tags=("observer", "events")),
-            _make_item("SnapshotFacts", "core", "data_object", "Compact facts known at one point of the engine lifecycle.", module="optimizer/core/observer.py", tags=("observer", "events")),
-            _make_item("RunStartEvent", "core", "data_object", "The first validated state of one engine chunk, passed to observers.", module="optimizer/core/observer.py", tags=("observer", "events")),
-            _make_item("IterationEvent", "core", "data_object", "One attempted outer iteration, including a rejected or failed trial, passed to observers.", module="optimizer/core/observer.py", tags=("observer", "events")),
-            _make_item("CheckpointEvent", "core", "data_object", "Engine-selected reproducibility point carrying already-owned state, passed to observers.", module="optimizer/core/observer.py", tags=("observer", "events", "checkpoint")),
-            _make_item("ChunkEvent", "core", "data_object", "A completed engine chunk, passed to observers and the in-memory compatibility trace.", module="optimizer/core/observer.py", tags=("observer", "events")),
-            _make_item("TerminalEvent", "core", "data_object", "The final fact produced by one engine chunk, passed to observers.", module="optimizer/core/observer.py", tags=("observer", "events")),
+
+
+
+
+
+
+
+
         ),
     )
 
@@ -1914,7 +1896,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
         name="campaigns",
         summary="Durable multi-stage coordination using objective and provenance declared by system_spec().",
         common_inputs={"system": "OLGS system with static system_spec().", "root": "New durable campaign directory."},
-        common_returns={"type": "Campaign or ModeResult", "evidence": "per-stage tracker journals plus campaign receipt/timeline."},
+        common_returns={"type": "Campaign or ModeResult", "evidence": "owned numerical candidates and validation results; explicit service checkpoints handle persistence."},
         workflow=(
             "Create a campaign from one declared base system.",
             "Scout or compare compatible candidates, then refine or validate the selected candidate.",
@@ -1923,7 +1905,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
         items=(
             _make_item("Campaign", "campaigns", "coordinator", "Campaign object with durable stage, system-fingerprint, and selection evidence.", module="optimizer/campaigns/__init__.py", tags=("campaign", "provenance", "multistart")),
             _make_item("create", "campaigns", "factory", "Create a new campaign rooted at a new directory.", inputs={"system": "Declared OLGS system.", "root": "Nonexistent campaign path."}, returns={"type": "Campaign"}, requires=("system.system_spec",), module="optimizer/campaigns/__init__.py", tags=("campaign", "create")),
-            _make_item("open", "campaigns", "factory", "Open saved campaign evidence with a caller-owned system resolver.", inputs={"root": "Existing campaign path.", "system_resolver": "Callable from saved SystemReference to matching system."}, returns={"type": "Campaign"}, requires=("system resolver", "verified checkpoint artifacts"), module="optimizer/campaigns/__init__.py", tags=("campaign", "replay", "warmstart")),
+
             _make_item("MethodSpec", "campaigns", "data_object", "Declared optimizer name and bounded options for one campaign stage.", module="optimizer/campaigns/__init__.py", tags=("campaign", "method")),
             _make_item("SelectionSpec", "campaigns", "data_object", "System-owned metric and direction used for ranking; never inferred from J.", module="optimizer/campaigns/__init__.py", tags=("campaign", "objective", "system_spec")),
             _make_item("SystemReference", "campaigns", "data_object", "Digest of the normalized system-owned semantic specification for one stage.", module="optimizer/campaigns/__init__.py", tags=("campaign", "provenance", "system_spec")),
@@ -1934,44 +1916,6 @@ def _build_groups() -> dict[str, CatalogGroup]:
         ),
     )
 
-    tracker_group = CatalogGroup(
-        name="tracker",
-        summary="Passive durable run evidence; it records engine facts and never calls system numerics.",
-        common_inputs={"receipt": "Declared metric semantics and source references.", "run_dir": "One owned durable run directory."},
-        common_returns={"type": "RunJournal, reader records, or checkpoint data"},
-        workflow=("Create one RunJournal per run.", "Attach JournalObserver to a supported optimizer.", "Read receipt/timeline/terminal through the standalone reader APIs."),
-        items=(
-            _make_item("RunJournal", "tracker", "writer", "Append-only receipt, timeline, checkpoint, live, and terminal writer.", module="optimizer/tracker/journal.py", tags=("tracker", "journal", "durable")),
-            _make_item("JournalObserver", "tracker", "observer", "Passive bridge from already-computed core facts to a RunJournal.", module="optimizer/tracker/bridge.py", tags=("tracker", "observer", "passive")),
-            _make_item("CheckpointPolicy", "tracker", "policy", "Bound durable control artifacts while retaining every scalar iteration record.", module="optimizer/tracker/bridge.py", tags=("tracker", "checkpoint", "retention")),
-            _make_item("read_timeline", "tracker", "reader", "Validate and read append-only tracker events without optimizer imports.", module="optimizer/tracker/reader.py", tags=("tracker", "reader", "read_only")),
-            _make_item("load_checkpoint", "tracker", "reader", "Load a SHA-256 verified control artifact without a system object.", module="optimizer/tracker/artifacts.py", tags=("tracker", "checkpoint", "replay")),
-            _make_item("RunReceipt", "tracker", "data_object", "Small immutable receipt for one run, without redefining its problem.", module="optimizer/tracker/model.py", tags=("tracker", "receipt")),
-            _make_item("MetricDescriptor", "tracker", "data_object", "Declared meaning of one scalar metric saved by the tracker.", module="optimizer/tracker/model.py", tags=("tracker", "metrics")),
-            _make_item("SourceReference", "tracker", "data_object", "Small pointer to an authority owned outside the tracker.", module="optimizer/tracker/model.py", tags=("tracker", "provenance")),
-            _make_item("ScalarSnapshot", "tracker", "data_object", "Compact state view at one causal point in a run.", module="optimizer/tracker/model.py", tags=("tracker", "snapshot")),
-            _make_item("IterationRecord", "tracker", "data_object", "Raw before, proposal, trial, and after record for one outer iteration.", module="optimizer/tracker/model.py", tags=("tracker", "journal")),
-            _make_item("ChunkRecord", "tracker", "data_object", "One completed optimizer chunk with its resolved method and system facts.", module="optimizer/tracker/model.py", tags=("tracker", "journal")),
-            _make_item("InterventionRecord", "tracker", "data_object", "An action between normal iterations, linked to its numerical evidence.", module="optimizer/tracker/model.py", tags=("tracker", "journal")),
-            _make_item("AnalysisRecord", "tracker", "data_object", "A derived, explicitly scheduled analysis of a raw iteration window.", module="optimizer/tracker/model.py", tags=("tracker", "analysis")),
-            _make_item("LiveSnapshot", "tracker", "data_object", "Replaceable progress view for a local observer; not the scientific source.", module="optimizer/tracker/model.py", tags=("tracker", "live")),
-            _make_item("TerminalRecord", "tracker", "data_object", "The selected terminal result and any explicitly requested certificate.", module="optimizer/tracker/model.py", tags=("tracker", "terminal")),
-            _make_item("CheckpointReference", "tracker", "data_object", "Small JSON-safe pointer to a separately stored control artifact.", module="optimizer/tracker/artifacts.py", tags=("tracker", "checkpoint")),
-            _make_item("CheckpointData", "tracker", "data_object", "Loaded controls plus caller-supplied JSON metadata.", module="optimizer/tracker/artifacts.py", tags=("tracker", "checkpoint")),
-            _make_item("TimelineReadResult", "tracker", "data_object", "Complete timeline records and, if present, one ignored damaged tail line.", module="optimizer_log/reader.py", tags=("tracker", "reader")),
-            _make_item("follow_timeline", "tracker", "reader", "Read complete appended events and distinguish partial tails from corruption.", module="optimizer_log/reader.py", tags=("tracker", "reader", "live")),
-            _make_item("read_receipt", "tracker", "reader", "Read the stored run receipt exactly as written.", module="optimizer_log/reader.py", tags=("tracker", "reader")),
-            _make_item("read_live", "tracker", "reader", "Read the current replaceable observer snapshot, if the run has started.", module="optimizer_log/reader.py", tags=("tracker", "reader", "live")),
-            _make_item("read_terminal", "tracker", "reader", "Read the direct terminal-result index, if the run has ended.", module="optimizer_log/reader.py", tags=("tracker", "reader")),
-            _make_item("read_writer", "tracker", "reader", "Read explicit writer ownership and heartbeat state, if present.", module="optimizer_log/reader.py", tags=("tracker", "reader", "liveness")),
-            _make_item("inspect_writer", "tracker", "reader", "Report local writer liveness without taking ownership or modifying files.", module="optimizer_log/reader.py", tags=("tracker", "reader", "liveness")),
-            _make_item("metric_coverage", "tracker", "reader", "Compare declared metrics with observed and explicitly omitted metrics.", module="optimizer_log/reader.py", tags=("tracker", "reader", "metrics")),
-            _make_item("project_timeline", "tracker", "reader", "Create a generic read-only projection for API or interface consumers.", module="optimizer_log/reader.py", tags=("tracker", "reader")),
-            _make_item("validate_event", "tracker", "validator", "Validate one causal event envelope without importing optimizer code.", module="optimizer_log/reader.py", tags=("tracker", "validation")),
-            _make_item("validate_receipt", "tracker", "validator", "Validate the generic receipt fields required by read-only consumers.", module="optimizer_log/reader.py", tags=("tracker", "validation")),
-            _make_item("validate_timeline", "tracker", "validator", "Validate the one-start, one-terminal lifecycle of a complete prefix.", module="optimizer_log/reader.py", tags=("tracker", "validation")),
-        ),
-    )
 
     visualization_group = CatalogGroup(
         name="visualization",
@@ -2015,10 +1959,8 @@ def _build_groups() -> dict[str, CatalogGroup]:
             _make_item("metric_spec", "system_olgs", "helper", "Build one normalized OLGS metric declaration for system_spec().", module="optimizer/system_olgs/specs.py", tags=("system_spec", "metric"), root=True),
             _make_item("validate_system_spec", "system_olgs", "validator", "Validate and normalize a static OLGS system_spec() mapping.", module="optimizer/system_olgs/specs.py", tags=("system_spec", "validation"), root=True),
             _make_item("validate_declared_metrics", "system_olgs", "validator", "Validate metric names and declared shapes without changing system values.", module="optimizer/system_olgs/specs.py", tags=("system_spec", "metric", "validation")),
-            _make_item("TRACKING_SPEC_SCHEMA", "system_olgs", "constant", "Schema identifier of the optional tracking specification.", module="optimizer/system_olgs/contract.py", tags=("tracking", "schema"), root=True),
             _make_item("TrackingSpec", "system_olgs", "type_alias", "Type of the optional static tracking specification mapping.", module="optimizer/system_olgs/contract.py", tags=("tracking", "type"), root=True),
             _make_item("Metrics", "system_olgs", "type_alias", "Type of an OLGS metrics mapping from metric name to value.", module="optimizer/system_olgs/contract.py", tags=("metrics", "type")),
-            _make_item("get_tracking_spec", "system_olgs", "helper", "Return optional static tracking metadata declared by a system.", module="optimizer/system_olgs/contract.py", tags=("tracking", "static"), root=True),
             _make_item("contract_info", "system_olgs", "helper", "Return the generic OLGS contract without inspecting a concrete system.", module="optimizer/system_olgs/contract.py", tags=("contract", "introspection"), root=True),
             _make_item("describe_system", "system_olgs", "helper", "Describe declared OLGS system capabilities without evaluating controls.", module="optimizer/system_olgs/contract.py", tags=("system", "introspection"), root=True),
             _make_item("SystemProbe", "system_olgs", "data_object", "Presence of required, recommended, and optional OLGS hooks.", module="optimizer/system_olgs/contract.py", tags=("system", "introspection"), root=True),
@@ -2213,28 +2155,6 @@ def _build_groups() -> dict[str, CatalogGroup]:
         ),
     )
 
-    reader_group = CatalogGroup(
-        name="optimizer_log",
-        summary="Standalone, read-only tracker reader package; it is not yet a portal UI or command-line application.",
-        common_inputs={"run_dir": "Existing tracker run directory."},
-        common_returns={"type": "validated receipt, records, live state, or terminal state"},
-        workflow=("Locate a known run directory.", "Read or follow its timeline.", "Build user interfaces only above these read-only APIs."),
-        items=(
-            _make_item("read_timeline", "optimizer_log", "reader", "Read validated tracker events without importing optimizer numerics.", module="optimizer_log/reader.py", tags=("reader", "tracker", "read_only")),
-            _make_item("follow_timeline", "optimizer_log", "reader", "Incrementally follow appended complete JSONL events.", module="optimizer_log/reader.py", tags=("reader", "tracker", "live")),
-            _make_item("inspect_writer", "optimizer_log", "reader", "Inspect writer ownership/liveness without taking ownership.", module="optimizer_log/reader.py", tags=("reader", "tracker", "liveness")),
-            _make_item("TimelineReadResult", "optimizer_log", "data_object", "Complete timeline records and, if present, one ignored damaged tail line.", module="optimizer_log/reader.py", tags=("reader", "tracker")),
-            _make_item("read_receipt", "optimizer_log", "reader", "Read the stored run receipt exactly as written.", module="optimizer_log/reader.py", tags=("reader", "tracker")),
-            _make_item("read_live", "optimizer_log", "reader", "Read the current replaceable observer snapshot, if the run has started.", module="optimizer_log/reader.py", tags=("reader", "tracker", "live")),
-            _make_item("read_terminal", "optimizer_log", "reader", "Read the direct terminal-result index, if the run has ended.", module="optimizer_log/reader.py", tags=("reader", "tracker")),
-            _make_item("read_writer", "optimizer_log", "reader", "Read explicit writer ownership and heartbeat state, if present.", module="optimizer_log/reader.py", tags=("reader", "tracker", "liveness")),
-            _make_item("metric_coverage", "optimizer_log", "reader", "Compare declared metrics with observed and explicitly omitted metrics.", module="optimizer_log/reader.py", tags=("reader", "tracker", "metrics")),
-            _make_item("project_timeline", "optimizer_log", "reader", "Create a generic read-only projection for API or interface consumers.", module="optimizer_log/reader.py", tags=("reader", "tracker")),
-            _make_item("validate_event", "optimizer_log", "validator", "Validate one causal event envelope without importing optimizer code.", module="optimizer_log/reader.py", tags=("reader", "validation")),
-            _make_item("validate_receipt", "optimizer_log", "validator", "Validate the generic receipt fields required by read-only consumers.", module="optimizer_log/reader.py", tags=("reader", "validation")),
-            _make_item("validate_timeline", "optimizer_log", "validator", "Validate the one-start, one-terminal lifecycle of a complete prefix.", module="optimizer_log/reader.py", tags=("reader", "validation")),
-        ),
-    )
 
     operations_group = CatalogGroup(
         name="operations",
@@ -2256,12 +2176,10 @@ def _build_groups() -> dict[str, CatalogGroup]:
         "base": base_group,
         "core": core_group,
         "campaigns": campaigns_group,
-        "tracker": tracker_group,
         "visualization": visualization_group,
         "system_olgs": system_group,
         "system_olss": shooting_system_group,
         "shooting": shooting_group,
-        "optimizer_log": reader_group,
     }
 
 
@@ -2561,12 +2479,10 @@ schedules = CatalogGroupView("schedules")
 base = CatalogGroupView("base")
 core = CatalogGroupView("core")
 campaigns = CatalogGroupView("campaigns")
-tracker = CatalogGroupView("tracker")
 visualization = CatalogGroupView("visualization")
 system_olgs = CatalogGroupView("system_olgs")
 system_olss = CatalogGroupView("system_olss")
 shooting = CatalogGroupView("shooting")
-optimizer_log = CatalogGroupView("optimizer_log")
 
 
 __all__ = [
@@ -2586,14 +2502,12 @@ __all__ = [
     "info",
     "list",
     "optimizers",
-    "optimizer_log",
     "path",
     "schedules",
     "search",
     "shooting",
     "system_olgs",
     "system_olss",
-    "tracker",
     "utils",
     "visualization",
 ]

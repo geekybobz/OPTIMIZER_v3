@@ -22,7 +22,7 @@ class _Adapter:
 
 
 _OLGS_READ = {
-    "get_system_spec", "describe_system", "probe_system", "get_tracking_spec",
+    "get_system_spec", "describe_system", "probe_system",
     "validate_control_spec", "validate_controls_for_system", "evaluate_system", "gradient_system",
     "value_and_gradient_system", "optional_residuals", "optional_jacobian", "optional_hvp",
     "optional_hessian", "optional_smooth_gradient", "optional_prox", "optional_plot_data",
@@ -48,7 +48,6 @@ _PURE_SYSTEM = {"basic_system_spec", "metric_spec", "validate_system_spec", "val
                 "validate_metrics", "contract_info", "basic_shooting_system_spec", "shooting_metric_spec",
                 "validate_shooting_system_spec", "shooting_contract_info"}
 _VISUAL_DATA = {"coerce_plot_data", "validate_bloch_data", "validate_controls_data"}
-_LOG_TYPES = {"Trace", "Checkpoint", "ChunkRecord", "IterationRecord", "EventRecord", "trace"}
 _HOOKS = {
     "optional_residuals": ("residuals",), "optional_jacobian": ("jacobian",),
     "optional_hvp": ("hvp",), "optional_hessian": ("hessian",),
@@ -70,8 +69,6 @@ def _policy(item: catalog.CatalogItem) -> _Adapter:
     obj = item.public_object()
     group, name = item.group, item.name
     family = item.family
-    if group in {"tracker", "optimizer_log"} or name in _LOG_TYPES:
-        return _Adapter("legacy_logging", reason="Legacy trace/tracker retirement is Task 5.")
     if item.kind in {"constant", "registry", "object", "type_alias"}:
         return _Adapter("inspectable_value", reason="Discovery only; this entry is not executable.")
     if group == "optimizers":

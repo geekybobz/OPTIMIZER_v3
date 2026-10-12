@@ -84,105 +84,43 @@ def _stop_facts(reason: str | None) -> dict[str, Any]:
     }
 
 
-def _optimizer_series(result: Any) -> dict[str, Any] | None:
-    """Extract the run's own samples from its trace; ``None`` without a trace.
-
-    The start value comes from the run's chunk record, so the trend starts
-    before the first step rather than after it.
-    """
-
-    trace = getattr(result, "trace", None)
-    if trace is None:
-        return None
-    metric = str(getattr(result, "objective_metric", "J"))
-    records = list(trace.iteration_records)
-    chunks = list(getattr(trace, "chunk_records", ()))
-    start_value = None
-    if chunks:
-        last = chunks[-1]
-        records = [
-            record for record in records if last.start_iteration < record.iteration <= last.end_iteration
-        ] or records
-        if metric in last.start_metrics:
-            start_value = float(last.start_metrics[metric])
-    return {
-        "metric": metric,
-        "start": start_value,
-        "values": [float(record.metrics[metric]) for record in records if metric in record.metrics],
-        "accepted": [record.accepted for record in records if record.accepted is not None],
-        "gradient_norms": [
-            float(record.technical["gradient_norm"])
-            for record in records
-            if record.technical.get("gradient_norm") is not None
-        ],
-        "step_norms": [
-            float(record.technical["proposal"]["applied_step_norm"])
-            for record in records
-            if (record.technical.get("proposal") or {}).get("applied_step_norm") is not None
-        ],
-        "iterations": len(records),
-    }
-
-
 def diagnose_run(result: Any, *, mode: str | None = None) -> dict[str, Any]:
-    """Classify a short OLGS or OLSS run from already-recorded evidence.
+    """Classify OLGS numerical aggregates or OLSS native solver history.
 
-    Labels: ``converging``, ``slow``, ``stalled``, ``oscillating``,
-    ``diverging``, ``repeating_rejections``, and ``no_trace`` when an OLGS run
-    kept no iteration samples.  Thresholds are relative to the starting value
-    and are returned with every diagnosis.
+    OLGS retains constant-size counters and objective aggregates, never an
+    iteration log. Results constructed without aggregates report unavailable
+    evidence instead of inventing intermediate samples.
     """
-
     from optimizer.result import OptimizerResult
     from optimizer.system_olss import ShootingResult
-
-    if isinstance(result, ShootingResult):
-        return _diagnose_shooting(result)
+    if isinstance(result, ShootingResult): return _diagnose_shooting(result)
     if not isinstance(result, OptimizerResult):
-        raise TypeError(
-            "diagnose_run expects an OptimizerResult or a ShootingResult, "
-            f"got {type(result).__name__}."
-        )
+        raise TypeError("diagnose_run expects an OptimizerResult or a ShootingResult.")
     resolved_mode = "min" if mode is None else str(mode)
-    if resolved_mode not in {"min", "max"}:
-        raise ValueError("mode must be 'min' or 'max'.")
-    series = _optimizer_series(result)
-    base = {
-        "kind": "run_diagnosis",
-        "family": "olgs",
-        "optimizer": result.optimizer,
-        "stop_reason": result.stop_reason,
-        **_stop_facts(result.stop_reason),
-        "objective_metric": result.objective_metric,
-        "objective_mode": resolved_mode,
-        "thresholds": dict(_DIAGNOSIS_THRESHOLDS),
-    }
-    if series is None:
-        return {
-            **base,
-            "classification": "no_trace",
-            "message": "The run kept no iteration samples (create_trace=False); only its final metrics are known.",
-            "final_value": float(result.metrics[result.objective_metric]),
-            "iterations": int(result.iterations),
-        }
-    values = series["values"] if series["start"] is None else [series["start"], *series["values"]]
-    signed = values if resolved_mode == "min" else [-value for value in values]
-    accepted = series["accepted"]
-    rejection_ratio = sum(not value for value in accepted) / len(accepted) if accepted else 0.0
-    classification, relative, reversals = _classify(
-        signed, rejection_ratio=rejection_ratio, attempts=len(accepted)
-    )
-    return {
-        **base,
-        "classification": classification,
-        "objective_trend": _trend(values),
-        "relative_change": relative,
-        "direction_reversals": reversals,
-        "gradient_trend": _trend(series["gradient_norms"]),
-        "step_trend": _trend(series["step_norms"]),
-        "rejection_ratio": rejection_ratio,
-        "iterations": series["iterations"],
-    }
+    if resolved_mode not in {"min", "max"}: raise ValueError("mode must be 'min' or 'max'.")
+    base = dict(kind="run_diagnosis", family="olgs", optimizer=result.optimizer,
+                stop_reason=result.stop_reason, **_stop_facts(result.stop_reason),
+                objective_metric=result.objective_metric, objective_mode=resolved_mode,
+                thresholds=dict(_DIAGNOSIS_THRESHOLDS))
+    data = result.diagnostics
+    if not data:
+        return dict(base, classification="insufficient_evidence", final_value=result.objective_value,
+                    iterations=result.iterations)
+    attempts, reversals = data['attempts'], data['reversals']
+    rejection_ratio = data['rejected'] / attempts if attempts else 0.0
+    scale = abs(data['start']) or max(abs(data['minimum']), abs(data['maximum']), np.finfo(float).tiny)
+    relative = (data['end']-data['start']) / scale * (1 if resolved_mode == 'min' else -1)
+    limits = _DIAGNOSIS_THRESHOLDS
+    if attempts >= 3 and rejection_ratio >= limits['repeating_rejection_ratio']: label='repeating_rejections'
+    elif attempts >= 3 and reversals >= max(2, int(np.ceil(attempts*limits['oscillation_reversal_fraction']))): label='oscillating'
+    elif relative > limits['diverging_relative_increase']: label='diverging'
+    elif relative >= -limits['stalled_relative_change']: label='stalled'
+    elif -relative < limits['slow_relative_improvement']: label='slow'
+    else: label='converging'
+    trend=_trend([data['start'],data['end']]); trend['count']=attempts+1
+    return dict(base, classification=label, objective_trend=trend, relative_change=relative,
+                direction_reversals=reversals, rejection_ratio=rejection_ratio, iterations=attempts,
+                evidence="constant_size_numerical_aggregates")
 
 
 def _diagnose_shooting(result: Any) -> dict[str, Any]:

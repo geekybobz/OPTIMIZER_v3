@@ -59,7 +59,7 @@ residuals
 ## `diagnose_run`
 
 Use this after a short run to decide whether to continue, change the step, or
-switch methods. It reads the result's own samples and makes no system call.
+switch methods. It reads the result's numerical evidence and makes no system call.
 
 Accepts an `OptimizerResult` or a `ShootingResult`; any other object raises
 `TypeError`. `mode="max"` treats a larger objective as better.
@@ -71,18 +71,18 @@ stalled                changed by at most 1e-6 relative, or worsened by at most 
 oscillating            the direction reversed in at least a third of the steps
 diverging              worse than the start by more than 0.1 %
 repeating_rejections   at least 80 % of at least three attempts were rejected
-no_trace               the OLGS run kept no samples (create_trace=False)
+insufficient_evidence  manually built/legacy OLGS result has no numerical aggregates
 ```
 
 Every threshold is relative to the run's starting value, so a run gets the same
 label whether its objective is an infidelity near `1e-6` or an energy near
-`1e3`. The OLGS trend starts at the objective before the first step, taken from
-the run's chunk record. Oscillation is tested before divergence, so a run that
+`1e3`. OLGS uses constant-size start/end/extrema/reversal/count aggregates, without
+retaining iteration samples. Oscillation is tested before divergence, so a run that
 swings while improving is labelled `oscillating`. An OLSS run whose solver
 converged is `converging`.
 
 Returns the label, `objective_trend` or `residual_trend`, `relative_change`,
-`direction_reversals`, gradient and step trends (OLGS), the rejection ratio,
+`direction_reversals`, the rejection ratio,
 the stop reason, and the `thresholds` that were applied. `stop_outcome` and
 `stop_continuable` come from the [stop-reason registry](../core/CORE_STOPPING.md#stop-reasons):
 the outcome class of the reason, and whether the final state is a valid start
@@ -96,7 +96,7 @@ checking objective names
 checking control norms and finiteness
 seeing gradient scale by channel
 seeing whether residual hooks are available
-building compact notebook logs
+inspecting compact numerical reports
 classifying a 5--10 iteration run before continuing
 comparing methods from identical controls and budgets
 checking OLSS Jacobian rank and weak variable blocks

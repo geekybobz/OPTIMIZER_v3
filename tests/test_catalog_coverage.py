@@ -5,8 +5,7 @@ Namespaces build ``__all__`` from their catalog declarations
 These tests check what that generation cannot: every exported name resolves,
 no library function or class is reachable in a namespace without a
 declaration, every declaration resolves to its object and names its families,
-and the standalone ``optimizer_log`` reader, which keeps a literal list so it
-never imports the optimizer package, matches its declarations.
+and retired logging exports remain absent.
 """
 
 from __future__ import annotations
@@ -32,12 +31,10 @@ NAMESPACES = {
     "schedules": "optimizer.schedules",
     "core": "optimizer.core",
     "campaigns": "optimizer.campaigns",
-    "tracker": "optimizer.tracker",
     "visualization": "optimizer.visualization",
     "system_olgs": "optimizer.system_olgs",
     "system_olss": "optimizer.system_olss",
     "shooting": "optimizer.shooting",
-    "optimizer_log": "optimizer_log",
 }
 HELPERS = {"info", "list", "search", "path"}
 
@@ -112,16 +109,15 @@ class CatalogCoverageTests(unittest.TestCase):
 
     def test_root_names_resolve_to_their_root_declaration(self):
         self.assertEqual(opt.info("finite_difference_jacobian")["id"], "utils.finite_difference_jacobian")
-        self.assertEqual(opt.info("ChunkRecord")["id"], "base.ChunkRecord")
+        self.assertEqual(opt.info("OptimizerResult")["id"], "base.OptimizerResult")
         self.assertEqual(opt.info("bind")["id"], "base.context")
-        self.assertEqual(opt.info("follow_timeline")["id"], "tracker.follow_timeline")
         self.assertEqual(opt.finite_difference_jacobian.info()["id"], "utils.finite_difference_jacobian")
-        self.assertEqual(opt.ChunkRecord.info()["id"], "base.ChunkRecord")
+        self.assertEqual(opt.OptimizerResult.info()["id"], "base.OptimizerResult")
         self.assertEqual(opt.to_plain.info()["family"], ["olgs", "olss"])
         self.assertTrue(opt.info("adam")["root"])
 
     def test_protocols_and_typing_aliases_get_no_info_attribute(self):
-        for protocol in (opt.OLGSystem, opt.SupportsHVP, opt.OpenLoopShootingSystem, opt.core.RunObserver):
+        for protocol in (opt.OLGSystem, opt.SupportsHVP, opt.OpenLoopShootingSystem):
             with self.subTest(protocol=protocol.__name__):
                 self.assertNotIn("info", vars(protocol))
         self.assertFalse(hasattr(collections.abc.Mapping, "info"))
@@ -142,7 +138,7 @@ class CatalogCoverageTests(unittest.TestCase):
         self.assertEqual(set(methods), functions)
         self.assertEqual(methods["ncg"].module, "optimizer/optimizers/nonlinear_cg.py")
         self.assertEqual(methods["solve_shooting"].phase, "OLSS")
-        self.assertEqual(methods["trace"].module, "optimizer/logs/trace.py")
+        self.assertNotIn("trace", methods)
 
 
 if __name__ == "__main__":

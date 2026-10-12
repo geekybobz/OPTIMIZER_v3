@@ -48,19 +48,17 @@ class CatalogTests(unittest.TestCase):
         groups = opt.catalog.groups()
         for name in (
             "campaigns",
-            "tracker",
             "visualization",
             "system_olgs",
             "system_olss",
             "shooting",
-            "optimizer_log",
         ):
             self.assertIn(name, groups)
             self.assertGreater(groups[name]["count"], 0)
         self.assertGreater(opt.search("campaign")["count"], 0)
-        self.assertGreater(opt.search("tracker")["count"], 0)
+        self.assertGreater(opt.search("controls")["count"], 0)
         self.assertGreater(opt.search("visualization")["count"], 0)
-        self.assertEqual(opt.catalog.campaigns.open.info()["id"], "campaigns.open")
+        self.assertEqual(opt.catalog.campaigns.create.info()["id"], "campaigns.create")
         olss_names = {item["name"] for item in opt.catalog.system_olss.list()["items"]}
         self.assertTrue(
             {"OLSS", "ShootingBlock", "ShootingSpec", "ShootingVariables", "basic_shooting_system_spec"}
@@ -111,8 +109,7 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(via_catalog["id"], "guesses.random_fourier_guess")
         self.assertIn("seed", via_group["inputs"])
         self.assertEqual(opt.schedules.AdaptiveStepSchedule.info()["id"], "schedules.AdaptiveStepSchedule")
-        self.assertEqual(opt.info("optimizer_log")["group"], "optimizer_log")
-        self.assertTrue(callable(opt.optimizer_log.read_timeline))
+        with self.assertRaises(KeyError): opt.info('optimizer_log')
 
     def test_filters_search_and_paths_support_recovery_when_lost(self):
         derivative_tools = opt.utils.list(kind="derivative")

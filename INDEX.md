@@ -51,10 +51,8 @@ reviewed: 2026-10-12
 
 ## Coordination and evidence
 
-- [Campaigns](optimizer/campaigns/CAMPAIGNS.md) — durable multi-stage workflows.
-- [Tracker Hub](optimizer/tracker/TRACKER_HUB.md) — journals, checkpoints, and observer bridge.
-- [Logs Hub](optimizer/logs/LOGS_HUB.md) — in-memory trace and checkpoint behavior.
-- [Standalone Log Reader](optimizer_log/OPTIMIZER_LOG_READER.md) — read-only run-folder inspection.
+- [Campaigns](optimizer/campaigns/CAMPAIGNS.md) — in-memory multi-stage workflows.
+- [Command history](optimizer/history/HISTORY.md) — frontend records, recovery, migration and replay.
 - [Testing Hub](tests/TESTING_HUB.md) — test ownership and scenario evidence.
 - [Release Evidence](RELEASE_EVIDENCE.md) — released-wheel provenance.
 

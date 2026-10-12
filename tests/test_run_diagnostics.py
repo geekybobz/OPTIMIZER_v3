@@ -57,11 +57,12 @@ class DiagnoseRunTests(unittest.TestCase):
         self.assertIn("thresholds", diagnosis)
 
     def test_a_run_without_samples_says_so(self):
-        result = opt.adam(self.system, self.controls, maxiter=3, create_trace=False)
+        result = opt.adam(self.system, self.controls, maxiter=3)
+        result.diagnostics = {}
         diagnosis = opt.diagnose_run(result)
 
         self.assertEqual(diagnosis["family"], "olgs")
-        self.assertEqual(diagnosis["classification"], "no_trace")
+        self.assertEqual(diagnosis["classification"], "insufficient_evidence")
 
     def test_shooting_results_and_other_objects_dispatch_by_type(self):
         system = RectangularShootingSystem()

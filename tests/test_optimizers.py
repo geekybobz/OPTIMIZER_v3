@@ -85,9 +85,7 @@ class OptimizerPhaseTests(unittest.TestCase):
         )
 
         self.assertLess(result.J, opt.evaluate(system, controls).J)
-        record = result.trace.iteration_records[0]
-        attempts = record.technical["proposal"]["attempts"]
-        self.assertGreaterEqual(len(attempts), 1)
+        self.assertGreater(result.diagnostics['counters']['evaluation_attempt'], 1)
 
     def test_declared_maximization_defaults_propagate_to_line_search_and_cma_es(self):
         system = MaximizingScalarSystem()
@@ -157,7 +155,7 @@ class OptimizerPhaseTests(unittest.TestCase):
             accept=default_accept,
         )
 
-        self.assertFalse(result.trace.iteration_records[0].accepted)
+        self.assertEqual(result.diagnostics['accepted'], 0)
         self.assertEqual(result.state.optimizer_state["reject_count"], 1)
         np.testing.assert_allclose(result.state.optimizer_state["velocity"], 0.0)
 

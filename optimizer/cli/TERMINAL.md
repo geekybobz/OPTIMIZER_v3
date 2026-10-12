@@ -32,9 +32,9 @@ with `opt.project.init(name="experiment");` or `opt.project.open(path=...);`.
 [Persistent experiments](../persistence/PERSISTENCE.md) owns save/reopen/fork,
 typed checkpoints, restore/undo/redo, exact-continuation requirements and cleanup.
 Exit/EOF preserves an open experiment's committed data and releases its lease.
-Permanent CLI/MCP history and old-logger retirement are the next phase. Ordinary
-Python receives no automatic history writer; existing native traces remain until
-their consumers migrate. Managed background/parallel jobs are deferred.
+[Command history](../history/HISTORY.md) records frontend statements and outcomes.
+Ordinary Python receives no automatic history writer. Managed background/parallel
+jobs and the MCP transport are deferred.
 
 ## Calls and retained objects
 
@@ -101,8 +101,8 @@ inside brackets. A submission is limited to 65,536 UTF-8 bytes, 8,192 AST nodes,
 32 expression nesting levels and 128 registered calls. Command scripts use this
 same restricted grammar, not general Python. The whole submitted batch is
 syntax-validated before execution. Runtime failure stops subsequent statements;
-earlier completed operations keep their committed transitions. Nested calls also
-have explicit responses and their own transitions.
+earlier completed statements keep their committed transitions. Nested calls have
+explicit responses but share the parent statement transaction and history pair.
 
 Live callbacks must already be registered by trusted Python through
 `service.register_reference("step", callback)` when embedding the coordinator;
@@ -146,9 +146,9 @@ remains. This does not provide cooperative pause/resume or background execution.
 [main.py](main.py) owns launch/prompt; [input.py](input.py) frames submissions;
 [language.py](language.py) validates the AST and binds service requests;
 [display.py](display.py) summarizes data; [discovery.py](discovery.py) scans paths.
-The coordinator's optional explicit observer receives raw command, canonical
-request, response and interruption flag for future history integration. It is
-informational and installs no durable writer or commit protocol.
+The recorder in [history/](../history/HISTORY.md) owns permanent statement history.
+The coordinator's optional explicit observer remains an informational embedding
+hook and cannot replace the recorder's commit protocol.
 
 The [language tests](../../tests/test_cli_language.py) cover native parity,
 aliases, continuation, candidates, validation/quotas and isolated OLGS/OLSS

@@ -44,7 +44,6 @@ from optimizer.optimizers._common import (
     coerce_warmstart,
     controls_from_flat_like,
     flat_state_array,
-    method_api_context,
     next_scheduled_step,
     require_finite,
     require_probability_like,
@@ -246,7 +245,7 @@ def adagrad(
         accept_metric=accept_metric,
         accept_mode=accept_mode,
         accept_tolerance=accept_tolerance,
-        **method_api_context(engine_kwargs, method="adagrad", config=config),
+        **engine_kwargs,
     )
 
 
@@ -298,5 +297,5 @@ def rmsprop(
         accept_metric=accept_metric,
         accept_mode=accept_mode,
         accept_tolerance=accept_tolerance,
-        **method_api_context(engine_kwargs, method="rmsprop", config=config),
+        **engine_kwargs,
     )

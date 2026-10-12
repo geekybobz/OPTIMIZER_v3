@@ -38,7 +38,7 @@ guess controls
   -> adam or cma_es for rough search
   -> line_search, nonlinear_cg, or lbfgs for deterministic improvement
   -> projected, Newton-CG, trust-region, or proximal methods when capabilities exist
-  -> inspect result.metrics and result.trace
+  -> inspect result.metrics and result.diagnostics
 ```
 
 Typical chain:

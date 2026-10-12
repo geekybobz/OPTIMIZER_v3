@@ -30,7 +30,7 @@ hand the method a StepContext
 validate and evaluate the proposed trial
 accept or reject the trial
 update run state and optimizer-private state
-record iterations, chunks, and checkpoints
+retain native state and compact numerical aggregates
 stop for a consistent, named reason
 ```
 
@@ -61,7 +61,7 @@ CORE_LIFECYCLE.md
   Exact order of one chunk, and what each failure branch leaves behind.
 
 CORE_ENGINE.md
-  run_chunk argument surface, start-state precedence, recording and checkpoints.
+  run_chunk argument surface, start-state precedence, numerical result aggregates.
 
 CORE_EVALUATION.md
   SystemEvaluator, the evaluation cache, and structured failure outcomes.
@@ -73,7 +73,7 @@ CORE_STOPPING.md
   StoppingConfig, StopTracker, rule order, and stop reasons.
 
 CORE_BOUNDARY.md
-  What belongs in core, and what belongs in utils, optimizers, logs, and systems.
+  What belongs in core, and what belongs in utils, optimizers, history, and systems.
 ```
 
 ## Two Namespaces, Two Meanings
@@ -85,7 +85,7 @@ opt.core    this package: run_chunk, StepContext, StepProposal,
             AcceptanceDecision, SystemEvaluator, StoppingConfig, metric_guard
 
 opt.base    top-level spine objects: Controls, ControlSpec, OptimizerResult,
-            WarmStartState, Trace, evaluate, gradient, context
+            WarmStartState, evaluate, gradient, context
 ```
 
 Both are catalogued, so either can be listed at runtime:
@@ -132,7 +132,7 @@ optimizer/core/
   guards.py       MetricGuard and metric_guard
   stopping.py     StoppingConfig, StopTracker, StopDecision
   stop_reasons.py StopReason and STOP_REASONS, the registry shared by OLGS and OLSS
-  observer.py     RunObserver, observer events, and terminal-status classification
+  progress.py     private constant-size numerical aggregate accumulator
   curvature.py    matrix-free curvature evidence and classification
   _cache.py       bounded least-recently-used store behind both evaluators
 ```
@@ -163,10 +163,11 @@ CORE_EVALUATION.md
 CORE_LIFECYCLE.md
 ```
 
-## Related Notes
+## Connections
 
 - [Root Entry](../../README.md)
 - [Core Contract](CORE_CONTRACT.md)
+- Deeper: [Core engine](CORE_ENGINE.md)
 - [Core Lifecycle](CORE_LIFECYCLE.md)
 - [Core Boundary](CORE_BOUNDARY.md)
 - [Optimizer Lifecycle](../optimizers/OPTIMIZER_LIFECYCLE.md)

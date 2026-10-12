@@ -22,7 +22,7 @@ AcceptanceDecision and the acceptance policy
 SystemEvaluator, the validated path to the system
 StoppingConfig, StopTracker, and stop reasons
 metric guards
-trace and checkpoint plumbing for the loop
+constant-size numerical aggregates
 ```
 
 ## Core Does Not Own
@@ -34,7 +34,8 @@ initial controls            -> guesses
 step-size policy            -> schedules
 diagnostics and repair      -> utils
 map-style parallelism       -> utils
-in-memory run records       -> logs
+frontend command history    -> history
+durable numerical state     -> persistence/checkpoints
 derivations and intuition   -> Theory
 ```
 
@@ -69,7 +70,7 @@ opt.core    run_chunk, StepContext, StepProposal, AcceptanceDecision,
             SystemEvaluator, StoppingConfig, metric_guard
 
 opt.base    Controls, ControlSpec, OptimizerResult, WarmStartState,
-            Trace, evaluate, gradient, context
+            evaluate, gradient, context
 ```
 
 `base` covers the top-level spine that everything shares: the data objects and the
@@ -86,7 +87,7 @@ their own contents.
 - [Optimizer Boundary](../optimizers/OPTIMIZER_BOUNDARY.md)
 - [Util Boundary](../utils/UTIL_BOUNDARY.md)
 - [OLGS Logging Boundary](../system_olgs/LOGGING_BOUNDARY.md)
-- [Logs Hub](../logs/LOGS_HUB.md)
+- [Command history](../history/HISTORY.md)
 
 ---
 

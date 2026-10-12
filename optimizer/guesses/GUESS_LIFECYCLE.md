@@ -59,7 +59,7 @@ sources
 perturbation_kind
 ```
 
-This helps traces and notebooks remember where a starting pulse came from.
+This helps saved initial-control references and notebooks remember where a starting pulse came from.
 
 ## Validation
 

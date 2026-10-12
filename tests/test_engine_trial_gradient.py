@@ -51,7 +51,7 @@ class TrialGradientTests(unittest.TestCase):
         result = opt.line_search(system, start, maxiter=5)
 
         self.assertEqual(result.iterations, 5)
-        technical = result.trace.iteration_records[-1].technical["counters"]
+        technical = result.diagnostics['counters']
         self.assertGreaterEqual(technical["evaluation"], technical["value_gradient"])
 
 

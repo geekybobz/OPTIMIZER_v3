@@ -1,14 +1,14 @@
 ---
 role: front-door
 parent: ../README.md
-summary: "The test suite, its fixtures, contained scenario evidence, and tracker trials."
+summary: "The test suite, its fixtures, contained scenario evidence, and contained numerical systems."
 read_when: "Read when running tests or locating test evidence."
 status: active
 reviewed: 2026-10-12
 ---
 # Testing Hub
 
-The library test suite, its fixtures, and the tracker trials.
+The library test suite, its fixtures, and contained numerical systems.
 
 ## Run the suite
 
@@ -31,7 +31,8 @@ bytecode out of the checkout.
 | OLSS contract and scenarios | `test_olss.py`, `test_olss_scenarios.py`, `test_olss_regressions.py` |
 | Guesses and utilities | `test_guesses.py`, `test_utils_tools.py`, `test_run_diagnostics.py` |
 | System contract, templates, and visualization | `test_system_contract.py`, `test_templates.py`, `test_system_spec_visualization.py` |
-| Traces, tracker, and campaigns | `test_trace_checkpoint.py`, `test_tracker.py`, `test_tracker_bridge.py`, `test_campaigns.py` |
+| Command history and campaigns | `test_history.py`, `test_campaigns.py` |
+| Service, terminal and persistence | `test_operation_service.py`, `test_cli_language.py`, `test_cli.py`, `test_persistence.py` |
 | Documentation | `test_document_links.py`: every relative link in the Markdown resolves |
 
 ## Worked example
@@ -53,9 +54,12 @@ The 2026-10-12 review records five verified OLSS fixes, the open issues, and
 the shared-core inspection in the
 [2026-10-12 Review](../test_contained/review_2026_10_12/REPORT.md).
 
-## Tracker trials
+## Contained systems
 
-Small contained systems that exercise the tracker on real physics:
+These numerical definitions remain available. Retired tracker-specific trial and
+live-journal scripts are preserved in workspace `temp/task5-retired-logging-docs/`;
+they require their historical code revision. No new article benchmark ran in the
+history migration. CLI recovery/replay coverage lives in [history tests](test_history.py).
 
 - [HO purification trial](../test_contained/ho_purification/PROBLEM_CONTEXT.md)
 - [Second-order PMP trial](../test_contained/second_order_pmp/PROBLEM_CONTEXT.md)

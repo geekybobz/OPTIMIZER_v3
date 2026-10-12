@@ -40,7 +40,6 @@ class RunStateTests(unittest.TestCase):
             optimizer_name="adam",
             step_size=0.1,
             system_params={"lambda2": 1.0},
-            trace_id="run-1",
         )
 
         self.assertEqual(state.iteration, 0)
@@ -94,8 +93,6 @@ class WarmStartTests(unittest.TestCase):
             iterations=3,
             optimizer="line_search",
             system_params={"energy_weight": 0.1},
-            trace_id="trace-1",
-            checkpoint_ids={"latest": "ckpt"},
         )
 
         warm = result.warmstart(target_optimizer="adam")
@@ -104,7 +101,6 @@ class WarmStartTests(unittest.TestCase):
         self.assertEqual(warm.target_optimizer, "adam")
         self.assertIsNone(warm.optimizer_state)
         self.assertEqual(warm.system_params["energy_weight"], 0.1)
-        self.assertEqual(warm.checkpoint_ids["latest"], "ckpt")
 
 
 class OptimizerResultTests(unittest.TestCase):
@@ -114,11 +110,9 @@ class OptimizerResultTests(unittest.TestCase):
             metrics={"J": 4.0, "fidelity": 0.9},
             optimizer_name="momentum",
             system_params={"residual_weight": 10.0},
-            trace_id="trace",
         )
         state.iteration = 7
         state.stop_reason = "maxiter"
-        state.checkpoint_ids["latest"] = "ckpt-7"
 
         result = OptimizerResult.from_state(state, stop_reason=state.stop_reason)
         payload = result.to_dict(include_state=True)
@@ -128,7 +122,6 @@ class OptimizerResultTests(unittest.TestCase):
         self.assertEqual(result.optimizer, "momentum")
         self.assertEqual(payload["controls"]["matrix"], [[1.0, 2.0], [3.0, 4.0]])
         self.assertEqual(payload["state"]["iteration"], 7)
-        self.assertEqual(payload["checkpoint_ids"]["latest"], "ckpt-7")
 
     def test_result_controls_do_not_alias_live_run_state_controls(self):
         state = RunState.initial(sample_controls(), metrics={"J": 4.0}, optimizer_name="momentum")

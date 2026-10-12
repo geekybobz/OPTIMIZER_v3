@@ -122,16 +122,6 @@ class SecondOrderPMPSystem:
             "discretization": "Method 1 right-grid storage: N time nodes and N-1 propagator intervals",
         }
 
-    def tracking_spec(self) -> dict[str, Any]:
-        return {
-            "schema_version": "optimizer.tracking-spec/v1",
-            "objective": {"metric_id": "J", "direction": "minimize"},
-            "metrics": {
-                "fidelity": {"label": "nominal transfer fidelity", "direction": "maximize", "source": "evaluate"},
-                "robustness_penalty": {"label": "sum of selected squared channel integrals", "direction": "minimize", "source": "evaluate"},
-                "control_energy": {"label": "quadratic control energy", "direction": "minimize", "source": "evaluate"},
-            },
-        }
 
     def with_secondary(self, **updates: Any) -> "SecondOrderPMPSystem":
         return type(self)(replace(self.params, **updates))

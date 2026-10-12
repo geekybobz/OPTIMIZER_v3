@@ -3,7 +3,6 @@ import unittest
 import numpy as np
 
 import optimizer as opt
-import optimizer.logs as logs
 from fixtures.quadratic_system import QuadraticVectorSystem
 
 
@@ -75,17 +74,6 @@ class _StaticInfoSpy:
     def describe(self):
         return {"kind": "static-info-spy", "label": "test system"}
 
-    def tracking_spec(self):
-        return {
-            "schema_version": opt.TRACKING_SPEC_SCHEMA,
-            "objective": {"metric_id": "cost", "direction": "minimize"},
-            "metrics": {
-                "cost": {
-                    "label": "Cost",
-                    "role": "objective",
-                }
-            },
-        }
 
 
 class PublicApiTests(unittest.TestCase):
@@ -102,13 +90,9 @@ class PublicApiTests(unittest.TestCase):
         self.assertTrue(callable(opt.path))
         self.assertTrue(callable(opt.context_info))
         self.assertTrue(callable(opt.system_info))
-        self.assertTrue(callable(opt.tracker.info))
+        self.assertFalse(hasattr(opt, "tracker"))
         self.assertIsInstance(opt.library, opt.OptimizerLibrary)
         self.assertEqual(dir(opt), sorted(opt.__all__))
-        self.assertEqual(
-            logs.__all__,
-            ["Checkpoint", "ChunkRecord", "EventRecord", "IterationRecord", "Trace", "clone_run_state"],
-        )
 
         methods = opt.methods()
         self.assertEqual(methods["run_chunk"].status, "implemented")
@@ -128,11 +112,10 @@ class PublicApiTests(unittest.TestCase):
         self.assertEqual(snapshot["schema_version"], "optimizer.context/v1")
         self.assertIn("context_info", snapshot["optimizer"]["methods"])
         self.assertIn("base", snapshot["optimizer"]["catalog"]["groups"])
-        self.assertTrue(snapshot["optimizer"]["core"]["has_live_tracking_argument"])
-        self.assertEqual(snapshot["tracker"]["run_schema_version"], "optimizer.tracker/v3")
+        self.assertFalse(snapshot["optimizer"]["core"]["has_live_tracking_argument"])
         self.assertTrue(snapshot["system"]["probe"]["required_ok"])
         self.assertEqual(
-            snapshot["system"]["tracking_spec"]["value"]["objective"]["metric_id"],
+            snapshot["system"]["system_spec"]["value"]["objective"]["metric_id"],
             "cost",
         )
         self.assertEqual(
@@ -157,7 +140,6 @@ class PublicApiTests(unittest.TestCase):
         self.assertIn("residual_norm2", evaluation.metrics)
         self.assertTrue(np.all(np.isfinite(gradient.as_matrix())))
 
-        trace = opt.trace("public-vector")
         result = opt.run_chunk(
             system,
             controls,
@@ -165,20 +147,17 @@ class PublicApiTests(unittest.TestCase):
             optimizer_name="public_descent",
             maxiter=4,
             step_size=1.0,
-            trace=trace,
-            create_trace=False,
         )
 
         self.assertEqual(result.stop_reason, "maxiter")
         self.assertLess(result.J, evaluation.J)
-        self.assertIs(result.trace, trace)
-        self.assertEqual(len(trace.iteration_records), 4)
-        self.assertIn("accepted", result.checkpoint_ids)
+        self.assertEqual(result.diagnostics['attempts'], 4)
+        self.assertFalse(hasattr(result, 'checkpoint_ids'))
         self.assertEqual(opt.warmstart(result, target_optimizer="public_descent").target_optimizer, "public_descent")
 
     def test_bound_context_supports_curriculum_param_changes_without_global_system(self):
         system = QuadraticVectorSystem(N=17, residual_weight=0.0)
-        ctx = opt.context(system, trace="curriculum-context", step_size=1.0)
+        ctx = opt.context(system, step_size=1.0)
         controls = ctx.zeros(name="ctx-zero")
 
         self.assertIsInstance(ctx, opt.OptimizerContext)
@@ -203,9 +182,8 @@ class PublicApiTests(unittest.TestCase):
 
         self.assertEqual(ctx.params["residual_weight"], 0.0)
         self.assertEqual(ctx_second.params["residual_weight"], 0.25)
-        self.assertIs(ctx.trace, ctx_second.trace)
         self.assertLess(second.J, ctx_second.evaluate(first.controls).J)
-        self.assertEqual(len(ctx.trace.chunk_records), 2)
+        self.assertEqual(second.diagnostics['attempts'], 2)
 
     def test_bind_alias_and_context_optimizer_methods_run(self):
         ctx = opt.bind(QuadraticVectorSystem(N=9))

@@ -176,8 +176,8 @@ Responses, results, and reports share one conversion, `opt.to_plain`, so every
 - Any other object raises `TypeError`; durable output never falls back to
   `repr()`.
 
-Tracker journals are stricter: their records reject non-finite values, and the
-standalone reader validates them. Serialization is representation only; it does
+[Frontend history](history/HISTORY.md) uses a strict versioned record format.
+Serialization is representation only; it does
 not reconstruct arbitrary project systems or grant permission to import project
 code.
 

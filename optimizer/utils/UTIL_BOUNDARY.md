@@ -63,7 +63,7 @@ engine state
 acceptance decisions
 metric guards
 run chunks
-trace and checkpoint plumbing
+frontend history and durable checkpoint plumbing
 ```
 
 `metric_guard` belongs to core in both implementation and catalog:

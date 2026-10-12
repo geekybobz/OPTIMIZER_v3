@@ -44,7 +44,6 @@ from optimizer.optimizers._common import (
     coerce_warmstart,
     controls_from_flat_like,
     flat_state_array,
-    method_api_context,
     next_scheduled_step,
     require_finite,
     require_probability_like,
@@ -263,5 +262,5 @@ def momentum(
         accept_metric=accept_metric,
         accept_mode=accept_mode,
         accept_tolerance=accept_tolerance,
-        **method_api_context(engine_kwargs, method="momentum", config=config),
+        **engine_kwargs,
     )

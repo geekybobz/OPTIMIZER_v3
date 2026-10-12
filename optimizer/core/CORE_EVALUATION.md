@@ -108,14 +108,14 @@ prox_count                 successful proximal operations
 
 Cache hits do not increment either evaluation counter.  The attempted counters make
 failed/non-finite trials visible as real work without changing the established
-successful-call counters.  Both views are copied into the iteration evidence.
+successful-call counters.  Final counters are copied into the result's numerical diagnostics.
 
 `clear_cache()` drops cached evaluations without resetting the counters or replacing
 the system.
 
 `counters(compact=True)` retains the original evaluation/gradient counter keys and
-adds only nonzero conditional-capability counters. This keeps ordinary tracker
-records compact while preserving advanced-method work evidence.
+adds only nonzero conditional-capability counters. This keeps numerical result
+aggregates compact while preserving advanced-method work evidence.
 
 ## What This Layer Refuses To Do
 
