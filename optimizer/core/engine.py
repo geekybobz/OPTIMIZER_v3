@@ -336,6 +336,8 @@ def run_chunk(system: Any, controls: Controls | None=None, *, step: StepFunction
         if budget_decision.stop:
             stop_reason = budget_decision.reason or 'maxiter'
             break
+        from optimizer.jobs.boundary import _checkpoint
+        _checkpoint('olgs', run_state, run_state.global_iteration)
         try:
             if prefetched_gradient is not None:
                 gradient_outcome = GradientOutcome(gradient=prefetched_gradient, ok=True, reason='ok')

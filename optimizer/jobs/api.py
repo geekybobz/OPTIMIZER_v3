@@ -59,3 +59,23 @@ def release(job, *, service=None):
 def shutdown(*, service=None):
     """Cancel and reap this service's workers; no jobs survive client shutdown."""
     return _invoke(service, "jobs.shutdown", {})
+
+
+def pause(job, *, service=None):
+    """Pause supported methods at a numerical iteration boundary."""
+    return _invoke(service, 'jobs.pause', {'job':job})
+
+
+def checkpoint(job, *, service=None):
+    """Retrieve the last acknowledged physical boundary snapshot."""
+    return _invoke(service, 'jobs.checkpoint', {'job':job})
+
+
+def resume(job, *, mode='exact', maxiter=None, service=None):
+    """Resume a live paused worker exactly, or explicitly fork a physical restart."""
+    return _invoke(service, 'jobs.resume', {'job':job,'mode':mode,'maxiter':maxiter})
+
+
+def detach(*, service=None):
+    """Detach a persistent terminal client without stopping its coordinator."""
+    return _invoke(service, 'jobs.detach', {})

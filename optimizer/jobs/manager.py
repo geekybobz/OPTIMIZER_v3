@@ -22,6 +22,7 @@ from optimizer.serialization import to_plain
 from optimizer.session import _compatible, _owned, _physical, _size, _Context
 
 _TERMINAL = {"succeeded", "failed", "cancelled", "interrupted"}
+_LIVE = {'running', 'pausing', 'paused'}
 _THREAD_ENV = ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS",
                "VECLIB_MAXIMUM_THREADS", "NUMEXPR_NUM_THREADS", "BLIS_NUM_THREADS")
 
@@ -70,6 +71,9 @@ class _Job:
     peak_rss: int | None = None
     forced: bool = False
     cancellation_boundary: str | None = None
+    pause_state: object = None
+    environment: object = None
+    parent: object = None
 
 
 class _Jobs:
@@ -82,6 +86,9 @@ class _Jobs:
         self._closed = False
         # Bound service lifetime, including ephemeral CLI EOF. No durable daemon.
         self._registered_exit = False
+        self.durable = False
+        self.client_detach = False
+        self.shutdown_requested = False
 
     def _get(self, handle):
         if isinstance(handle, JobHandle):
@@ -103,7 +110,9 @@ class _Jobs:
                 "peak_rss":job.peak_rss, "forced":job.forced,
                 "cancellation_boundary":job.cancellation_boundary,
                 "process_id":job.process.pid if job.process is not None else None,
-                "lifetime":"client", "resume_level":"physical_only"}
+                "lifetime":"coordinator" if self.durable else "client",
+                "resume_level":"exact_live" if job.status=='paused' and job.process is not None else "physical_only",
+                "checkpoint_available":job.pause_state is not None, "parent":job.parent}
 
     def _admit(self, pending):
         cfg = self.config
@@ -113,7 +122,7 @@ class _Jobs:
         active = [j for j in jobs if j.status not in _TERMINAL]
         # Admission simulates the slots that fit RAM as well as CPU; a large
         # worker estimate must not silently create an oversized effective queue.
-        occupied=[j for j in active if j.status=="running"]
+        occupied=[j for j in active if j.status in _LIVE and j.process is not None]
         available=cfg.memory_bytes-cfg.coordinator_bytes-sum(j.worker_bytes for j in occupied)
         slots=len(occupied)
         for j in active:
@@ -206,6 +215,8 @@ class _Jobs:
                    refs, worker_bytes, result_bytes,
                    _size(packet)+_size(manifest)+_size(codec.blobs)+_size(sources)+4*result_bytes+8192,
                    input_size+2*result_bytes)
+        from optimizer.persistence.store import _environment
+        job.environment = _environment()
         with self._condition: self._admit([*pending, job])
         return job
 
@@ -257,10 +268,14 @@ class _Jobs:
                          "cache_reserved":sum(j.cache_bytes for j in self.records.values()),
                          "memory_enforcement":"sampled RSS cancellation on POSIX; reservations elsewhere",
                          "native_thread_enforcement":"environment hints, project/native libraries must honor them",
-                         "backend":"process", "lifetime":"client"}
+                         "backend":"process", "lifetime":"coordinator" if self.durable else "client"}
             elif name == "shutdown":
                 service._job_actions.append(("shutdown",None))
-                value = {"shutdown_requested":True,"jobs":len(self.records),"lifetime":"client"}
+                value = {"shutdown_requested":True,"jobs":len(self.records),"lifetime":"coordinator" if self.durable else "client"}
+            elif name == 'detach':
+                if not self.durable: raise _ServiceError('unsupported_lifetime','Detach requires a persistent coordinator.')
+                service._job_actions.append(('detach',None))
+                value={'detached':True,'lifetime':'coordinator'}
             elif name == "compare":
                 value = self._compare(**arguments)
             else:
@@ -270,10 +285,44 @@ class _Jobs:
                     if not math.isfinite(timeout) or not 0 <= timeout <= 30:
                         raise _ServiceError("invalid_arguments","timeout must be finite and between 0 and 30 seconds.")
                     deadline=time.monotonic()+timeout
-                    while source.status not in _TERMINAL and time.monotonic()<deadline:
+                    while source.status not in _TERMINAL and (source.status!='paused' or source.cancel_requested) and time.monotonic()<deadline:
                         self._condition.wait(min(.1, max(0,deadline-time.monotonic())))
                     value=self._status(source)
                 elif name == "status": value=self._status(source)
+                elif name == 'checkpoint':
+                    if source.pause_state is None: raise _ServiceError('checkpoint_missing','No acknowledged numerical boundary is available.')
+                    value=_owned(source.pause_state)
+                elif name == 'pause':
+                    if source.cancel_requested: raise _ServiceError('job_not_running','Cancellation is already requested.')
+                    if source.directory and (source.directory/'resume').exists():
+                        raise _ServiceError('job_not_ready','Wait for live resumption before requesting another pause.')
+                    if not self._pausable(source): raise _ServiceError('unsupported_pause','Pause supports Adam, heavy-ball momentum and LM shooting only.')
+                    if source.status in _TERMINAL: raise _ServiceError('job_not_running','A terminal job cannot be paused.')
+                    service._job_actions.append(('pause',source.handle.job_id))
+                    value={**self._status(source),'pause_requested':True}
+                elif name == 'resume':
+                    mode=arguments['mode']; budget=arguments['maxiter']
+                    if mode not in {'exact','physical'}: raise _ServiceError('invalid_arguments','mode is exact or physical.')
+                    if mode=='exact':
+                        if source.cancel_requested: raise _ServiceError('unsupported_continuation','A cancelling worker cannot resume.')
+                        if budget is not None: raise _ServiceError('invalid_arguments','Exact live resume preserves the original budget/options.')
+                        if source.status!='paused': raise _ServiceError('unsupported_continuation','Exact resume requires the same live paused worker or an unstarted paused job.')
+                        if source.process is not None and source.process.poll() is not None:
+                            raise _ServiceError('unsupported_continuation','Paused worker was lost; use an explicit physical restart.')
+                        from optimizer.persistence.store import _environment
+                        if source.environment!=_environment(): raise _ServiceError('environment_changed','Numerical environment/source changed since submission.')
+                        service._job_actions.append(('resume',source.handle.job_id))
+                        value={'resume_requested':source.handle,'resume_level':'exact_live'}
+                    else:
+                        if source.status not in _TERMINAL|{'paused'} or source.pause_state is None:
+                            raise _ServiceError('unsupported_continuation','Physical restart requires a retained boundary of a paused or terminal job.')
+                        if type(budget) is not int or budget<0: raise _ServiceError('invalid_arguments','Physical restart requires an explicit nonnegative maxiter.')
+                        child=self._restart(source,budget)
+                        pending=[a[1] for a in service._job_actions if a[0]=='submit']
+                        self._admit([*pending,child])
+                        if source.status=='paused': service._job_actions.append(('cancel',source.handle.job_id))
+                        service._job_actions.append(('submit',child))
+                        value=child.handle
                 elif name == "cancel":
                     service._job_actions.append(("cancel",source.handle.job_id))
                     value={**self._status(source),"cancel_requested":source.status not in _TERMINAL or source.cancel_requested}
@@ -288,7 +337,7 @@ class _Jobs:
                     value=_owned(source.result)
                 else: raise _ServiceError("unknown_operation",operation)
         context = None
-        if name == "result":
+        if name in {'result','checkpoint'}:
             # Original provenance only; method state is deliberately uncertified.
             context=_Context(source.handle.context,None,source.family,source.layout,None,source.recipe,
                              configuration=source.handle.configuration)
@@ -303,6 +352,25 @@ class _Jobs:
                             {k:v for k,v in current.recipe.items() if k!="dependency_hashes"} !=
                             {k:v for k,v in source.recipe.items() if k!="dependency_hashes"})
         return _owned(value),(ref,),metadata,operation
+
+    def _pausable(self, job):
+        options=job.packet['options']
+        return (job.handle.operation=='optimizers.adam' and options.get('variant','adam')=='adam' or
+                job.handle.operation=='optimizers.momentum' and options.get('variant','heavy_ball')=='heavy_ball' or
+                job.handle.operation=='shooting.solve_shooting' and options.get('method','lm')=='lm')
+
+    def _restart(self, job, budget):
+        from optimizer.checkpoints.codec import _Codec, _json
+        from optimizer.persistence.store import _environment
+        child=dataclasses.replace(job,handle=dataclasses.replace(job.handle,job_id=uuid4().hex),
+            packet=_owned(job.packet),process=None,directory=None,result=None,error=None,status='queued',
+            cancel_requested=False,cancel_time=None,forced=False,peak_rss=None,pause_state=None,
+            cancellation_boundary=None,parent=job.handle,environment=_environment())
+        child.packet['initial']=_owned(job.pause_state['physical'])
+        child.packet['options']['maxiter']=budget
+        codec=_Codec(max_bytes=self.config.input_bytes)
+        child.manifest=_json(codec.encode(child.packet)); child.blobs=codec.blobs
+        return child
 
     def _compare(self, jobs, metric, direction):
         if direction not in {"minimize","maximize"} or not isinstance(metric,str) or not metric:
@@ -330,7 +398,7 @@ class _Jobs:
     def commit(self, actions):
         """Called after successful foreground/durable commit; never rollback work."""
         for kind,value in actions:
-            if kind=="shutdown": self.close(); continue
+            if kind=="shutdown": self.shutdown_requested=True; self.close(); continue
             with self._condition:
                 if kind=="configure": self.config=value; self._closed=False
                 elif kind=="submit":
@@ -344,6 +412,28 @@ class _Jobs:
                 elif kind=="cancel":
                     job=self.records.get(value)
                     if job is not None: self._cancel(job)
+                elif kind=='detach': self.client_detach=True
+                elif kind=='pause':
+                    job=self.records[value]
+                    if job.status=='queued': job.status='paused'
+                    elif job.status=='running':
+                        try:
+                            (job.directory/'pause').touch(); job.status='pausing'
+                        except OSError as exc:
+                            job.error={'code':'runtime_control_failed','message':str(exc)[:1024]}
+                elif kind=='resume':
+                    job=self.records[value]
+                    try:
+                        if job.process is None:
+                            job.status='queued'; self._ensure_thread()
+                        else:
+                            (job.directory/'resume').touch()
+                            (job.directory/'paused.json').unlink(missing_ok=True)
+                            (job.directory/'pause').unlink(missing_ok=True)
+                            job.status='running'
+                    except (OSError,RuntimeError) as exc:
+                        job.error={'code':'runtime_control_failed','message':str(exc)[:1024]}
+                        if job.process is None: job.status='failed'
                 elif kind=="release":
                     job=self.records.pop(value,None)
                     if job is not None and job.directory: shutil.rmtree(job.directory,ignore_errors=True)
@@ -360,7 +450,7 @@ class _Jobs:
     def _cancel(self, job):
         if job.status in _TERMINAL: return
         job.cancel_requested=True
-        if job.status=="queued": job.status="cancelled"; return
+        if job.process is None: job.status="cancelled"; return
         if job.cancel_time is None: job.cancel_time=time.monotonic()
         if job.directory:
             try: (job.directory/"cancel").touch()
@@ -432,10 +522,18 @@ class _Jobs:
     def _run(self):
         with self._condition:
             while not self._closed:
-                running=[j for j in self.records.values() if j.status=="running"]
+                running=[j for j in self.records.values() if j.status in _LIVE and j.process is not None]
                 for job in running:
                     if job.process.poll() is not None:
                         self._finish(job); continue
+                    if job.status=='pausing' and (job.directory/'paused.json').exists():
+                        try:
+                            from optimizer.jobs.durable import _read_output
+                            snapshot=_read_output(job.directory,'paused.json',job.result_bytes)
+                            _compatible(job.layout,snapshot['physical'])
+                            job.pause_state=snapshot; job.status='paused'; self._condition.notify_all()
+                        except Exception as exc:
+                            job.error={'code':'checkpoint_failed','message':str(exc)[:1024]}; self._cancel(job)
                     measured=_rss(job.process)
                     if measured is not None:
                         job.peak_rss=max(measured,job.peak_rss or 0)
@@ -446,7 +544,7 @@ class _Jobs:
                         job.forced=True
                         try: job.process.kill()
                         except ProcessLookupError: pass
-                running=[j for j in self.records.values() if j.status=="running"]
+                running=[j for j in self.records.values() if j.status in _LIVE and j.process is not None]
                 memory=sum(j.worker_bytes for j in running)+self.config.coordinator_bytes
                 for job in self.records.values():
                     if job.status=="queued" and len(running)<self.config.max_workers and memory+job.worker_bytes<=self.config.memory_bytes:
@@ -459,10 +557,10 @@ class _Jobs:
         with self._condition:
             for job in self.records.values(): self._cancel(job)
             deadline=time.monotonic()+self.config.shutdown_seconds+.5
-            while any(j.status=="running" for j in self.records.values()) and time.monotonic()<deadline:
+            while any(j.status in _LIVE and j.process is not None for j in self.records.values()) and time.monotonic()<deadline:
                 self._condition.wait(.1)
             for job in self.records.values():
-                if job.status=="running":
+                if job.status in _LIVE and job.process is not None:
                     job.forced=True
                     try: job.process.kill()
                     except ProcessLookupError: pass

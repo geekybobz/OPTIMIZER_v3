@@ -2203,7 +2203,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
         _make_item("JobsConfig","jobs","data_object","Conservative CPU, memory, queue and scratch reservations.",
                    module="optimizer/jobs/contracts.py",returns={"type":"JobsConfig"}),
         *(_make_item(name,"jobs","job_operation",summary,module="optimizer/jobs/api.py",
-                     returns={"type":returned},watch_out=("Jobs end with the client; results never autoactivate.",))
+                     returns={"type":returned},watch_out=("Persistent lifetime requires an explicitly started coordinator; results never autoactivate.",))
           for name,summary,returned in (
             ("configure","Set scheduler resource reservations before retaining jobs.","dict"),
             ("submit","Freeze a source-backed system and initial state, then queue a solver.","JobHandle"),
@@ -2214,6 +2214,10 @@ def _build_groups() -> dict[str, CatalogGroup]:
             ("compare","Rank compatible completed candidates using an explicit metric.","dict"),
             ("release","Release a terminal job's frozen inputs and runtime result.","dict"),
             ("shutdown","Cancel and reap the service's owned workers.","dict"),
+            ("pause","Pause a supported method at a numerical iteration boundary.","dict"),
+            ("checkpoint","Retrieve an acknowledged physical boundary snapshot.","dict"),
+            ("resume","Continue a live paused worker or explicitly fork a physical restart.","dict or JobHandle"),
+            ("detach","Detach a persistent terminal without stopping jobs.","dict"),
           )),
     ))
     return {

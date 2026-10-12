@@ -192,6 +192,9 @@ def solve_shooting(
             emit("iteration", row)
             break
 
+        from optimizer.jobs.boundary import _checkpoint
+        _checkpoint('olss', current, iteration_offset + iteration)
+
         normal_gradient_norm = float(np.linalg.norm(jacobian.T @ residuals))
         row["normal_gradient_norm"] = normal_gradient_norm
         try:

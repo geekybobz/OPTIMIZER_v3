@@ -68,7 +68,7 @@ class _Store:
             if set(self.project)!={'schema','id','name','origin'} or self.project['schema']!='optimizer-project/1':
                 raise _ServiceError('checkpoint_corrupt','Unknown project schema/fields.')
             required={'schema','project_id','generation','contexts','selected','bindings','objects','bookmarks','pins','ancestry','cursor','redo','policy','environment'}
-            if set(self.index)!=required or self.index['schema']!='optimizer-session/1' or self.index['project_id']!=self.project['id']:
+            if set(self.index) not in (required,required|{'jobs'}) or self.index['schema']!='optimizer-session/1' or self.index['project_id']!=self.project['id']:
                 raise _ServiceError('checkpoint_corrupt','Unknown session schema/identity/fields.')
             self.policy(**self.index['policy'])
             if type(self.index['generation']) is not int or self.index['generation']<0:
@@ -77,6 +77,16 @@ class _Store:
             for oid,entry in self.index['objects'].items():
                 if not isinstance(oid,str) or not _ID.fullmatch(oid) or set(entry)!=fields or type(entry['available']) is not bool:
                     raise _ServiceError('checkpoint_corrupt','Invalid checkpoint index entry.')
+            jobs=self.index.get('jobs')
+            if jobs is not None:
+                if not isinstance(jobs,dict) or set(jobs)!={'schema','runtime_id','config','signature','records'} or jobs['schema']!='optimizer-jobs/1' or not isinstance(jobs['records'],dict):
+                    raise _ServiceError('checkpoint_corrupt','Invalid durable job registry.')
+                for job,entry in jobs['records'].items():
+                    if not isinstance(job,str) or not _ID.fullmatch(job) or not isinstance(entry,dict) or set(entry) not in ({'payload','reserved_bytes'},{'payload','reserved_bytes','status'},{'payload','reserved_bytes','status','handles'}) or type(entry['reserved_bytes']) is not int or entry['reserved_bytes']<0 or entry['payload'] not in self.index['objects']:
+                        raise _ServiceError('checkpoint_corrupt','Invalid job payload/reservation.')
+                    handles=entry.get('handles',[])
+                    if not isinstance(handles,list) or any(not isinstance(oid,str) or oid not in self.index['objects'] or self.index['objects'][oid]['type']!='JobHandle' for oid in handles):
+                        raise _ServiceError('checkpoint_corrupt','Invalid durable job handle references.')
             protected=self.protected()
             if any(not self.index['objects'].get(oid,{}).get('available') for oid in protected):
                 raise _ServiceError('checkpoint_corrupt','Active/pinned payload is missing from index.')
@@ -177,7 +187,9 @@ class _Store:
 
     def protected(self,index=None):
         index=self.index if index is None else index
-        return set(index['pins'])|{c['head'] for c in index['contexts'].values() if c['head']}
+        records=index.get('jobs',{}).get('records',{}).values()
+        return set(index['pins'])|{c['head'] for c in index['contexts'].values() if c['head']}|{
+            oid for record in records for oid in [record['payload'],*record.get('handles',[])]}
 
     def reclaim(self, targets, index=None):
         index=self.index if index is None else index
@@ -249,7 +261,8 @@ class _Store:
             outcome={**data,'index':index}
         extra=sum(len(data) for relative,data in files.items() if not self._path(relative).exists())+len(_json(index))
         if outcome is not None: extra+=len(_json(outcome))+1024
-        if self.usage()+extra > index['policy']['max_bytes']:
+        reserved=sum(record['reserved_bytes'] for record in index.get('jobs',{}).get('records',{}).values())
+        if self.usage()+extra+reserved > index['policy']['max_bytes']:
             raise _ServiceError('storage_full','Insufficient preparation capacity; prune/unpin or raise the explicit byte limit.')
         created=[]
         committed=False
@@ -295,6 +308,8 @@ class _Store:
                                 **self.index['policy'],origin={'project_id':self.project['id'],'generation':self.index['generation']})
         try:
             index=copy.deepcopy(self.index); index['project_id']=destination.project['id']; index['generation']=1
+            # A fork inherits numerical artifacts, never live coordinator jobs.
+            index.pop('jobs',None)
             files={p.relative_to(self.path).as_posix():p.read_bytes() for p in self._files()
                    if p.relative_to(self.path).parts[0] in ('checkpoints','inputs')}
             destination.commit(index,files)

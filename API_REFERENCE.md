@@ -19,7 +19,7 @@ surfaces and defaults.
 
 | Group | Entries | Purpose |
 |---|---:|---|
-| [`jobs`](#jobs) | 11 | Bounded client-lifetime process jobs and explicit candidate retrieval. |
+| [`jobs`](#jobs) | 15 | Bounded client-lifetime process jobs and explicit candidate retrieval. |
 | [`operations`](#operations) | 5 | Foreground session and native operation dispatch for future terminal/MCP adapters. |
 | [`optimizers`](#optimizers) | 13 | Methods that move Controls to improve system metrics. |
 | [`guesses`](#guesses) | 13 | Initial Controls generators and restart helpers. |
@@ -91,7 +91,7 @@ configure(*, service=None, **limits)
 
 #### Watch out
 
-- Jobs end with the client; results never autoactivate.
+- Persistent lifetime requires an explicitly started coordinator; results never autoactivate.
 
 Source: `optimizer/jobs/api.py`.
 
@@ -113,7 +113,7 @@ submit(operation, *, controls=None, variables=None, options=None, label=None, wo
 
 #### Watch out
 
-- Jobs end with the client; results never autoactivate.
+- Persistent lifetime requires an explicitly started coordinator; results never autoactivate.
 
 Source: `optimizer/jobs/api.py`.
 
@@ -135,7 +135,7 @@ status(job=None, *, service=None)
 
 #### Watch out
 
-- Jobs end with the client; results never autoactivate.
+- Persistent lifetime requires an explicitly started coordinator; results never autoactivate.
 
 Source: `optimizer/jobs/api.py`.
 
@@ -157,7 +157,7 @@ wait(job, *, timeout=10.0, service=None)
 
 #### Watch out
 
-- Jobs end with the client; results never autoactivate.
+- Persistent lifetime requires an explicitly started coordinator; results never autoactivate.
 
 Source: `optimizer/jobs/api.py`.
 
@@ -179,7 +179,7 @@ result(job, *, service=None)
 
 #### Watch out
 
-- Jobs end with the client; results never autoactivate.
+- Persistent lifetime requires an explicitly started coordinator; results never autoactivate.
 
 Source: `optimizer/jobs/api.py`.
 
@@ -201,7 +201,7 @@ cancel(job, *, service=None)
 
 #### Watch out
 
-- Jobs end with the client; results never autoactivate.
+- Persistent lifetime requires an explicitly started coordinator; results never autoactivate.
 
 Source: `optimizer/jobs/api.py`.
 
@@ -223,7 +223,7 @@ compare(jobs, *, metric='J', direction='minimize', service=None)
 
 #### Watch out
 
-- Jobs end with the client; results never autoactivate.
+- Persistent lifetime requires an explicitly started coordinator; results never autoactivate.
 
 Source: `optimizer/jobs/api.py`.
 
@@ -245,7 +245,7 @@ release(job, *, service=None)
 
 #### Watch out
 
-- Jobs end with the client; results never autoactivate.
+- Persistent lifetime requires an explicitly started coordinator; results never autoactivate.
 
 Source: `optimizer/jobs/api.py`.
 
@@ -267,7 +267,95 @@ shutdown(*, service=None)
 
 #### Watch out
 
-- Jobs end with the client; results never autoactivate.
+- Persistent lifetime requires an explicitly started coordinator; results never autoactivate.
+
+Source: `optimizer/jobs/api.py`.
+
+### `jobs.pause`
+
+Pause a supported method at a numerical iteration boundary.
+
+Family: `olgs`, `olss`.
+
+```python
+pause(job, *, service=None)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | dict |
+
+#### Watch out
+
+- Persistent lifetime requires an explicitly started coordinator; results never autoactivate.
+
+Source: `optimizer/jobs/api.py`.
+
+### `jobs.checkpoint`
+
+Retrieve an acknowledged physical boundary snapshot.
+
+Family: `olgs`, `olss`.
+
+```python
+checkpoint(job, *, service=None)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | dict |
+
+#### Watch out
+
+- Persistent lifetime requires an explicitly started coordinator; results never autoactivate.
+
+Source: `optimizer/jobs/api.py`.
+
+### `jobs.resume`
+
+Continue a live paused worker or explicitly fork a physical restart.
+
+Family: `olgs`, `olss`.
+
+```python
+resume(job, *, mode='exact', maxiter=None, service=None)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | dict or JobHandle |
+
+#### Watch out
+
+- Persistent lifetime requires an explicitly started coordinator; results never autoactivate.
+
+Source: `optimizer/jobs/api.py`.
+
+### `jobs.detach`
+
+Detach a persistent terminal without stopping jobs.
+
+Family: `olgs`, `olss`.
+
+```python
+detach(*, service=None)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | dict |
+
+#### Watch out
+
+- Persistent lifetime requires an explicitly started coordinator; results never autoactivate.
 
 Source: `optimizer/jobs/api.py`.
 

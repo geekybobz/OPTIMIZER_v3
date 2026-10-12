@@ -39,7 +39,7 @@ project system
 | Diagnostics and repair | `optimizer/utils/` | Short-run diagnosis, derivatives, geometry, repair, and control inspection | `test_utils_tools.py`, `test_run_diagnostics.py` |
 | Campaign coordination | `campaigns/` | In-memory typed candidates and explicit validation | `test_campaigns.py` |
 | Command history | `history/` | Frontend statement transactions, recorded outcomes, recovery and replay | `test_history.py` |
-| [Parallel jobs](optimizer/jobs/JOBS.md) | `optimizer/jobs/` | Frozen independent process runs, bounded admission, cancellation and explicit candidate retrieval | `test_jobs.py` |
+| [Parallel jobs](optimizer/jobs/JOBS.md) | `optimizer/jobs/` | Frozen process runs, bounded admission, persistent single-writer coordination, live pause and physical recovery | `test_jobs.py`, `test_durable_jobs.py` |
 
 ## OLGS execution path
 

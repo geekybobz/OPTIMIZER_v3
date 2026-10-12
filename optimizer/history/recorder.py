@@ -83,6 +83,8 @@ class _Recorder:
         if store.read_only:return _StagedStore(store)
         path=store._path('history.jsonl')
         journal=_Journal(store)
+        if journal.pending:
+            journal.recover()
         if self.capacity_override is not None and store is self.service._persistence.store:
             journal.capacity_override=self.capacity_override
         if not path.exists():
@@ -146,7 +148,7 @@ class _Recorder:
                         _adopt(root.session,staged.session)
                         root._persistence.store=destination.real if destination is not None else None
                         if original is not None and root._persistence.store is not original:original.close()
-                        if any(e['operation']=='session.exit' for e in self.events):
+                        if not root._jobs.durable and any(e['operation']=='session.exit' for e in self.events):
                             staged._job_actions.append(('shutdown',None))
                         root._jobs.commit(staged._job_actions)
                 self._remember(outcome)

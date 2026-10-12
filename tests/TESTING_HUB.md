@@ -35,12 +35,16 @@ bytecode out of the checkout.
 | Service, terminal and persistence | `test_operation_service.py`, `test_cli_language.py`, `test_cli.py`, `test_persistence.py` |
 | Documentation | `test_document_links.py`: every relative link in the Markdown resolves |
 
-## Worked example
+## Details
+
+### Worked examples
 
 [Parallel job tests](test_jobs.py) use neutral OLGS/OLSS systems to check actual
 worker processes, frozen inputs, bounded resources, cancellation and history
 commit ordering. [The jobs reference](../optimizer/jobs/JOBS.md) owns their runtime
 contracts; these tests do not replace scientific convergence benchmarks.
+[Persistent job tests](test_durable_jobs.py) check actual local coordinators,
+detachment, numerical pause/resume parity, crash recovery and history publication.
 
 [fixtures/quadratic_system.py](fixtures/quadratic_system.py) is a complete,
 minimal OLGS system used across the suite. Read it next to the

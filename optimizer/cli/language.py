@@ -226,7 +226,7 @@ class _Terminal:
                     *[f"opt.{name}{inspect.signature(method)}" for name,method in self.service._persistence.methods.items()], "opt.session.exit()"],
                 "lifetime": "RAM unless project.init/open selects a durable experiment; project.status reports storage.",
                 "history": [entry['id'] for entry in self.history.descriptors()],
-                "deferred": ["managed parallel jobs/control transforms (Task 6)", "MCP transport"]}
+                "deferred": ["MCP transport"]}
 
     def _usage(self, operation: str) -> str | None:
         """A readable call form without the context-supplied system or annotations."""
@@ -296,6 +296,9 @@ class _Terminal:
         return self.service.session.get(value) if isinstance(value, ObjectRef) else value
 
     def _exit(self):
+        if self.service._jobs.durable:
+            self.closed = True
+            return {'session':'detached','lifetime':'coordinator'}
         persistent=self.service._persistence.store is not None
         if self.service._persistence.store is not None:
             self._send(OperationRequest('project.close'))
@@ -525,7 +528,13 @@ class _Terminal:
                         'durability_warning':store.warning if store else None})
                 self._output(response,request)
             if code:return code
+            if root._jobs.durable and (root._jobs.client_detach or root._jobs.shutdown_requested):
+                self.closed=True
+                break
         return 0
+
+    def cancel_input(self,source):
+        return self.history.run(source,None,lambda service:130,origin='input_cancelled')
 
     def completions(self) -> list[str]:
         entries = self.service.list()
@@ -538,7 +547,7 @@ class _Terminal:
 
     def finish(self,reason='frontend_close'):
         """Record an EOF/script lifecycle action without inventing user text."""
-        if self.service._persistence.store is None:return
+        if self.service._jobs.durable or self.service._persistence.store is None:return
         root=self.service
         def close(staged):
             request=OperationRequest('project.close')

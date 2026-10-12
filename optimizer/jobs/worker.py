@@ -11,6 +11,19 @@ import time
 from optimizer.checkpoints.codec import _Codec, _json
 from optimizer.operations import OperationRequest, OperationService
 from optimizer.serialization import to_plain
+from optimizer.jobs.boundary import _boundaries
+
+
+def _write(directory, filename, value, limit):
+    codec = _Codec(max_bytes=limit)
+    raw = _json(codec.encode(value))
+    if len(raw) + sum(map(len, codec.blobs.values())) > limit:
+        raise MemoryError('Serialized boundary/result exceeds result_bytes.')
+    blobs = directory / 'output_blobs'; blobs.mkdir(exist_ok=True)
+    for digest, data in codec.blobs.items():
+        (blobs / digest).write_bytes(data)
+    temporary = directory / (filename + '.prepare')
+    temporary.write_bytes(raw); temporary.replace(directory / filename)
 
 
 class _Cancelled(BaseException):
@@ -75,7 +88,22 @@ def main():
         argument = "controls" if inputs["family"] == "olgs" else "initial"
         arguments = {**inputs["options"], argument:inputs["initial"]}
         if cancelled(): raise _Cancelled()
-        response = service.execute(OperationRequest(inputs["operation"], arguments, activate=False))
+        def boundary(family, state, iteration):
+            if cancelled(): raise _Cancelled()
+            if not (directory / 'pause').exists(): return
+            from optimizer.session import _physical
+            snapshot = {'physical':_physical(state), 'native_state':state, 'iteration':iteration,
+                        'family':family, 'resume_level':'physical_only', 'boundary':'iteration'}
+            _write(directory, 'paused.json', snapshot, limit)
+            while (directory / 'pause').exists() and not (directory / 'resume').exists():
+                if cancelled(): raise _Cancelled()
+                time.sleep(.05)
+            (directory / 'paused.json').unlink(missing_ok=True)
+            shutil.rmtree(directory / 'output_blobs',ignore_errors=True)
+            (directory / 'pause').unlink(missing_ok=True)
+            (directory / 'resume').unlink(missing_ok=True)
+        with _boundaries(boundary):
+            response = service.execute(OperationRequest(inputs["operation"], arguments, activate=False))
         if not response.ok:
             outcome = {"status":"failed", "error":response.error, "result":None}
         else:
@@ -92,15 +120,7 @@ def main():
         outcome = {"status":"interrupted" if isinstance(exc, KeyboardInterrupt) else "failed", "result":None,
                    "error":{"code":"worker_failed","message":f"{type(exc).__name__}: {str(exc)[:1024]}"}}
     try:
-        codec = _Codec(max_bytes=limit)
-        encoded = codec.encode(outcome)
-        raw = _json(encoded)
-        if len(raw) + sum(map(len, codec.blobs.values())) > limit:
-            raise MemoryError("Serialized result exceeds result_bytes.")
-        blobs = directory / "output_blobs"; blobs.mkdir(exist_ok=True)
-        for digest, data in codec.blobs.items(): (blobs / digest).write_bytes(data)
-        temporary = directory / "output.prepare"
-        temporary.write_bytes(raw); temporary.replace(directory / "output.json")
+        _write(directory, 'output.json', outcome, limit)
     except BaseException as exc:
         # A fixed-size error can still fit even when the numerical result cannot.
         raw = _json(_Codec().encode({"status":"failed", "result":None,

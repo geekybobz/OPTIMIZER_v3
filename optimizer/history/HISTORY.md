@@ -46,6 +46,10 @@ to the saved file. Durable history starts on initialization or writer attachment
 earlier ephemeral commands are not retroactively invented. EOF/script completion
 records an empty-text lifecycle action with origin `frontend_close`. Incomplete
 input cancellation records `input_cancelled`; no synthetic user command is added.
+An explicitly started [persistent coordinator](../jobs/JOBS.md) keeps its writer
+lease across client exit. Client EOF records detachment; system job transitions
+carry `origin="coordinator"` and use the same history/checkpoint commit path.
+Ordinary foreground lifetime retains the existing close behavior.
 
 Existing index-owned stores require `project.open(path=..., migrate=True)` to
 append an explicit baseline. Existing immutable IDs are preserved; old commands

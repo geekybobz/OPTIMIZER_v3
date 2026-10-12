@@ -148,6 +148,8 @@ class _Persistence:
         index['contexts']=contexts; index['selected']=session._selected; index['bindings']=dict(session._bindings)
         for oid,stored in session._objects.items():
             if oid not in index['objects']: index['objects'][oid]=self._pack(oid,stored)
+        from optimizer.jobs.durable import persist
+        persist(self.service._jobs,self,session)
         # Recent and undo are preferences; active and pins are hard protection.
         protected=self.store.protected(index)
         for name,state_id in index['cursor'].items():
@@ -321,6 +323,8 @@ class _Persistence:
             store.close(); self.store=None; raise
 
     def close(self):
+        if self.service._jobs.durable and self.store:
+            raise _ServiceError('coordinator_owned','Use jobs.detach or jobs.shutdown; the coordinator owns this experiment lease.')
         if self.service._defer_jobs:
             self.service._job_actions.append(('shutdown',None))
         else:
@@ -334,6 +338,13 @@ class _Persistence:
 
     def fork(self,name,root=None):
         store=self.require(); fork=store.clone(name,root)
+        if self.service._jobs.durable:
+            try:
+                from optimizer.history.journal import _Journal
+                import copy
+                _Journal(fork).append('baseline',{'index':copy.deepcopy(fork.index),'origin':fork.project['origin']})
+                return {'name':fork.project['name'],'path':str(fork.path),'project_id':fork.project['id'],'selected':False}
+            finally: fork.close()
         if self.service._history is not None:
             fork=self.service._history.attach_store(fork,created=True)
         store.close(); self.store=fork

@@ -47,9 +47,23 @@ def main(argv: list[str] | None = None) -> int:
     mode.add_argument("--command", help="Run one structured semicolon-terminated submission.")
     mode.add_argument("--script", help="Run a UTF-8 .opt command file (not general Python).")
     parser.add_argument("--json", action="store_true", help="Emit one compact response JSON object per operation.")
+    connection=parser.add_mutually_exclusive_group()
+    connection.add_argument('--connect',metavar='EXPERIMENT',help='Attach to an existing persistent coordinator.')
+    connection.add_argument('--start-coordinator',metavar='EXPERIMENT',help='Explicitly start/recover and attach to a persistent experiment coordinator.')
+    parser.add_argument('--restore-mode',choices=('exact','controls_only','variables_only'),default='exact',help='Explicit restore mode when starting a coordinator.')
     options = parser.parse_args(argv)
     display = _Display(json_output=options.json)
-    terminal = _Terminal(emit=display.emit, progress=None if options.json else _live_line_factory())
+    try:
+        if options.connect or options.start_coordinator:
+            from optimizer.jobs.coordinator import _RemoteTerminal, start
+            path=start(options.start_coordinator,options.restore_mode) if options.start_coordinator else options.connect
+            terminal=_RemoteTerminal(path,emit=display.emit,progress=None if options.json else _live_line_factory())
+        else:
+            terminal = _Terminal(emit=display.emit, progress=None if options.json else _live_line_factory())
+    except (OSError,_ServiceError) as exc:
+        from optimizer.operations.contracts import OperationResponse
+        display.emit(OperationResponse('coordinator-connect',None,'error',error={'code':getattr(exc,'code','coordinator_unavailable'),'message':str(exc)}))
+        return 2
     display.timings = terminal.timings
     try:
         return _run(terminal,options)
@@ -85,7 +99,7 @@ def _run(terminal,options):
                 return terminal.submit(buffer) if buffer.strip() else status
             except KeyboardInterrupt:
                 if buffer.strip():
-                    terminal.history.run(buffer,None,lambda service:130,origin='input_cancelled')
+                    terminal.cancel_input(buffer)
                 buffer = ""
                 if not interactive:
                     return 130
