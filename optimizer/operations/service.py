@@ -74,7 +74,8 @@ def _summary(result: Any) -> dict[str, Any]:
 class OperationService:
     """One foreground service shared by direct Python and future CLI/MCP.
 
-    No history writer or disk storage is installed. Execution serializes at the
+    Optional experiment storage is installed through project.init/open; no
+    history writer is installed. Execution serializes at the
     service boundary; a session revision also catches reentrant/outside writes.
     """
 
@@ -84,17 +85,26 @@ class OperationService:
             raise TypeError("session must be Session.")
         self._registry = _Registry()
         self._writer = threading.RLock()
+        from optimizer.persistence.controller import _Persistence
+        self._persistence = _Persistence(self)
 
     def list(self) -> list[dict[str, Any]]:
-        return [self._registry.describe(name) for name in self._registry.items]
+        return [self._registry.describe(name) for name in self._registry.items] + self._persistence.descriptors()
 
     def info(self, operation: str) -> dict[str, Any]:
+        if operation in self._persistence.methods:
+            return next(entry for entry in self._persistence.descriptors() if entry['id'] == operation)
         return self._registry.describe(operation)
 
     def register_reference(self, name: str, value: Any) -> ObjectRef:
-        """Register Python-owned callbacks/data; durability remains ephemeral."""
+        """Register owned data; callbacks are supported only in ephemeral sessions."""
         from optimizer.operations.contracts import _name
         _name(name, "name")
+        if self._persistence.store is not None:
+            response = self.execute(OperationRequest('session.retain', {'name': name, 'value': value}))
+            if not response.ok:
+                raise _ServiceError(response.error['code'], response.error['message'])
+            return response.object_refs[0]
         with self.session._lock:
             return self.session._publish(value, revision=self.session._revision, bind=name)
 
@@ -114,6 +124,7 @@ class OperationService:
                    "session.select": self.session.select, "session.use": self.session.use,
                    "session.update": self.session.update, "session.release": self.session.release,
                    "session.bind": self.session.bind_reference,
+                   "session.retain": self.register_reference,
                    "session.get": self.session.get, "session.state": self.session.snapshot}
         method = methods.get(request.operation)
         if method is None:
@@ -135,7 +146,7 @@ class OperationService:
             raise _ServiceError("invalid_arguments", str(exc)) from exc
         # Preserve refs for use (configuration provenance) and get, and don't
         # deepcopy trusted system objects passed to attach.
-        if request.operation not in {"session.use", "session.get", "session.attach", "session.bind"}:
+        if request.operation not in {"session.use", "session.get", "session.attach", "session.bind", "session.retain"}:
             args = self._resolve(args)
         result = method(**args)
         return result, (result,) if isinstance(result, ObjectRef) else ()
@@ -267,6 +278,9 @@ class OperationService:
             except TypeError as exc:
                 raise _ServiceError("invalid_arguments", str(exc)) from exc
 
+            if item.group == "optimizers" and not any(args.get(k) is not None for k in ("controls", "state", "warmstart")):
+                raise _ServiceError("invalid_arguments", "Initialize controls or provide compatible state before optimizing.")
+
             # Effective configuration excludes only run budgets and input/state.
             # Any change to variant, schedule or numerical settings resets memory.
             config = {k: v for k, v in bound.arguments.items() if k not in {
@@ -329,9 +343,17 @@ class OperationService:
                 raise _ServiceError("invalid_state", "Activate the transfer's control with session.use; its tuple is a report.")
             raise _ServiceError("invalid_state", "Select a numerical member from this candidate report before activation.")
         response_value = _owned(result)  # prepare before committing
+        def references(value):
+            if isinstance(value,ObjectRef): return [value]
+            if isinstance(value,Mapping): return [r for v in value.values() for r in references(v)]
+            if isinstance(value,(list,tuple)): return [r for v in value for r in references(v)]
+            return []
+        inputs=tuple(references(request.arguments))
+        if context is not None and context.head and not any(k in request.arguments for k in ('controls','initial','state','warmstart','variables','previous_result')):
+            inputs+=(ObjectRef(context.head),)
         with self.session._lock:
             ref = self.session._publish(result, revision=revision, context=context, bind=request.bind,
-                                        activate=activate, method_key=method_key)
+                                        activate=activate, method_key=method_key, inputs=inputs)
         effective = dict(bound.arguments)
         effective.update(args)
         if "controls" not in args and "state" in args:
@@ -361,6 +383,8 @@ class OperationService:
                     operation if isinstance(operation, str) else None, "error", state_before=before,
                     state_after=self.session.snapshot(), error={"code": "invalid_request", "type": type(exc).__name__, "message": str(exc)})
             try:
+                if request.operation in self._persistence.methods or self._persistence.store is not None:
+                    return self._persistence.execute(request)
                 if request.operation.startswith("session."):
                     result, refs = self._session_call(request)
                     metadata = {"summary": _summary(result)}

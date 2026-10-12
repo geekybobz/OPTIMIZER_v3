@@ -10,7 +10,8 @@ read_when: Read when integrating the operation service or preparing a terminal/M
 `OperationService` supplies a selected system and current numerical input to
 existing library tools. `Session` owns independent named contexts, versioned
 objects and active heads. Native OLGS and OLSS contracts remain separate.
-This service has no terminal parser, disk store or automatic history writer.
+The service exposes optional [persistent experiments](../persistence/PERSISTENCE.md)
+through `project.init/open`; it has no automatic history writer.
 
 ## Calls and results
 
@@ -166,8 +167,8 @@ Structured error codes include `invalid_request`, `invalid_arguments`,
 - [service tests](../../tests/test_operation_service.py): native parity, continuation,
   candidates, layouts, ownership, quotas, revisions and Python history boundary.
 
-The [structured terminal](../cli/TERMINAL.md) now calls this service. Named on-disk experiments/checkpoints, full
-CLI/MCP history and old logger removal, new control conversion helpers and managed
+The [structured terminal](../cli/TERMINAL.md) now calls this service. Named on-disk experiments/checkpoints are implemented through the
+[persistence service](../persistence/PERSISTENCE.md). Full CLI/MCP history and old logger removal, new control conversion helpers and managed
 parallel/pause/cancel workflows have separate delivery gates.
 
 ## Connections

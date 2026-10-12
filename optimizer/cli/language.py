@@ -190,9 +190,10 @@ class _Terminal:
                 "commands": ["opt.help(operation=None)", "opt.list(group=None, classification=None)",
                     "opt.info(operation)", "opt.inspect(value)", "opt.session.discover(root='.', depth=3)",
                     *[f"opt.{name}{inspect.signature(getattr(self.service.session, method))}"
-                      for name, method in _SESSION_METHODS.items()], "opt.session.exit()"],
-                "lifetime": "Foreground RAM only; exiting discards this session.",
-                "deferred": ["persistent experiments/checkpoints (Task 4)", "CLI/MCP command history and legacy logger retirement (Task 5)",
+                      for name, method in _SESSION_METHODS.items()],
+                    *[f"opt.{name}{inspect.signature(method)}" for name,method in self.service._persistence.methods.items()], "opt.session.exit()"],
+                "lifetime": "RAM unless project.init/open selects a durable experiment; project.status reports storage.",
+                "deferred": ["CLI/MCP command history and legacy logger retirement (Task 5)",
                              "managed parallel jobs/control transforms (Task 6)"]}
 
     def _info(self, operation: str) -> dict:
@@ -221,8 +222,11 @@ class _Terminal:
         return self.service.session.get(value) if isinstance(value, ObjectRef) else value
 
     def _exit(self):
+        persistent=self.service._persistence.store is not None
+        if self.service._persistence.store is not None:
+            self._send(OperationRequest('project.close'))
         self.closed = True
-        return {"session": "closed", "durability": "ephemeral"}
+        return {"session": "closed", "durability": "persistent" if persistent else "ephemeral"}
 
     def _conveniences(self) -> dict:
         return {"help": self._help, "info": self._info, "list": self._list,
@@ -254,6 +258,10 @@ class _Terminal:
         args = [self._value(value) for value in node.args]
         kwargs = {keyword.arg: self._value(keyword.value) for keyword in node.keywords}
         self._operation_name, self._request = operation, None
+        if operation in self.service._persistence.methods:
+            method=self.service._persistence.methods[operation]
+            bound=inspect.signature(method).bind(*args, **kwargs)
+            return self._send(OperationRequest(operation, dict(bound.arguments), bind=binding))
         conveniences = self._conveniences()
         if operation in conveniences:
             method = conveniences[operation]
@@ -265,7 +273,7 @@ class _Terminal:
             refs = ()
             if binding:
                 source = args[0] if args else kwargs.get("value")
-                ref = (self.service.session.bind_reference(binding, source)
+                ref = (self._send(OperationRequest('session.bind', {'name':binding,'reference':source}))
                        if operation == "inspect" and isinstance(source, ObjectRef)
                        else self.service.register_reference(binding, value))
                 refs = (ref,)
@@ -365,7 +373,7 @@ class _Terminal:
 
     def completions(self) -> list[str]:
         entries = self.service.list()
-        names = ["opt." + entry["id"] for entry in entries if entry["classification"] in {"tool", "constructor"}]
+        names = ["opt." + entry["id"] for entry in entries if entry["classification"] in {"tool", "constructor", "lifecycle"}]
         names += ["opt." + item.name for item in self.service._registry.items.values() if item.root
                   and self.service._registry.adapters[item.id].classification in {"tool", "constructor"}]
         names += ["opt." + name for name in (*_SESSION_METHODS, *self._conveniences())]

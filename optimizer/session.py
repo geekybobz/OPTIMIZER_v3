@@ -48,7 +48,9 @@ def _size(value: Any, seen: set[int] | None = None) -> int:
     if isinstance(value, np.ndarray):
         return total + (value.nbytes if value.base is not None else 0) + (
             sum(_size(item, seen) for item in value.flat) if value.dtype.hasobject else 0)
+    # Mapping cost is stable across CPython shared-key dictionary resizing.
     if isinstance(value, Mapping):
+        total = sys.getsizeof({}) + 32 * len(value)
         return total + sum(_size(k, seen) + _size(v, seen) for k, v in value.items())
     if isinstance(value, (list, tuple, set, frozenset)):
         return total + sum(_size(v, seen) for v in value)
@@ -138,6 +140,8 @@ class _Stored:
     context: str | None
     configuration: int | None
     method_key: Any = None
+    recipe: dict[str, Any] | None = None
+    inputs: tuple[ObjectRef, ...] = ()
 
 
 class Session:
@@ -155,6 +159,7 @@ class Session:
         self._contexts: dict[str, _Context] = {}
         self._objects: dict[str, _Stored] = {}
         self._bindings: dict[str, str] = {}
+        self._pruned: set[str] = set()
         self._selected: str | None = None
         self._revision = 0
         self._lock = threading.RLock()
@@ -162,7 +167,7 @@ class Session:
     def _retained_bytes(self) -> int:
         # Physics runtimes/native libraries/temporary arrays are outside this
         # retained-data accounting; never present it as process RSS.
-        return _size(self._bindings) + sum(o.bytes for o in self._objects.values()) + sum(
+        return _size(self._bindings) + _size(self._pruned) + sum(o.bytes for o in self._objects.values()) + sum(
             _size(c.recipe) + _size(c.layout) for c in self._contexts.values())
 
     def snapshot(self) -> dict[str, Any]:
@@ -183,6 +188,8 @@ class Session:
     def _resolve_id(self, reference: str | ObjectRef) -> str:
         name = reference.object_id if isinstance(reference, ObjectRef) else reference
         object_id = self._bindings.get(name, name)
+        if object_id in self._pruned:
+            raise _ServiceError("payload_pruned", f"Payload for {name!r} was pruned.")
         if object_id not in self._objects:
             raise _ServiceError("missing_object", f"No retained object {name!r}.")
         return object_id
@@ -237,9 +244,13 @@ class Session:
             # if its context has since been updated. Never invent resume authority.
             value = self.get(reference)
             result = self._publish(value, revision=self._revision, bind=name,
-                                   method_key=source.method_key)
+                                   method_key=source.method_key, inputs=source.inputs,
+                                   extra_bytes=_size(source.recipe)-_size(None))
             stored = self._objects[result.object_id]
             stored.context, stored.configuration = source.context, source.configuration
+            stored.recipe = _owned(source.recipe)
+            stored.bytes += _size(source.recipe)-_size(None)
+            stored.inputs = source.inputs
             return result
 
     def _check_revision(self, revision: int) -> None:
@@ -248,10 +259,10 @@ class Session:
 
     def _publish(self, value: Any, *, revision: int, context: _Context | None = None,
                  bind: str | None = None, activate: bool = False, method_key: Any = None,
-                 extra_bytes: int = 0) -> ObjectRef:
+                 extra_bytes: int = 0, inputs: tuple[ObjectRef, ...] = ()) -> ObjectRef:
         self._check_revision(revision)
         owned = _owned(value)
-        size = _size(owned) + _size(method_key)
+        size = _size(owned) + _size(method_key) + _size(context.recipe if context else None) + _size(inputs)
         oid = uuid4().hex
         bindings = {**self._bindings, bind: oid} if bind else self._bindings
         if len(bindings) > self.max_objects:
@@ -278,7 +289,8 @@ class Session:
         for old in evict:
             del self._objects[old]
         self._objects[oid] = _Stored(owned, size, context.name if context else None,
-                                    context.configuration if context else None, method_key)
+                                    context.configuration if context else None, method_key,
+                                    _owned(context.recipe) if context else None, inputs)
         if bind:
             self._bindings[bind] = oid
         if activate:
@@ -288,7 +300,7 @@ class Session:
 
     def load(self, name: str, factory: Callable[..., Any] | str | Path, *,
              parameters: Mapping[str, Any] | None = None, factory_name: str = "system",
-             select: bool = True) -> dict[str, Any]:
+             select: bool = True, checkpoint: Mapping[str, Any] | None = None) -> dict[str, Any]:
         """Load an explicit callable or trusted project file; never import a search tree."""
         _name(name, "name")
         if type(select) is not bool:
@@ -333,7 +345,9 @@ class Session:
             system = construct()
             family, layout = _validate_system(system)
             recipe = {**source, "callable": f"{getattr(factory, '__module__', type(factory).__module__)}:{getattr(factory, '__qualname__', type(factory).__qualname__)}",
-                      "parameters": effective, "durability": "source_reference" if source else "ephemeral"}
+                      "parameters": effective, "arguments": parameter_values,
+                      "checkpoint": _owned(dict(checkpoint or {})),
+                      "durability": "source_reference" if source else "ephemeral"}
             if self._retained_bytes() + _size(recipe) + _size(layout) > self.max_bytes:
                 raise _ServiceError("object_quota", "Retained context recipe/layout exceeds the byte limit.")
             self._check_revision(revision)
@@ -428,7 +442,7 @@ class Session:
             physical = _physical(self._objects[c.head].value) if c.head else None
             self._check_revision(revision)
             if physical is not None:
-                head = self._publish(physical, revision=revision, context=c, activate=True, extra_bytes=delta)
+                head = self._publish(physical, revision=revision, context=c, activate=True, extra_bytes=delta+_size(recipe)-_size(c.recipe))
                 c.head = head.object_id
             else:
                 self._revision += 1
@@ -438,4 +452,7 @@ class Session:
             c.recipe = recipe
             if c.head:
                 self._objects[c.head].configuration = c.configuration
+                stored=self._objects[c.head]
+                stored.bytes += _size(recipe)-_size(stored.recipe)
+                stored.recipe = _owned(recipe)
             return {"name": c.name, "configuration": c.configuration}

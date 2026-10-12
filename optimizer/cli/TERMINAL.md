@@ -27,12 +27,14 @@ python -B -m optimizer.cli
 point until it is updated. One-shot and script modes start a fresh session:
 load a system and perform work in the same submission/file.
 
-This terminal currently retains data in foreground RAM. Exit/EOF discards that
-session. Durable named experiments, checkpoints and undo/redo are a later phase;
-permanent CLI/MCP history and old-logger retirement follow that phase. Ordinary
-Python receives no automatic command-history writer. Existing native traces
-remain until their consumers migrate. Managed background/parallel jobs are also
-deferred. Help explicitly reports these boundaries.
+The terminal defaults to foreground RAM. Select an independent durable experiment
+with `opt.project.init(name="experiment");` or `opt.project.open(path=...);`.
+[Persistent experiments](../persistence/PERSISTENCE.md) owns save/reopen/fork,
+typed checkpoints, restore/undo/redo, exact-continuation requirements and cleanup.
+Exit/EOF preserves an open experiment's committed data and releases its lease.
+Permanent CLI/MCP history and old-logger retirement are the next phase. Ordinary
+Python receives no automatic history writer; existing native traces remain until
+their consumers migrate. Managed background/parallel jobs are deferred.
 
 ## Calls and retained objects
 
@@ -61,12 +63,13 @@ For example `opt.adam(u0, maxiter=5);` explicitly starts from `u0`.
 `context="main"`, `activate=False` and `bind="name"` are service options, not
 numerical parameters. Use either assignment or `bind`, never both.
 
-Assignments protect retained object versions within the session's byte/object
+In RAM-only sessions, assignments protect retained object versions within the byte/object
 quotas. `old = r;` protects the full old result when `r` is rebound.
 `saved = r.state;` retains an owned state field with its original
 context/configuration/method provenance. It does not keep every other field of
 the original result resident. Release a name with `opt.session.release("old");`.
-Binding storage is included in retained-data accounting; a quota error leaves
+In durable experiments, pins protect disk payloads; names can become explicit
+`payload_pruned` tombstones after retention or cleanup. Binding storage is included in retained-data accounting; a quota error leaves
 the previous head and names intact. These quotas do not measure process RAM.
 
 Same-method implicit calls continue compatible native state. A retained state

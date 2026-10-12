@@ -30,6 +30,7 @@ reviewed: 2026-10-12
 - [System Transactions](optimizer/TRANSACTIONS.md) — shared request-response envelope.
 - [Foreground Operation Service](optimizer/operations/SERVICE.md) — selected contexts, native dispatch, candidates and bounded results.
 - [Structured Terminal](optimizer/cli/TERMINAL.md) — interactive calls, scripts, names, inspection and foreground lifetime.
+- [Persistent Experiments](optimizer/persistence/PERSISTENCE.md) — independent stores, typed checkpoints, rollback, quotas and recovery.
 
 ## Numerical execution
 

@@ -48,6 +48,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", action="store_true", help="Emit one compact response JSON object per operation.")
     options = parser.parse_args(argv)
     terminal = _Terminal(emit=lambda response: print(_render(response, json_output=options.json), flush=True))
+    try:
+        return _run(terminal,options)
+    finally:
+        terminal.service._persistence.close()
+
+
+def _run(terminal,options):
     if options.command is not None:
         return terminal.submit(options.command)
     if options.script is not None:
@@ -63,7 +70,7 @@ def main(argv: list[str] | None = None) -> int:
     interactive = sys.stdin.isatty()
     restore = _completion(terminal) if interactive else lambda: None
     if interactive and not options.json:
-        print("OPTIMIZER — foreground RAM session. End commands with ';'. opt.help(); for commands.")
+        print("OPTIMIZER — structured session; project.init/open enables persistence. End commands with ';'. opt.help(); for commands.")
     buffer, status = "", 0
     try:
         while not terminal.closed:

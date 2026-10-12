@@ -41,7 +41,7 @@ class OperationServiceTests(unittest.TestCase):
         args.update(options.pop("arguments", {}))
         return self.call("adam", args, **options)
 
-    def fail(self, operation, arguments=None, code=None, **options):
+    def reject(self, operation, arguments=None, code=None, **options):
         before = self.service.session.snapshot()
         response = self.service.execute({"operation": operation, "arguments": arguments or {}, **options})
         self.assertFalse(response.ok)
@@ -68,28 +68,29 @@ class OperationServiceTests(unittest.TestCase):
 
     def test_catalog_complete_classification_alias_and_constructor(self):
         entries = self.service.list()
-        expected = {i.id for g in opt.catalog.groups() for i in opt.catalog.group(g).items}
+        expected = {self.service.info(i.id)["id"] for g in opt.catalog.groups() for i in opt.catalog.group(g).items}
+        expected.update(self.service._persistence.methods)
         self.assertEqual({i["id"] for i in entries}, expected)
         self.assertEqual(self.service.info("ncg")["id"], "optimizers.nonlinear_cg")
         self.assertEqual(self.service.info("optimizers.ncg")["id"], "optimizers.nonlinear_cg")
         self.assertTrue(all(i["reason"] for i in entries if i["classification"] not in {"tool", "constructor"}))
         response = self.call("schedules.ConstantSchedule", {"value": 0.02}, bind="schedule")
         self.assertIsInstance(response.result, opt.ConstantSchedule)
-        self.fail("tracker.RunTracker", code="adapter_unavailable")
-        self.fail("does_not_exist", code="unknown_operation")
+        self.reject("tracker.RunJournal", code="adapter_unavailable")
+        self.reject("does_not_exist", code="unknown_operation")
 
     def test_argument_typos_rejected_before_computation(self):
         self.initial()
         for arguments in ({"maxiterr": 2}, {"statee": None}, {"history_writer": True}):
-            self.fail("adam", arguments, "invalid_arguments")
-        self.fail("session.select", {"name": "main", "unknown": 2}, "invalid_arguments")
+            self.reject("adam", arguments, "invalid_arguments")
+        self.reject("session.select", {"name": "main", "unknown": 2}, "invalid_arguments")
 
     def test_missing_context_state_and_family(self):
-        self.fail("adam", code="invalid_arguments")  # native controls required despite default
+        self.reject("adam", code="invalid_arguments")  # native controls required despite default
         empty = opt.OperationService()
         self.assertEqual(empty.execute({"operation": "adam"}).error["code"], "missing_context")
         self.load("shot", RectangularShootingSystem)
-        self.fail("adam", code="wrong_family")
+        self.reject("adam", code="wrong_family")
 
     def test_native_adam_equivalence_and_chunk_continuation(self):
         initial = self.initial().result
@@ -136,16 +137,16 @@ class OperationServiceTests(unittest.TestCase):
         reference = opt.ObjectRef(result.object_refs[0].object_id, ("state",))
         continued = self.adam(arguments={"state": reference})
         self.assertEqual(continued.result.state.global_iteration, 4)
-        self.fail("adam", {"state": reference, "step_size": 0.03}, "unsupported_continuation")
-        self.fail("adam", {"state": result.result.state}, "unsupported_continuation")
+        self.reject("adam", {"state": reference, "step_size": 0.03}, "unsupported_continuation")
+        self.reject("adam", {"state": result.result.state}, "unsupported_continuation")
 
     def test_layout_checked_before_call(self):
         self.initial()
         wrong = opt.constant_guess(QuadraticVectorSystem(N=7))
-        self.fail("adam", {"controls": wrong}, "incompatible_layout")
+        self.reject("adam", {"controls": wrong}, "incompatible_layout")
         spec = opt.ControlSpec(("ux", "uy", "uz"), 5, dt=0.5)
         wrong = opt.Controls(spec, np.zeros(spec.shape))
-        self.fail("session.use", {"value": wrong}, "incompatible_layout")
+        self.reject("session.use", {"value": wrong}, "incompatible_layout")
 
     def test_result_input_and_store_buffers_owned(self):
         initial = self.initial()
@@ -167,7 +168,7 @@ class OperationServiceTests(unittest.TestCase):
         result = self.adam(bind="r")
         controls = self.call("session.get", {"reference": opt.ObjectRef(result.object_refs[0].object_id, ("controls",))})
         self.assertIsInstance(controls.result, opt.Controls)
-        self.fail("session.get", {"reference": opt.ObjectRef(result.object_refs[0].object_id, ("warmstart",))}, "invalid_reference")
+        self.reject("session.get", {"reference": opt.ObjectRef(result.object_refs[0].object_id, ("warmstart",))}, "invalid_reference")
 
     def test_context_switch_preserves_independent_heads(self):
         self.initial()
@@ -188,9 +189,9 @@ class OperationServiceTests(unittest.TestCase):
         self.assertIsNone(result.state_after["contexts"]["other"]["head"])
 
     def test_invalid_system_load_and_duplicate_preserve_session(self):
-        self.fail("session.load", {"name": "bad", "factory": object}, "invalid_system")
-        self.fail("session.load", {"name": "main", "factory": QuadraticVectorSystem}, "context_exists")
-        self.fail("session.load", {"name": "bad", "factory": QuadraticVectorSystem, "parameters": {"unknown": 2}}, "invalid_arguments")
+        self.reject("session.load", {"name": "bad", "factory": object}, "invalid_system")
+        self.reject("session.load", {"name": "main", "factory": QuadraticVectorSystem}, "context_exists")
+        self.reject("session.load", {"name": "bad", "factory": QuadraticVectorSystem, "parameters": {"unknown": 2}}, "invalid_arguments")
 
     def test_secondary_update_invalidates_metrics_and_method_memory(self):
         self.initial()
@@ -199,14 +200,14 @@ class OperationServiceTests(unittest.TestCase):
         self.assertIsInstance(self.service.session.active(), opt.Controls)
         resumed = self.adam()
         self.assertEqual(resumed.result.state.global_iteration, 2)
-        self.fail("session.use", {"value": old.object_refs[0]}, "unsupported_continuation")
-        self.fail("session.update", {"updates": {"unknown": 2}}, "invalid_arguments")
+        self.reject("session.use", {"value": old.object_refs[0]}, "unsupported_continuation")
+        self.reject("session.update", {"updates": {"unknown": 2}}, "invalid_arguments")
 
     def test_attached_system_requires_isolation_for_solver(self):
         self.call("session.attach", {"name": "attached", "system": QuadraticVectorSystem(N=5)})
         self.call("session.use", {"value": opt.constant_guess(QuadraticVectorSystem(N=5))})
         self.call("evaluate")
-        self.fail("adam", {"maxiter": 1}, "unsupported_isolation")
+        self.reject("adam", {"maxiter": 1}, "unsupported_isolation")
         self.call("session.attach", {"name": "cloned", "system": QuadraticVectorSystem(N=5), "clone": lambda: QuadraticVectorSystem(N=5)})
         self.initial()
         self.adam()
@@ -214,7 +215,7 @@ class OperationServiceTests(unittest.TestCase):
     def test_isolation_rejects_same_object_clone(self):
         system = QuadraticVectorSystem(N=5)
         self.call("session.attach", {"name": "singleton", "system": system, "clone": lambda: system})
-        self.fail("guesses.constant_guess", code="unsupported_isolation")
+        self.reject("guesses.constant_guess", code="unsupported_isolation")
 
     def test_factory_parameters_are_captured(self):
         parameters = {"N": 5}
@@ -231,7 +232,7 @@ class OperationServiceTests(unittest.TestCase):
             self.assertEqual(loaded.result["recipe"]["parameters"], {"N": 5})
             self.assertEqual(len(loaded.result["recipe"]["sha256"]), 64)
             path.write_text(path.read_text() + "# changed\n")
-            self.fail("guesses.constant_guess", code="source_changed")
+            self.reject("guesses.constant_guess", code="source_changed")
 
     def test_shooting_solver_history_and_native_equivalence(self):
         self.load("shot", RectangularShootingSystem)
@@ -261,14 +262,14 @@ class OperationServiceTests(unittest.TestCase):
         self.load()
         self.initial()
         self.adam(bind="r")
-        self.fail("adam", {"maxiter": 1}, "object_quota")
+        self.reject("adam", {"maxiter": 1}, "object_quota")
         self.call("session.release", {"name": "u0"})
         self.adam()
         self.assertLessEqual(self.service.session.snapshot()["objects"], 2)
 
     def test_byte_quota_and_constructor_without_context(self):
         self.service = opt.OperationService(opt.Session(max_bytes=200))
-        self.fail("base.controls", {"spec": opt.ControlSpec(("a",), 100), "values": np.zeros((1, 100))}, "object_quota")
+        self.reject("base.controls", {"spec": opt.ControlSpec(("a",), 100), "values": np.zeros((1, 100))}, "object_quota")
         service = opt.OperationService()
         result = service.execute({"operation": "schedules.ConstantSchedule", "arguments": {"value": 0.02}})
         self.assertTrue(result.ok, result.error)
@@ -332,7 +333,7 @@ class OperationServiceTests(unittest.TestCase):
 
     def test_missing_capability_and_python_no_history_files(self):
         self.initial()
-        self.fail("optional_hvp", {"vector": np.ones(15)}, "capability_missing")
+        self.reject("optional_hvp", {"vector": np.ones(15)}, "capability_missing")
         previous = Path.cwd()
         with tempfile.TemporaryDirectory() as directory:
             try:
@@ -355,11 +356,11 @@ class OperationServiceTests(unittest.TestCase):
 
     def test_nested_options_validated_and_parallel_rejected(self):
         self.initial()
-        self.fail("utils.compare_methods", {"methods": ["adam"], "options": {"adam": {"maxiterr": 1}}}, "invalid_arguments")
+        self.reject("utils.compare_methods", {"methods": ["adam"], "options": {"adam": {"maxiterr": 1}}}, "invalid_arguments")
         self.load("shot", RectangularShootingSystem)
         seeds = self.call("random_shooting_seeds", {"count": 2}).object_refs[0]
-        self.fail("solve_shooting_multistart", {"starts": seeds, "solver_options": {"maxiterr": 1}}, "invalid_arguments")
-        self.fail("solve_shooting_multistart", {"starts": seeds, "parallel": opt.ParallelConfig(backend="thread", workers=2)}, "capability_missing")
+        self.reject("solve_shooting_multistart", {"starts": seeds, "solver_options": {"maxiterr": 1}}, "invalid_arguments")
+        self.reject("solve_shooting_multistart", {"starts": seeds, "parallel": opt.ParallelConfig(backend="thread", workers=2)}, "capability_missing")
 
     def test_derivative_report_and_transform_native_equivalence(self):
         initial = self.initial()
@@ -374,9 +375,9 @@ class OperationServiceTests(unittest.TestCase):
     def test_context_count_and_recipe_byte_limits(self):
         self.service = opt.OperationService(opt.Session(max_objects=1))
         self.load()
-        self.fail("session.load", {"name": "too_many", "factory": QuadraticVectorSystem}, "object_quota")
+        self.reject("session.load", {"name": "too_many", "factory": QuadraticVectorSystem}, "object_quota")
         self.service = opt.OperationService(opt.Session(max_bytes=500))
-        self.fail("session.load", {"name": "too_large", "factory": QuadraticVectorSystem}, "object_quota")
+        self.reject("session.load", {"name": "too_large", "factory": QuadraticVectorSystem}, "object_quota")
 
     def test_factory_changed_configuration_rejected(self):
         state = [1]
@@ -385,7 +386,7 @@ class OperationServiceTests(unittest.TestCase):
             state[0] += 1
             return system
         self.load("unstable", factory)
-        self.fail("guesses.constant_guess", code="invalid_system")
+        self.reject("guesses.constant_guess", code="invalid_system")
 
     def test_effective_mutable_factory_defaults_frozen(self):
         settings = {"N": 5}
@@ -409,7 +410,7 @@ class OperationServiceTests(unittest.TestCase):
             def with_secondary(self, **updates):
                 return LayoutChanging(N=7)
         self.load("layout", LayoutChanging, N=5)
-        self.fail("session.update", {"updates": {}}, "incompatible_layout")
+        self.reject("session.update", {"updates": {}}, "incompatible_layout")
 
     def test_large_factory_inputs_are_summarized_in_transport(self):
         def factory(table):

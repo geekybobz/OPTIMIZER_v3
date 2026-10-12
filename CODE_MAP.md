@@ -32,6 +32,7 @@ project system
 | Transactions | `optimizer/transactions.py` | Family-aware request-response execution: payload decoding, validated calls, and serialization | `test_transactions.py`, `test_olgs_olss_integrations.py` |
 | Foreground service | `optimizer/operations/`, `optimizer/session.py` | Catalog dispatch, contexts, owned candidates, atomic activation and retention limits | `test_operation_service.py` |
 | Structured terminal | `optimizer/cli/` | Restricted AST commands, reference binding, prompt/scripts, discovery and compact responses | `test_cli_language.py`, `test_cli.py` |
+| Durable experiments | `optimizer/persistence/`, `optimizer/checkpoints/` | Independent stores, typed state, rollback, leases, quotas and atomic recovery | `test_persistence.py` |
 | Shared gradient engine | `optimizer/core/` | Evaluation, proposal validation, bounds, acceptance, stopping, trace, and checkpoints | `test_engine.py` |
 | Gradient methods | `optimizer/optimizers/` | Method-specific updates and private state | `test_optimizers.py`, `test_advanced_optimizers.py` |
 | Shooting methods | `optimizer/shooting/` | Root solving, direct shooting, continuation, multistart, seeds, and replay | `test_olss.py`, `test_olss_scenarios.py` |

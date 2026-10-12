@@ -42,6 +42,7 @@ semicolon commands and scripts; a future MCP adapter uses the same service.
   or [Shooting Hub](optimizer/shooting/SHOOTING_HUB.md).
 - To inspect a short run, start with the [Utils Hub](optimizer/utils/UTILS_HUB.md).
 - To run interactive commands or scripts, use the [Structured Terminal](optimizer/cli/TERMINAL.md).
+- To save, reopen, fork or roll back an experiment, use [Persistent Experiments](optimizer/persistence/PERSISTENCE.md).
 
 ## Normal workflow
 
@@ -114,6 +115,7 @@ from the [Testing Hub](tests/TESTING_HUB.md).
 
 - Deeper: [Foreground operation service](optimizer/operations/SERVICE.md)
 - Deeper: [Structured terminal](optimizer/cli/TERMINAL.md)
+- Deeper: [Persistent experiments](optimizer/persistence/PERSISTENCE.md)
 
 - Related: [Base API Hub](optimizer/BASE_HUB.md)
 - Related: [OLGS System Hub](optimizer/system_olgs/SYSTEM_OLGS_HUB.md)
