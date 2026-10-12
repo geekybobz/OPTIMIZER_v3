@@ -40,29 +40,9 @@ from optimizer.utils.run_diagnostics import (
     shooting_geometry_probe,
 )
 from optimizer.utils.spectrum import control_spectrum, smoothness_report
-from optimizer.catalog import attach_namespace_helpers
+from optimizer.catalog import attach_namespace_helpers, exports
 
 
 attach_namespace_helpers(globals(), "utils")
 
-__all__ = [
-    "RepairResult",
-    "control_spectrum",
-    "compare_methods",
-    "curvature_probe",
-    "diagnose_run",
-    "diagnostic_report",
-    "finite_difference_gradient",
-    "finite_difference_jacobian",
-    "geometry_probe",
-    "info",
-    "list",
-    "metric_report",
-    "nullspace_basis",
-    "project_gradient",
-    "repair_newton",
-    "shooting_geometry_probe",
-    "smoothness_report",
-    "verify_gradient",
-    "verify_jacobian",
-]
+__all__ = [*exports("utils"), "info", "list"]

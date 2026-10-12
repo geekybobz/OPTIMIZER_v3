@@ -46,22 +46,7 @@ import numpy as np
 from optimizer.controls import Controls
 from optimizer.state import RunState, WarmStartState
 from optimizer.system_olgs import validate_metrics
-
-
-def _json_safe(value: Any) -> Any:
-    """Convert common scientific Python values into JSON-friendly structures."""
-
-    if isinstance(value, np.ndarray):
-        return value.tolist()
-    if isinstance(value, np.generic):
-        return value.item()
-    if isinstance(value, Controls):
-        return controls_to_dict(value)
-    if isinstance(value, Mapping):
-        return {str(key): _json_safe(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_json_safe(item) for item in value]
-    return value
+from optimizer.serialization import to_plain
 
 
 def controls_to_dict(controls: Controls) -> dict[str, Any]:
@@ -117,11 +102,11 @@ class Evaluation:
     def to_dict(self, *, include_controls: bool = True) -> dict[str, Any]:
         """Return a JSON-friendly evaluation payload."""
 
-        payload: dict[str, Any] = {"metrics": _json_safe(self.metrics)}
+        payload: dict[str, Any] = {"metrics": to_plain(self.metrics)}
         if include_controls:
             payload["controls"] = controls_to_dict(self.controls)
         if self.system_state is not None:
-            payload["system_state"] = _json_safe(self.system_state)
+            payload["system_state"] = to_plain(self.system_state)
         return payload
 
     def copy(self, *, name: str | None = None) -> "Evaluation":
@@ -211,14 +196,14 @@ class OptimizerResult:
 
         payload: dict[str, Any] = {
             "controls": controls_to_dict(self.controls),
-            "metrics": _json_safe(self.metrics),
+            "metrics": to_plain(self.metrics),
             "objective_metric": self.objective_metric,
-            "objective_value": self.objective_value,
-            "J": None if "J" not in self.metrics else float(self.metrics["J"]),
+            "objective_value": to_plain(self.objective_value),
+            "J": None if "J" not in self.metrics else to_plain(float(self.metrics["J"])),
             "stop_reason": self.stop_reason,
             "iterations": int(self.iterations),
             "optimizer": self.optimizer,
-            "system_params": _json_safe(self.system_params),
+            "system_params": to_plain(self.system_params),
             "trace_id": self.trace_id,
             "checkpoint_ids": dict(self.checkpoint_ids),
             "tracking_complete": not self.tracking_failures,
@@ -228,12 +213,12 @@ class OptimizerResult:
             payload["state"] = {
                 "iteration": int(self.state.iteration),
                 "global_iteration": int(self.state.global_iteration),
-                "step_size": self.state.step_size,
+                "step_size": to_plain(self.state.step_size),
                 "optimizer_name": self.state.optimizer_name,
                 "stop_reason": self.state.stop_reason,
-                "best_metrics": _json_safe(self.state.best_metrics),
+                "best_metrics": to_plain(self.state.best_metrics),
             }
         if include_trace and self.trace is not None:
             to_dict = getattr(self.trace, "to_dict", None)
-            payload["trace"] = _json_safe(to_dict() if callable(to_dict) else self.trace)
+            payload["trace"] = to_plain(to_dict() if callable(to_dict) else self.trace)
         return payload

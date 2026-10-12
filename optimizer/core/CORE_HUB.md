@@ -131,7 +131,10 @@ optimizer/core/
   evaluate.py     SystemEvaluator and structured outcomes
   guards.py       MetricGuard and metric_guard
   stopping.py     StoppingConfig, StopTracker, StopDecision
+  stop_reasons.py StopReason and STOP_REASONS, the registry shared by OLGS and OLSS
+  observer.py     RunObserver, observer events, and terminal-status classification
   curvature.py    matrix-free curvature evidence and classification
+  _cache.py       bounded least-recently-used store behind both evaluators
 ```
 
 ## Reading Path

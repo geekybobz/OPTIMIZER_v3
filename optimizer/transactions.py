@@ -13,30 +13,8 @@ from typing import Any, Callable, Mapping
 from uuid import uuid4
 
 import numpy as np
-
-
-def _plain(value: Any) -> Any:
-    from optimizer.controls import Controls
-    from optimizer.result import controls_to_dict
-
-    if isinstance(value, Controls):
-        return _plain(controls_to_dict(value))
-    if hasattr(value, "to_dict") and callable(value.to_dict):
-        return _plain(value.to_dict())
-    if hasattr(value, "system_spec") and callable(value.system_spec):
-        return {
-            "system_type": type(value).__name__,
-            "system_spec": _plain(value.system_spec()),
-        }
-    if isinstance(value, np.ndarray):
-        return value.tolist()
-    if isinstance(value, np.generic):
-        return value.item()
-    if isinstance(value, Mapping):
-        return {str(key): _plain(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_plain(item) for item in value]
-    return value
+from optimizer.families import system_family
+from optimizer.serialization import to_plain
 
 
 @dataclass(frozen=True)
@@ -63,8 +41,8 @@ class SystemRequest:
             "request_id": self.request_id,
             "family": self.family,
             "operation": self.operation,
-            "payload": _plain(self.payload),
-            "options": _plain(self.options),
+            "payload": to_plain(self.payload),
+            "options": to_plain(self.options),
         }
 
 
@@ -85,8 +63,8 @@ class SystemResponse:
             "family": self.family,
             "operation": self.operation,
             "ok": self.ok,
-            "result": _plain(self.result),
-            "error": None if self.error is None else _plain(self.error),
+            "result": to_plain(self.result),
+            "error": None if self.error is None else to_plain(self.error),
         }
 
 
@@ -96,19 +74,6 @@ class _TransactionFailure(Exception):
     def __init__(self, kind: str, message: str) -> None:
         super().__init__(message)
         self.kind = kind
-
-
-def _family(system: Any) -> str:
-    hook = getattr(system, "system_spec", None)
-    if not callable(hook):
-        raise TypeError("System transaction requires system_spec().")
-    value = hook()
-    family = value.get("family") if isinstance(value, Mapping) else None
-    if family in {None, "olgs"}:
-        return "olgs"
-    if family == "olss":
-        return "olss"
-    raise ValueError(f"Unsupported system family {family!r}.")
 
 
 # ----------------------------------------------------------------------
@@ -387,7 +352,7 @@ def transact(system: Any, request: SystemRequest | Mapping[str, Any]) -> SystemR
 
     if not isinstance(request, SystemRequest):
         request = SystemRequest(**dict(request))
-    family = _family(system)
+    family = system_family(system)
     if request.family is not None and request.family != family:
         return SystemResponse(
             request.request_id,
@@ -422,7 +387,7 @@ class SystemTransactionAdapter:
 
     def __init__(self, system: Any) -> None:
         self.system = system
-        self.family = _family(system)
+        self.family = system_family(system)
 
     def execute(self, request: SystemRequest | Mapping[str, Any]) -> SystemResponse:
         return transact(self.system, request)

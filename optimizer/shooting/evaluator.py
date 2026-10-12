@@ -8,6 +8,7 @@ from typing import Any, Mapping
 import numpy as np
 
 from optimizer.core._cache import DEFAULT_CACHE_SIZE, BoundedCache
+from optimizer.serialization import to_plain
 from optimizer.system_olss import (
     ShootingEvaluation,
     ShootingVariables,
@@ -76,14 +77,14 @@ def resolve_verification_tolerance(
     return value, source
 
 
-def _json_default(value: Any) -> str:
-    if isinstance(value, np.generic):
-        return repr(value.item())
-    return repr(value)
-
-
 def _options_key(options: Mapping[str, Any] | None) -> str:
-    return json.dumps(dict(options or {}), sort_keys=True, default=_json_default, separators=(",", ":"))
+    """Stable cache key for per-call options; falls back to repr for unconvertible values."""
+
+    payload = dict(options or {})
+    try:
+        return json.dumps(to_plain(payload), sort_keys=True, separators=(",", ":"))
+    except TypeError:
+        return repr(sorted((str(key), repr(value)) for key, value in payload.items()))
 
 
 def _candidate_key(variables: ShootingVariables, options: Mapping[str, Any] | None) -> tuple[Any, ...]:

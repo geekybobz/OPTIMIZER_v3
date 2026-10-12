@@ -1,7 +1,7 @@
 ---
 role: deep
 parent: ../../tests/TESTING_HUB.md
-summary: "2026-10-12 review in two rounds: OLSS fixes and every bug-level issue fixed with tests, the documentation review, issue statuses, and the shared-core inspection."
+summary: "2026-10-12 review: two rounds of fixes with tests, issue statuses, the shared-core inspection, and shared-core phase 1."
 read_when: "Read when checking the 2026-10-12 fixes and their evidence, or before designing or implementing the shared core."
 status: active
 reviewed: 2026-10-12
@@ -15,7 +15,8 @@ transfer (OLGS) and a Duffing minimum-energy transfer by indirect shooting
 and the code was inspected for logic that is duplicated between the two
 families or tied to one method. Round 1 fixed five OLSS defects. Round 2, after
 the user's answers, fixed every remaining bug-level issue and wrote the
-shared-core design for review.
+shared-core design for review. After the user approved the design, shared-core
+phase 1 was implemented.
 
 ## Verdict
 
@@ -27,13 +28,15 @@ shared-core design for review.
   → propagate → residuals and Jacobian → library update → independent
   verification.
 - **Every bug-level issue is fixed and tested.** Each fix has regression tests
-  that fail on the previous code (`20533da`). The suite passes (233 tests under
-  both `unittest` and pytest); the OLSS campaign and the OLGS matrix are
-  unchanged.
-- **The core is not shared yet.** OLGS methods run through one engine and OLSS
+  that fail on the previous code (`20533da`). The suite passes under both
+  `unittest` and pytest; the OLSS campaign and the OLGS matrix are unchanged.
+- **The core is partly shared.** OLGS methods run through one engine and OLSS
   through separate loops; the same mechanics exist two to eight times. The
-  user approved writing the shared-core design first. It is saved for review in
-  project memory as `plans/shared_core/` and is not implemented.
+  user approved the shared-core design (`plans/shared_core/` in project
+  memory). [Phase 1](#shared-core-phase-1) of five is implemented: one
+  stop-reason registry, one serialization policy, one family rule, and catalog
+  declarations that build the exports. Phases 2 to 5 share the numerical
+  kernels, scales, the run loop, and continuation.
 
 ## Decisions
 
@@ -44,9 +47,18 @@ Taken on 2026-10-12:
 3. The remaining issues are fixed in a structured way, with the documentation
    and memory updated.
 
-Open, in the shared-core design: scope and phases, the names of the new shared
-concepts, the JSON form of non-finite numbers, and OLSS root methods as step
-functions of the shared engine.
+After the design review:
+
+4. The design is approved, and phase 1 started.
+5. Non-finite numbers in JSON are the strings `"nan"`, `"inf"`, and `"-inf"`.
+6. OLSS root methods become step functions of the shared engine (phase 4).
+7. Phase 1 names: `StopReason` entries in `STOP_REASONS`, `to_plain`, and
+   `system_family`. `CatalogItem` stays the one declaration per tool; the
+   exports are built from the declarations, and a `root` field marks the root
+   shortcuts.
+
+Still open: the names of the concepts that later phases introduce, listed in
+the design.
 
 ## Fixed in round 1: OLSS
 
@@ -98,19 +110,21 @@ Tests: [test_run_diagnostics.py](../../tests/test_run_diagnostics.py), 6;
 |---|---|---|---|
 | S-1 (OLSS-028) | The root-solver update rule is fixed (`newton`, `lm`, `damped`) | Design | OLSS root methods become step functions in shared-core phase 4 |
 | S-2 (OLSS-021) | Evaluator caches grew without bound, in both families | Fixed | One bounded least-recently-used store (32 entries by default, `cache_size=None` keeps all) behind both evaluators |
-| S-3 | NaN residuals of a failed seed are not valid strict JSON | Design | The serialization policy and the user's choice of non-finite encoding are shared-core phase 1 |
+| S-3 | NaN residuals of a failed seed are not valid strict JSON | Fixed | Phase 1: every result converts through `to_plain`, so a failed seed's residuals serialize as `"nan"`; `RepairResult` and `OptimizerResult` numbers too |
 | S-4 | Deferred numerical work: OLSS-001 solver scaling, OLSS-002 sparse Jacobians, OLSS-004 and OLSS-019 SQP direct shooting, OLSS-023 adaptive damping, OLSS-006 article fixtures | Design / Backlog | OLSS-001 is shared-core phase 3; the rest stay in the numerical backlog |
 
 ### Catalog, tests, and documentation
 
 | ID | Issue | Status | Change |
 |---|---|---|---|
-| C-1 | Exported OLSS tools and results missing from the catalog, including `finite_difference_shooting_jacobian` | Fixed | Ten catalog entries added; a coverage test fails on any new uncatalogued export and lists today's known gaps, which shared-core phase 1 closes |
+| C-1 | Exported OLSS tools and results missing from the catalog, including `finite_difference_shooting_jacobian` | Fixed | Ten catalog entries added in round 2; phase 1 declared every other export, so the known-gap list is empty and the exports are built from the declarations |
+| C-2 | `optimizer.shooting.__all__` named a `search` function that does not exist, so `from optimizer.shooting import *` failed | Fixed | Phase 1: exports are built from the declarations; a test star-imports every namespace |
 | D-1 | The API-reference test never ran under `unittest` and failed under pytest without `PYTHONPATH` | Fixed | `unittest` test case; the generator puts the checkout on its own path |
 | D-2 | 91 front-matter summaries were boilerplate | Done | 90 specific summaries; the 91st page was parked (D-3) |
 | D-3 | `STABILIZATION.md` was due to move to the workspace `temp/` | Done | Parked in `temp/v4/` as the unedited committed version, with its origin recorded |
+| D-4 | The documentation pass dropped the README rule for removing a public entry, which the migration plan relies on | Done | Restored in the V4 README |
 
-Tests: [test_catalog_coverage.py](../../tests/test_catalog_coverage.py), 2;
+Tests: [test_catalog_coverage.py](../../tests/test_catalog_coverage.py), 8;
 [test_api_reference.py](../../tests/test_api_reference.py), 1.
 
 ## Shared-core inspection
@@ -142,6 +156,9 @@ round 2, the bounded evaluator cache.
 | 14 | Family detection | Four copies in `library.py`, one in `introspection.py`, one in `transactions.py`; the OLGS spec declares no `family` | Each new consumer adds another copy |
 | 15 | Campaigns and seeds | OLGS `guesses/` and durable `campaigns/`; OLSS seed tools with in-memory multistart and refinement | OLSS runs cannot be journaled by the tracker |
 
+Phase 1 resolves rows 7 (one registry, `opt.core.STOP_REASONS`), 12 (one
+`opt.to_plain`), and 14 (one `opt.system_family`).
+
 ### Code tied to one family or method
 
 - **The engine is the OLGS engine.** The Code Map calls it the shared gradient
@@ -162,7 +179,8 @@ round 2, the bounded evaluator cache.
 - **Registering is manual and repeated.** `diagnose_run` is wired in four files
   (nine references), and the catalog is a 2,240-line hand-written file. Three
   separate optimizer-name registries exist: `continuation.py:144`,
-  `library.py:894`, and `campaigns/__init__.py:68`.
+  `library.py:894`, and `campaigns/__init__.py:68`. Phase 1 replaced the three
+  registries with the catalog declarations, which also build the exports.
 - **Only one family declares scales.** `ShootingBlock` declares characteristic
   scales and `ControlSpec` does not.
 
@@ -173,19 +191,55 @@ The proposal is written up as a design for review in project memory,
 components (variables protocol, evaluator base, step engine, numerical kernels,
 run record, stop-reason registry, serialization policy, continuation
 coordinator, tool declarations, plus one family-detection function), and five
-migration phases aligned with the interactive interface reference. Nothing in it
-is implemented.
+migration phases aligned with the interactive interface reference. Phase 1 is
+implemented, as described below; phases 2 to 5 are not.
+
+## Shared-core phase 1
+
+Implemented after the design review. Every numerical result is unchanged.
+
+| Component | Change | Tests |
+|---|---|---|
+| Stop-reason registry | `opt.core.STOP_REASONS` holds 38 `StopReason` entries: meaning, outcome class, families, continuability, and the tools that assign it. `diagnose_run` reports `stop_outcome` and `stop_continuable`; the API reference generates the table; the stopping pages link to it | [test_stop_reasons.py](../../tests/test_stop_reasons.py), 4; a source scan fails on any assigned reason the registry lacks |
+| Serialization policy | `opt.to_plain` replaces the eight private helpers. Non-finite numbers become `"nan"`, `"inf"`, and `"-inf"`; an object without a known form raises instead of using `repr()` | [test_serialization.py](../../tests/test_serialization.py), 11, including strict JSON for every result type |
+| Family rule | `opt.system_family` replaces six detection copies. OLGS specifications declare `family: "olgs"`; a missing family still means OLGS | `test_serialization.py` |
+| Tool declarations | Every export has one `CatalogItem` (287 in all) with new `family` and `root` fields. Namespace and root `__all__`, `opt.methods()`, the continuation and campaign optimizer lookups, and the API reference are built from them | [test_catalog_coverage.py](../../tests/test_catalog_coverage.py), 8 |
+
+Found and fixed during phase 1:
+
+- `optimizer.shooting.__all__` named a nonexistent `search` (C-2).
+- OLSS results, `RepairResult`, and `OptimizerResult` wrote raw floats, so a
+  failed seed's NaN residuals produced invalid strict JSON (S-3).
+- Declaring `family` in OLGS specifications changed every campaign
+  fingerprint, so campaign evidence saved earlier could no longer resolve its
+  system. The fingerprint now leaves out the implied OLGS family; a test in
+  [test_campaigns.py](../../tests/test_campaigns.py) checks evidence without it.
+- Bare-name lookups such as `opt.info("follow_timeline")` resolve to the root
+  declaration, or to any of several declarations of one re-exported object.
+- The README rule for removing a public entry was restored (D-4).
+
+Deliberate limits:
+
+- Tracker journals keep their stricter rule: records reject non-finite values,
+  and the standalone reader validates them.
+- `optimizer_log` keeps a hand-written export list because it must not import
+  the optimizer package; a test checks the list against its declarations.
+- The root shortcut functions, such as `opt.adam`, are still written by hand;
+  the design generates them with the interactive operation registry.
+- `opt.methods()` now covers all 114 root functions; the 50 earlier entries are
+  unchanged.
 
 ## Verification
 
 | Check | Result |
 |---|---|
-| `python -B -m unittest discover -s tests` | 233 tests pass (189 before the review, 44 new) |
-| `python -B -m pytest tests` | 233 pass, without `PYTHONPATH` |
-| New tests on the previous code (`20533da`) | Fail, as recorded per fix below |
-| OLSS scenario campaign | 20 pass, 2 gaps, 1 deferred failure (A5) in 132 s, unchanged |
-| OLGS matrix | 425 runs, no non-finite result, stop reasons and acceptance counts unchanged, split-chunk Adam bit-identical |
-| Review evidence scripts | Pass, including the transaction and diagnosis probes |
+| `python -B -m unittest discover -s tests` | 255 tests pass (189 before the review, 44 in rounds 1 and 2, 22 in phase 1) |
+| `python -B -m pytest tests` | 255 pass, without `PYTHONPATH` |
+| New tests on the previous code (`20533da`, and `b2be361` for phase 1) | Fail, as recorded per fix below |
+| OLSS scenario campaign | 20 pass, 2 gaps, 1 deferred failure (A5); every observed value identical after phase 1 |
+| OLGS matrix | 425 runs, no non-finite result, stop reasons, acceptance counts, and values identical after phase 1; campaign summaries gain the declared `family` |
+| Run time | Unchanged: alternating runs of `b2be361` and phase 1 overlap (300,000-variable Newton-CG 183 to 315 ms per iteration before, 185 to 225 after; four serial OLSS solves 45 to 48 s before, 44 to 47 after) |
+| Review evidence scripts | Pass, including the transaction and diagnosis probes; the Duffing script checks strict JSON for every result |
 | `tools/generate_api_reference.py --check` | Current |
 | `mdp verify .` and `mdp inventory . --check` | Pass |
 
@@ -233,7 +287,8 @@ is implemented.
 
 ### Files changed in this review
 
-Nothing is committed.
+Git history records the commits: rounds 1 and 2 in `b2be361`, phase 1 in the
+commit that adds this report's phase 1 section.
 
 - Round 1 code: `optimizer/shooting/solvers.py`, `campaigns.py`,
   `continuation.py`, `derivatives.py`, `evaluator.py`;
@@ -259,6 +314,19 @@ Nothing is committed.
   `temp/README.md`.
 - Evidence: this folder, with the qubit OLGS system, the Duffing OLSS system,
   and their run and probe scripts.
+- Phase 1 code: `optimizer/core/stop_reasons.py`, `optimizer/serialization.py`,
+  and `optimizer/families.py` (new); `catalog.py`, `library.py`,
+  `introspection.py`, `transactions.py`, `continuation.py`, `result.py`,
+  `campaigns/__init__.py`, `core/observer.py`, `shooting/evaluator.py`,
+  `system_olgs/specs.py` and `results.py`, `system_olss/results.py`,
+  `utils/diagnostics.py`, `repairs.py`, and `run_diagnostics.py`, every
+  namespace `__init__.py`, and `tools/generate_api_reference.py`.
+- Phase 1 tests: `test_stop_reasons.py` and `test_serialization.py` (new),
+  `test_catalog_coverage.py` (rewritten), `test_campaigns.py`.
+- Phase 1 documentation: the V4 README and Code Map, the Base and Core hubs,
+  Core Stopping, Shooting Methods, Transactions, the OLGS contract, the OLSS
+  data model, the diagnostics page, the Testing Hub, and this report;
+  regenerated `API_REFERENCE.md` and `INVENTORY.md`.
 
 ### Reproduce
 

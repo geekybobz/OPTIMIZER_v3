@@ -22,20 +22,6 @@ import numpy as np
 from optimizer.controls import Controls
 from optimizer.core.evaluate import SystemEvaluator
 from optimizer.guesses import random_smooth_guess
-from optimizer.optimizers import (
-    adagrad,
-    adam,
-    cma_es,
-    lbfgs,
-    line_search,
-    momentum,
-    newton_cg,
-    nonlinear_cg,
-    projected_gradient,
-    proximal_gradient,
-    rmsprop,
-    trust_region,
-)
 from optimizer.result import OptimizerResult
 from optimizer.system_olgs import (
     get_system_spec,
@@ -57,6 +43,8 @@ from optimizer.tracker import (
     read_terminal,
 )
 from optimizer.utils.parallel import ParallelConfig, parallel_map
+from optimizer.serialization import to_plain
+from optimizer.catalog import exports, group
 
 
 OptimizerCallable = Callable[..., OptimizerResult]
@@ -64,43 +52,21 @@ SystemFactory = Callable[[], Any]
 SystemResolver = Callable[["SystemReference"], Any]
 
 _CAMPAIGN_SCHEMA = "optimizer.campaigns/v2"
-_OPTIMIZERS: dict[str, OptimizerCallable] = {
-    "adam": adam,
-    "adagrad": adagrad,
-    "cma_es": cma_es,
-    "lbfgs": lbfgs,
-    "line_search": line_search,
-    "momentum": momentum,
-    "newton_cg": newton_cg,
-    "nonlinear_cg": nonlinear_cg,
-    "ncg": nonlinear_cg,
-    "projected_gradient": projected_gradient,
-    "proximal_gradient": proximal_gradient,
-    "rmsprop": rmsprop,
-    "trust_region": trust_region,
-}
-
-
-def _json_safe(value: Any) -> Any:
-    """Return strict portable values; campaign provenance must not use repr()."""
-
-    if isinstance(value, np.ndarray):
-        return [_json_safe(item) for item in value.tolist()]
-    if isinstance(value, np.generic):
-        return _json_safe(value.item())
-    if isinstance(value, Path):
-        return str(value)
-    if isinstance(value, Mapping):
-        return {str(key): _json_safe(item) for key, item in value.items()}
-    if isinstance(value, (builtins.list, tuple)):
-        return [_json_safe(item) for item in value]
-    if value is None or isinstance(value, (str, int, float, bool)):
-        return value
-    raise TypeError(f"Campaign evidence is not JSON-safe: {type(value).__name__}.")
 
 
 def _canonical_bytes(value: Mapping[str, Any]) -> bytes:
-    return json.dumps(_json_safe(value), sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return json.dumps(to_plain(value), sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
+def _fingerprint(spec: Mapping[str, Any]) -> str:
+    """Digest of a system's semantic specification.
+
+    The implied OLGS family is left out, so evidence saved before
+    specifications declared ``family: "olgs"`` still matches the same system.
+    """
+
+    semantic = {key: value for key, value in spec.items() if not (key == "family" and value == "olgs")}
+    return sha256(_canonical_bytes(semantic)).hexdigest()
 
 
 def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
@@ -108,7 +74,7 @@ def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
 
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(
-        json.dumps(_json_safe(payload), indent=2, sort_keys=True) + "\n",
+        json.dumps(to_plain(payload), indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     temporary.replace(path)
@@ -181,11 +147,11 @@ class SystemReference:
     @classmethod
     def from_system(cls, system: Any) -> "SystemReference":
         spec = get_system_spec(system)
-        fingerprint = sha256(_canonical_bytes(spec)).hexdigest()
+        fingerprint = _fingerprint(spec)
         return cls(
             system_id=str(spec["identity"]["id"]),
             fingerprint=fingerprint,
-            system_spec=_json_safe(spec),
+            system_spec=to_plain(spec),
         )
 
     def selection(self) -> SelectionSpec:
@@ -213,7 +179,7 @@ class SystemReference:
         return {
             "system_id": self.system_id,
             "fingerprint": self.fingerprint,
-            "system_spec": _json_safe(self.system_spec),
+            "system_spec": to_plain(self.system_spec),
         }
 
     @classmethod
@@ -221,9 +187,9 @@ class SystemReference:
         reference = cls(
             system_id=str(value["system_id"]),
             fingerprint=str(value["fingerprint"]),
-            system_spec=_json_safe(dict(value["system_spec"])),
+            system_spec=to_plain(dict(value["system_spec"])),
         )
-        expected = sha256(_canonical_bytes(reference.system_spec)).hexdigest()
+        expected = _fingerprint(reference.system_spec)
         if reference.fingerprint != expected:
             raise ValueError("Campaign system reference fingerprint does not match its system_spec.")
         if reference.system_id != str(reference.system_spec["identity"]["id"]):
@@ -240,8 +206,9 @@ class MethodSpec:
 
     def __post_init__(self) -> None:
         name = str(self.name).lower()
-        if name not in _OPTIMIZERS:
-            raise KeyError(f"Unknown campaign optimizer {self.name!r}; valid names are {sorted(_OPTIMIZERS)}.")
+        names = exports("optimizers")
+        if name not in names:
+            raise KeyError(f"Unknown campaign optimizer {self.name!r}; valid names are {names}.")
         options = dict(self.options)
         if "maxiter" not in options or int(options["maxiter"]) < 1:
             raise ValueError("MethodSpec.options must include an integer maxiter >= 1.")
@@ -250,10 +217,10 @@ class MethodSpec:
 
     @property
     def optimizer(self) -> OptimizerCallable:
-        return _OPTIMIZERS[self.name]
+        return group("optimizers").get(self.name).public_object()
 
     def to_dict(self) -> dict[str, Any]:
-        return {"name": self.name, "options": _json_safe(dict(self.options))}
+        return {"name": self.name, "options": to_plain(dict(self.options))}
 
 
 @dataclass(frozen=True)
@@ -287,23 +254,23 @@ class CandidateRef:
             "source_id": self.source_id,
             "system": self.system.to_dict(),
             "selection": self.selection.to_dict(),
-            "checkpoint": _json_safe(self.checkpoint),
+            "checkpoint": to_plain(self.checkpoint),
             "optimizer": self.result.optimizer,
             "objective_metric": self.selection.metric_id,
             "objective_value": self.objective_value,
             "J": self.result.metrics.get("J"),
             "iterations": self.result.iterations,
             "stop_reason": self.result.stop_reason,
-            "metrics": _json_safe(self.result.metrics),
+            "metrics": to_plain(self.result.metrics),
         }
 
     @classmethod
     def from_dict(cls, value: Mapping[str, Any], *, stage_dir: Path) -> "CandidateRef":
         system = SystemReference.from_dict(dict(value["system"]))
         selection = SelectionSpec.from_dict(dict(value["selection"]))
-        checkpoint = _json_safe(dict(value["checkpoint"]))
+        checkpoint = to_plain(dict(value["checkpoint"]))
         data = load_checkpoint(stage_dir, checkpoint, verify=True)
-        metrics = _json_safe(dict(value["metrics"]))
+        metrics = to_plain(dict(value["metrics"]))
         selection.value(metrics)
         result = OptimizerResult(
             controls=data.controls,
@@ -368,7 +335,7 @@ class ValidationResult:
         return {
             "source_id": self.source_id,
             "system_fingerprint": self.system_fingerprint,
-            "metrics": _json_safe(self.metrics),
+            "metrics": to_plain(self.metrics),
             "gradient_norm": self.gradient_norm,
             "counters": dict(self.counters),
             "artifact": str(self.artifact),
@@ -451,7 +418,7 @@ def _execute_stage(request: _StageRequest) -> CandidateRef:
         result=result,
         system=request.system,
         selection=request.selection,
-        checkpoint=_json_safe(dict(checkpoint)),
+        checkpoint=to_plain(dict(checkpoint)),
         source_id=request.source_id,
     )
     _write_json(request.stage_dir / "stage_result.json", candidate.to_dict())
@@ -592,7 +559,7 @@ class Campaign:
 
     def _event(self, kind: str, payload: Mapping[str, Any]) -> None:
         self._events += 1
-        event = {"sequence": self._events, "kind": str(kind), "payload": _json_safe(payload)}
+        event = {"sequence": self._events, "kind": str(kind), "payload": to_plain(payload)}
         with (self.root / "campaign_timeline.jsonl").open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(event, sort_keys=True) + "\n")
         if self._terminal_status is None:
@@ -607,7 +574,7 @@ class Campaign:
             "campaign_id": self.campaign_id,
             "status": str(status),
             "reason": str(reason),
-            "details": _json_safe(dict(details or {})),
+            "details": to_plain(dict(details or {})),
             "last_sequence": self._events,
         }
         _write_json(self.root / "campaign_terminal.json", payload)
@@ -860,7 +827,7 @@ class Campaign:
                 "source_id": source.candidate_id,
                 "source_system_fingerprint": source.system.fingerprint,
                 "next_system_fingerprint": next_reference.fingerprint,
-                "updates": _json_safe(dict(updates)),
+                "updates": to_plain(dict(updates)),
             },
         )
         return self._run(
@@ -976,17 +943,4 @@ def __dir__() -> list[str]:
     return sorted(__all__)
 
 
-__all__ = [
-    "Campaign",
-    "CandidateRef",
-    "MethodSpec",
-    "ModeResult",
-    "SelectionSpec",
-    "SystemReference",
-    "ValidationResult",
-    "create",
-    "info",
-    "list",
-    "open",
-    "random_smooth_guesses",
-]
+__all__ = [*exports("campaigns"), "info", "list"]

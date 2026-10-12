@@ -24,7 +24,8 @@ project system
 
 | Component | Source owner | Responsibility | Primary checks |
 |---|---|---|---|
-| Public facade and catalog | `optimizer/__init__.py`, `library.py`, `catalog.py` | Namespaces, aliases, discovery, and structured API metadata | `test_public_api.py`, `test_catalog.py` |
+| Public facade and catalog | `optimizer/__init__.py`, `library.py`, `catalog.py` | One catalog declaration per public export; namespace exports, `opt.methods()`, the optimizer-name lookup, discovery, and the API reference are built from it | `test_public_api.py`, `test_catalog.py`, `test_catalog_coverage.py` |
+| Shared conventions | `serialization.py`, `families.py`, `core/stop_reasons.py` | One JSON policy (`to_plain`), one family rule (`system_family`), and one stop-reason registry (`STOP_REASONS`) for both families | `test_serialization.py`, `test_stop_reasons.py` |
 | Shared data | `controls.py`, `result.py`, `state.py` | Controls, optimizer results, live state, and warm starts | `test_controls.py`, `test_result_state.py` |
 | OLGS boundary | `optimizer/system_olgs/` | Gradient-system declarations, validation, and optional capabilities | `test_system_contract.py` |
 | OLSS boundary | `optimizer/system_olss/` | Shooting declarations, variables, validation, and evidence types | `test_olss.py` |
@@ -78,7 +79,9 @@ orchestration remain direct Python APIs until the terminal interface is designed
 | Shared acceptance or stopping | `core/engine.py` | optimizer wrappers and trace evidence | engine and optimizer tests |
 | One optimizer's update rule | its module under `optimizers/` | state/warm-start documentation | optimizer tests |
 | Shooting root behavior | `shooting/solvers.py` | evaluator, result evidence, campaigns | OLSS scenarios |
-| Public API name or metadata | `catalog.py` and exports | generated API reference | catalog and reference-freshness tests |
+| Public API name or metadata | its declaration in `catalog.py`; exports follow | generated API reference | catalog coverage and reference-freshness tests |
+| New stop reason | `core/stop_reasons.py` | the loop that assigns it; `diagnose_run` | `test_stop_reasons.py`, generated API reference |
+| Result or report serialization | `serialization.py` | the result's `to_dict` | `test_serialization.py` |
 | Documentation route | owning hub or topic | root map and index | Markdown Protocol verification |
 
 ## Connections

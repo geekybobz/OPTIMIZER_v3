@@ -9,6 +9,7 @@ import numpy as np
 
 from optimizer.controls import Controls
 from optimizer.core.curvature import curvature_evidence
+from optimizer.core.stop_reasons import StopReason
 from optimizer.system_olgs import get_system_spec
 
 
@@ -71,6 +72,16 @@ def _classify(
     if -relative < thresholds["slow_relative_improvement"]:
         return "slow", relative, reversals
     return "converging", relative, reversals
+
+
+def _stop_facts(reason: str | None) -> dict[str, Any]:
+    """Outcome class and continuability of a stop reason from the shared registry."""
+
+    entry = StopReason.lookup(reason)
+    return {
+        "stop_outcome": None if entry is None else entry.outcome,
+        "stop_continuable": None if entry is None else entry.continuable,
+    }
 
 
 def _optimizer_series(result: Any) -> dict[str, Any] | None:
@@ -141,6 +152,7 @@ def diagnose_run(result: Any, *, mode: str | None = None) -> dict[str, Any]:
         "family": "olgs",
         "optimizer": result.optimizer,
         "stop_reason": result.stop_reason,
+        **_stop_facts(result.stop_reason),
         "objective_metric": result.objective_metric,
         "objective_mode": resolved_mode,
         "thresholds": dict(_DIAGNOSIS_THRESHOLDS),
@@ -191,6 +203,7 @@ def _diagnose_shooting(result: Any) -> dict[str, Any]:
         "family": "olss",
         "method": result.method,
         "stop_reason": result.stop_reason,
+        **_stop_facts(result.stop_reason),
         "solver_converged": bool(result.solver_converged),
         "qualified": bool(result.qualified),
         "classification": classification,

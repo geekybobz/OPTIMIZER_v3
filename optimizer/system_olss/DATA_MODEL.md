@@ -92,7 +92,9 @@ is used only to rank qualified roots.
 | `ParameterContinuationPoint` | Secondary parameter, attempted step, and shooting result |
 | `ParameterContinuationResult` | Parameter path, target, points, stop reason, target status, and one step-history row per attempt, including failed attempts and their reasons |
 
-All public objects provide `to_dict()` for JSON-safe representation.
+All public objects provide `to_dict()`, which returns strict JSON under the
+library's [serialization policy](../TRANSACTIONS.md#serialization): a failed
+seed's residuals appear as `"nan"`, not as an invalid JSON number.
 
 ## Construction convention
 

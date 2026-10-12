@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import tempfile
 import unittest
@@ -170,6 +171,24 @@ class CampaignTests(unittest.TestCase):
             self.assertEqual(validated.system_fingerprint, continued.best.system.fingerprint)
             self.assertAlmostEqual(validated.metrics["J"], expected)
             self.assertNotAlmostEqual(validated.metrics["J"], original)
+
+    def test_evidence_saved_before_specs_declared_a_family_still_matches(self) -> None:
+        base = system()
+        spec = {key: value for key, value in opt.get_system_spec(base).items() if key != "family"}
+        canonical = json.dumps(opt.to_plain(spec), sort_keys=True, separators=(",", ":")).encode("utf-8")
+        legacy = opt.campaigns.SystemReference.from_dict(
+            {
+                "system_id": spec["identity"]["id"],
+                "fingerprint": hashlib.sha256(canonical).hexdigest(),
+                "system_spec": spec,
+            }
+        )
+
+        legacy.assert_matches(base)
+        current = opt.campaigns.SystemReference.from_system(base)
+        self.assertEqual(current.system_spec["family"], "olgs")
+        self.assertEqual(current.fingerprint, legacy.fingerprint)
+        opt.campaigns.SystemReference.from_dict(current.to_dict())
 
     def test_reopen_loads_hash_checked_candidate_and_requires_explicit_system_resolver(self) -> None:
         base = system()

@@ -14,26 +14,10 @@ from optimizer.shooting.derivatives import (
 from optimizer.shooting.evaluator import ShootingEvaluator
 from optimizer.shooting.solvers import solve_direct_shooting, solve_shooting
 from optimizer.shooting.replay import compare_shooting_replay
-from optimizer.catalog import attach_namespace_helpers
+from optimizer.catalog import attach_namespace_helpers, exports
 
 
 attach_namespace_helpers(globals(), "shooting")
 
 
-__all__ = [
-    "ShootingEvaluator",
-    "continue_shooting",
-    "continue_parameter",
-    "compare_shooting_replay",
-    "finite_difference_shooting_jacobian",
-    "solve_direct_shooting",
-    "solve_shooting",
-    "solve_shooting_multistart",
-    "random_shooting_seeds",
-    "perturb_shooting_seeds",
-    "refine_shooting_seeds",
-    "verify_shooting_jacobian",
-    "info",
-    "list",
-    "search",
-]
+__all__ = [*exports("shooting"), "info", "list"]

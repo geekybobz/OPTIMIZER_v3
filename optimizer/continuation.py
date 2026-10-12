@@ -8,33 +8,19 @@ from uuid import uuid4
 
 import numpy as np
 
+from optimizer import catalog
 from optimizer.controls import ControlSpec, Controls
 from optimizer.core.evaluate import SystemEvaluator
 from optimizer.logs.trace import Trace
 from optimizer.result import OptimizerResult
 from optimizer.system_olgs import get_secondary_update_hook, require_system
+from optimizer.serialization import to_plain
 
 
 OptimizerCallable = Callable[..., OptimizerResult]
 SystemFactory = Callable[[Any], Any]
 ControlTransfer = Callable[[Any, Any, Controls], Controls]
 ObserverFactory = Callable[[int, "ContinuationStage"], Sequence[Any] | None]
-
-
-def _json_safe(value: Any) -> Any:
-    if isinstance(value, np.ndarray):
-        return value.tolist()
-    if isinstance(value, np.generic):
-        return value.item()
-    if isinstance(value, Mapping):
-        return {str(key): _json_safe(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_json_safe(item) for item in value]
-    if callable(value):
-        return getattr(value, "__qualname__", getattr(value, "__name__", repr(value)))
-    if value is None or isinstance(value, (str, int, float, bool)):
-        return value
-    return repr(value)
 
 
 @dataclass(frozen=True)
@@ -100,11 +86,11 @@ class StageResult:
             "index": self.index,
             "label": self.stage.label,
             "optimizer": self.result.optimizer,
-            "secondary_updates": _json_safe(self.stage.secondary_updates),
-            "optimizer_options": _json_safe(self.stage.optimizer_options),
+            "secondary_updates": to_plain(self.stage.secondary_updates),
+            "optimizer_options": to_plain(self.stage.optimizer_options),
             "result": self.result.to_dict(),
             "gate_passed": self.gate_passed,
-            "gate_metrics": _json_safe(self.gate_metrics),
+            "gate_metrics": to_plain(self.gate_metrics),
             "transfer": self.transfer,
             "parent_checkpoint_ids": dict(self.parent_checkpoint_ids),
         }
@@ -142,40 +128,11 @@ class ContinuationResult:
 
 
 def _registered_optimizer(name: str) -> OptimizerCallable:
-    from optimizer.optimizers import (
-        adagrad,
-        adam,
-        cma_es,
-        lbfgs,
-        line_search,
-        momentum,
-        newton_cg,
-        nonlinear_cg,
-        projected_gradient,
-        proximal_gradient,
-        rmsprop,
-        trust_region,
-    )
-
-    methods: dict[str, OptimizerCallable] = {
-        "adagrad": adagrad,
-        "adam": adam,
-        "cma_es": cma_es,
-        "lbfgs": lbfgs,
-        "line_search": line_search,
-        "momentum": momentum,
-        "newton_cg": newton_cg,
-        "nonlinear_cg": nonlinear_cg,
-        "ncg": nonlinear_cg,
-        "projected_gradient": projected_gradient,
-        "proximal_gradient": proximal_gradient,
-        "rmsprop": rmsprop,
-        "trust_region": trust_region,
-    }
     key = str(name).lower()
-    if key not in methods:
-        raise KeyError(f"Unknown continuation optimizer {name!r}; valid names are {sorted(methods)}.")
-    return methods[key]
+    names = catalog.exports("optimizers")
+    if key not in names:
+        raise KeyError(f"Unknown continuation optimizer {name!r}; valid names are {names}.")
+    return catalog.group("optimizers").get(key).public_object()
 
 
 def _coerce_stage(value: ContinuationStage | Mapping[str, Any]) -> ContinuationStage:

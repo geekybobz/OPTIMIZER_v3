@@ -131,7 +131,7 @@ Front Door or `INDEX.md` remains the semantic route map.
 | [RELEASE_EVIDENCE.md](RELEASE_EVIDENCE.md) | deep | Provenance of the v4.0.4 release: tag, implementation revision, wheel, and test evidence. | Read when checking which revision and wheel the release route installs. |
 | [test_contained/olgs_convergence/REPORT.md](test_contained/olgs_convergence/REPORT.md) | deep | OLGS validation design, scenario matrix, method coverage, and the 2026-10-12 outcome. | Read when checking OLGS method structure or rerunning the matrix. |
 | [test_contained/olss_scenarios/REPORT.md](test_contained/olss_scenarios/REPORT.md) | deep | OLSS issue record: resolution status, original findings, and campaign evidence. | Read when checking an OLSS issue or rerunning the scenario campaign. |
-| [test_contained/review_2026_10_12/REPORT.md](test_contained/review_2026_10_12/REPORT.md) | deep | 2026-10-12 review in two rounds: OLSS fixes and every bug-level issue fixed with tests, the documentation review, issue statuses, and the shared-core inspection. | Read when checking the 2026-10-12 fixes and their evidence, or before designing or implementing the shared core. |
+| [test_contained/review_2026_10_12/REPORT.md](test_contained/review_2026_10_12/REPORT.md) | deep | 2026-10-12 review: two rounds of fixes with tests, issue statuses, the shared-core inspection, and shared-core phase 1. | Read when checking the 2026-10-12 fixes and their evidence, or before designing or implementing the shared core. |
 
 ---
 

@@ -32,25 +32,9 @@ from optimizer.optimizers.nonlinear_cg import ncg, nonlinear_cg
 from optimizer.optimizers.projected import projected_gradient
 from optimizer.optimizers.proximal import proximal_gradient
 from optimizer.optimizers.trust_region import trust_region
-from optimizer.catalog import attach_namespace_helpers
+from optimizer.catalog import attach_namespace_helpers, exports
 
 
 attach_namespace_helpers(globals(), "optimizers")
 
-__all__ = [
-    "adagrad",
-    "adam",
-    "cma_es",
-    "info",
-    "lbfgs",
-    "line_search",
-    "list",
-    "momentum",
-    "newton_cg",
-    "ncg",
-    "nonlinear_cg",
-    "projected_gradient",
-    "proximal_gradient",
-    "rmsprop",
-    "trust_region",
-]
+__all__ = [*exports("optimizers"), "info", "list"]

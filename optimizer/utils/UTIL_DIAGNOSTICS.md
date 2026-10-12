@@ -83,7 +83,11 @@ converged is `converging`.
 
 Returns the label, `objective_trend` or `residual_trend`, `relative_change`,
 `direction_reversals`, gradient and step trends (OLGS), the rejection ratio,
-the stop reason, and the `thresholds` that were applied.
+the stop reason, and the `thresholds` that were applied. `stop_outcome` and
+`stop_continuable` come from the [stop-reason registry](../core/CORE_STOPPING.md#stop-reasons):
+the outcome class of the reason, and whether the final state is a valid start
+for another run. Both are `None` for a reason the registry does not list, such
+as a custom step function's own reason.
 
 ## Best For
 

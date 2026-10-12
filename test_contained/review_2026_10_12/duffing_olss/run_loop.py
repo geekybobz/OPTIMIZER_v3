@@ -67,6 +67,7 @@ show(
 
 # 5. strict JSON for every result
 for result in (r2, branch, campaign):
-    json.dumps(result.to_dict(), allow_nan=True if result is campaign else False)
-print("\nresults serialize: ok (the failed seed carries NaN residuals)")
+    json.dumps(result.to_dict(), allow_nan=False)
+failed = [r for r in campaign.results if r.stop_reason == "initial_evaluation_failed"]
+print(f"\nresults serialize as strict JSON: ok (failed seed residuals: {failed[0].to_dict()['residuals'][:2] if failed else 'none'})")
 print(f"total wall time {time.perf_counter() - t0:.2f} s")

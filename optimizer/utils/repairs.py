@@ -40,6 +40,7 @@ import numpy as np
 from optimizer.controls import Controls
 from optimizer.system_olgs import optional_residuals, validate_controls_for_system
 from optimizer.utils.derivatives import get_jacobian
+from optimizer.serialization import to_plain
 
 
 @dataclass
@@ -62,15 +63,15 @@ class RepairResult:
         """Return a JSON-friendly repair summary."""
 
         payload: dict[str, Any] = {
-            "residual_norm": float(self.residual_norm),
-            "residual_max_abs": float(self.residual_max_abs),
+            "residual_norm": to_plain(self.residual_norm),
+            "residual_max_abs": to_plain(self.residual_max_abs),
             "converged": bool(self.converged),
             "iterations": int(self.iterations),
             "method": self.method,
             "residual_name": self.residual_name,
             "jacobian_source": self.jacobian_source,
             "stop_reason": self.stop_reason,
-            "history": list(self.history),
+            "history": to_plain(self.history),
         }
         if include_controls:
             payload["controls"] = {

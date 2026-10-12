@@ -13,6 +13,7 @@ import sys
 from typing import Any, Mapping
 
 from optimizer import catalog
+from optimizer.families import system_family
 from optimizer.core.engine import run_chunk
 from optimizer.system_olgs import contract_info, describe_system
 from optimizer.system_olss import describe_shooting_system, shooting_contract_info
@@ -55,9 +56,11 @@ def context_info(
     described_system = None
     selected_contract = contract_info()
     if system is not None:
-        hook = getattr(system, "system_spec", None)
-        raw = hook() if callable(hook) else None
-        if isinstance(raw, Mapping) and raw.get("family") == "olss":
+        try:
+            family = system_family(system)
+        except TypeError:
+            family = "olgs"
+        if family == "olss":
             described_system = describe_shooting_system(system)
             selected_contract = shooting_contract_info()
         else:

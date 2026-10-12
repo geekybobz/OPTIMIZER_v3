@@ -76,6 +76,9 @@ Read and change them with `channel(key)`, `set_channel(key, values)`,
 | `opt.plot_data(system, controls, kind=...)` | Request one system-owned visualization data product |
 | `opt.context_info(system=None)` | Report the registered optimizers, the OLGS contract, and tracker capabilities |
 | `opt.continuation(system, controls, stages=...)` | Run explicit parameter stages with safe control transfer |
+| `opt.system_family(system)` | Return `"olgs"` or `"olss"` from the system's `system_spec()`; a missing family means OLGS |
+| `opt.to_plain(value)` | Convert a result, report, or other library value to strict JSON data (see [Transactions](TRANSACTIONS.md#serialization)) |
+| `opt.methods()` | Status of every public root function, built from the catalog declarations |
 
 The first three accept `use_cache=True`, which reuses the cached evaluation for
 identical controls.
@@ -89,15 +92,18 @@ identical controls.
 | [state.py](state.py) | `RunState` and `WarmStartState` |
 | [library.py](library.py) | The root facade and the bound-system context |
 | [continuation.py](continuation.py) | Parameter-stage continuation |
-| [catalog.py](catalog.py) | The runtime catalog behind `opt.list`, `opt.info`, `opt.search`, and `opt.path` |
+| [catalog.py](catalog.py) | One declaration per public export; the exports, `opt.list`, `opt.info`, `opt.search`, `opt.path`, and `opt.methods()` are built from it |
 | [introspection.py](introspection.py) | Runtime self-description of registered APIs and signatures |
 | [transactions.py](transactions.py) | Family-aware request and response envelopes for OLGS and OLSS |
+| [serialization.py](serialization.py) | `to_plain`, the one JSON policy for results, reports, and responses |
+| [families.py](families.py) | `system_family`, the one rule for telling OLGS and OLSS apart |
 | [logs/trace.py](logs/trace.py) | `Trace` |
 
 OLSS uses `ShootingSpec`, `ShootingVariables`, `ShootingEvaluation`, and
 `ShootingResult` rather than `ControlSpec`, `Controls`, and `OptimizerResult`.
-Their family contracts remain separate even though the transaction envelope and
-runtime discovery conventions are shared.
+Their family contracts remain separate; the transaction envelope, runtime
+discovery, serialization, family detection, and the
+[stop-reason registry](core/CORE_STOPPING.md) are shared.
 
 ## Connections
 

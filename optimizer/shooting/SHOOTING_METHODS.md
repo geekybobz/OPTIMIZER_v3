@@ -32,16 +32,13 @@ shooting root equations; inspect `qualified`, not only `solver_converged`.
 
 Failures follow the OLGS engine rule. A start that cannot be evaluated raises
 `ValueError`. After the start, a trial whose residuals fail (for example an
-integration blow-up) is rejected and the line search shrinks; failures end the
-run with a named stop reason and the message in `ShootingResult.error`:
-
-| Stop reason | Meaning |
-|---|---|
-| `nonfinite_trial` | Every line-search trial in one iteration failed to evaluate |
-| `jacobian_failed` | The Jacobian failed at an accepted point |
-| `evaluation_failed` | Declared metrics failed at the converged point |
-| `verification_failed` | Verification failed, raised, or missed its tolerance or a named check |
-| `initial_evaluation_failed` | Recorded by coordinators for a seed or stage whose start failed |
+integration blow-up) is rejected and the line search shrinks. Failures end the
+run with `nonfinite_trial`, `jacobian_failed`, `evaluation_failed`, or
+`verification_failed` and the message in `ShootingResult.error`; coordinators
+record a seed or stage whose start failed as `initial_evaluation_failed`. The
+generated [stop-reason table](../../API_REFERENCE.md#stop-reasons) gives the
+meaning, outcome, and continuability of every reason, including the successful
+`root_tolerance` and `least_squares_stationary`.
 
 The verification tolerance is resolved as described in
 [OLSS Verification](../system_olss/VERIFICATION.md#verification-tolerance).

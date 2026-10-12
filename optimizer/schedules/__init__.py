@@ -20,17 +20,9 @@ from optimizer.schedules.step_size import (
     ExponentialDecaySchedule,
     LinearWarmupSchedule,
 )
-from optimizer.catalog import attach_namespace_helpers
+from optimizer.catalog import attach_namespace_helpers, exports
 
 
 attach_namespace_helpers(globals(), "schedules")
 
-__all__ = [
-    "AdaptiveStepSchedule",
-    "ConstantSchedule",
-    "CosineDecaySchedule",
-    "ExponentialDecaySchedule",
-    "LinearWarmupSchedule",
-    "info",
-    "list",
-]
+__all__ = [*exports("schedules"), "info", "list"]

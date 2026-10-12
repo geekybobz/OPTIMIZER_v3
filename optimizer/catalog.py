@@ -13,6 +13,12 @@ This module provides that discovery layer.  It keeps normal execution APIs uncha
 
 How it fits the architecture
 ----------------------------
+- every public export has exactly one ``CatalogItem`` declaration here: its
+  namespace (group), aliases, system family, and whether the package root also
+  exports it (``root``).
+- namespaces build ``__all__`` with ``exports(group)``; ``opt.methods()``, the
+  optimizer-name lookup of continuation and campaigns, and ``API_REFERENCE.md``
+  are built from the same declarations.
 - role namespaces can expose ``list(...)`` and ``info(name, ...)`` from this module.
 - public callables can receive an ``.info(...)`` attribute without wrapping execution.
 - metadata is curated where reflection cannot know workflow meaning.
@@ -31,6 +37,8 @@ import importlib
 import inspect
 from dataclasses import dataclass, field
 from typing import Any, Mapping
+
+from optimizer.families import FAMILY_NAMES
 
 
 TextMap = Mapping[str, str]
@@ -52,7 +60,13 @@ def _contains(value: str, needle: str) -> bool:
 
 @dataclass(frozen=True)
 class CatalogItem:
-    """Curated metadata for one public tool, class, or alias."""
+    """The one declaration of a public tool, class, constant, or alias.
+
+    Its group is the namespace that exports it; ``root`` also exports it from the
+    package root, and ``family`` names the system families (``olgs``, ``olss``)
+    it serves.  Namespace exports, ``opt.methods()``, the optimizer-name lookup,
+    and the API reference are all built from these declarations.
+    """
 
     name: str
     group: str
@@ -74,6 +88,8 @@ class CatalogItem:
     aliases: tuple[str, ...] = ()
     tags: tuple[str, ...] = ()
     notes: tuple[str, ...] = ()
+    family: tuple[str, ...] = ()
+    root: bool = False
 
     @property
     def id(self) -> str:
@@ -115,7 +131,10 @@ class CatalogItem:
             "requires": builtins.list(self.requires),
             "returns": self.return_type,
             "status": self.status,
+            "family": builtins.list(self.family),
         }
+        if self.root:
+            payload["root"] = True
         if self.variants:
             payload["variants"] = builtins.list(self.variants)
         if self.aliases:
@@ -147,6 +166,8 @@ class CatalogItem:
             "aliases": builtins.list(self.aliases),
             "tags": builtins.list(self.tags),
             "notes": builtins.list(self.notes),
+            "family": builtins.list(self.family),
+            "root": True if self.root else None,
         }
         return {key: value for key, value in payload.items() if value not in (None, [], {}, "")}
 
@@ -155,6 +176,10 @@ class CatalogItem:
         signature = self.signature()
         if signature:
             lines.append(f"Signature: {self.name}{signature}")
+        if self.family:
+            lines.append("Family: " + ", ".join(self.family))
+        if self.root:
+            lines.append(f"Root shortcut: opt.{self.object_name or self.name}")
         if self.requires:
             lines.append("Requires: " + ", ".join(self.requires))
         if self.variants:
@@ -360,7 +385,13 @@ def _make_item(
     aliases: Any = None,
     tags: Any = None,
     notes: Any = None,
+    family: Any = None,
+    root: bool = False,
 ) -> CatalogItem:
+    families = _tuple(family) or _GROUP_FAMILIES[group]
+    unknown = set(families) - set(FAMILY_NAMES)
+    if unknown:
+        raise ValueError(f"Catalog item {group}.{name} names unknown families {sorted(unknown)}.")
     return CatalogItem(
         name=name,
         group=group,
@@ -381,7 +412,28 @@ def _make_item(
         aliases=_tuple(aliases),
         tags=_tuple(tags),
         notes=_tuple(notes),
+        family=families,
+        root=bool(root),
     )
+
+
+# Family of every declaration in a group unless the declaration names its own.
+_BOTH = ("olgs", "olss")
+_GROUP_FAMILIES: dict[str, tuple[str, ...]] = {
+    "optimizers": ("olgs",),
+    "guesses": ("olgs",),
+    "utils": ("olgs",),
+    "schedules": ("olgs",),
+    "base": ("olgs",),
+    "core": ("olgs",),
+    "campaigns": ("olgs",),
+    "tracker": ("olgs",),
+    "visualization": _BOTH,
+    "system_olgs": ("olgs",),
+    "system_olss": ("olss",),
+    "shooting": ("olss",),
+    "optimizer_log": ("olgs",),
+}
 
 
 _GROUP_MODULES = {
@@ -463,6 +515,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/optimizers/adam.py",
                 phase="Phase 7",
                 tags=("gradient", "adaptive", "first_order", "warmstart"),
+                root=True,
             ),
             _make_item(
                 "momentum",
@@ -489,6 +542,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/optimizers/momentum.py",
                 phase="Phase 7",
                 tags=("gradient", "first_order", "low_memory"),
+                root=True,
             ),
             _make_item(
                 "line_search",
@@ -515,6 +569,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/optimizers/line_search.py",
                 phase="Phase 7",
                 tags=("gradient", "line_search", "first_order", "guardable"),
+                root=True,
             ),
             _make_item(
                 "adagrad",
@@ -538,6 +593,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/optimizers/adaptive.py",
                 phase="Phase 7",
                 tags=("gradient", "adaptive", "first_order"),
+                root=True,
             ),
             _make_item(
                 "rmsprop",
@@ -561,6 +617,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/optimizers/adaptive.py",
                 phase="Phase 7",
                 tags=("gradient", "adaptive", "first_order"),
+                root=True,
             ),
             _make_item(
                 "lbfgs",
@@ -587,6 +644,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/optimizers/lbfgs.py",
                 phase="Phase 7",
                 tags=("gradient", "quasi_newton", "polish", "warmstart"),
+                root=True,
             ),
             _make_item(
                 "nonlinear_cg",
@@ -613,6 +671,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 phase="Phase 7",
                 aliases=("ncg",),
                 tags=("gradient", "conjugate_gradient", "low_memory"),
+                root=True,
             ),
             _make_item(
                 "ncg",
@@ -627,6 +686,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/optimizers/nonlinear_cg.py",
                 phase="Phase 7",
                 tags=("gradient", "alias", "conjugate_gradient"),
+                root=True,
             ),
             _make_item(
                 "cma_es",
@@ -655,6 +715,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/optimizers/cma_es.py",
                 phase="Phase 7",
                 tags=("derivative_free", "population", "random", "global_search"),
+                root=True,
             ),
             _make_item(
                 "projected_gradient",
@@ -675,6 +736,8 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 example="result = opt.optimizers.projected_gradient(system, controls, maxiter=50)",
                 module="optimizer/optimizers/projected.py",
                 tags=("gradient", "constraints", "projected_kkt", "feasibility"),
+                root=True,
+                phase="Numerical capabilities",
             ),
             _make_item(
                 "newton_cg",
@@ -690,6 +753,8 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 example="result = opt.optimizers.newton_cg(system, controls, maxiter=20)",
                 module="optimizer/optimizers/newton_cg.py",
                 tags=("gradient", "second_order", "hvp", "conjugate_gradient"),
+                root=True,
+                phase="Numerical capabilities",
             ),
             _make_item(
                 "trust_region",
@@ -705,6 +770,8 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 example="result = opt.optimizers.trust_region(system, controls, initial_radius=1.0, maxiter=20)",
                 module="optimizer/optimizers/trust_region.py",
                 tags=("gradient", "second_order", "hvp", "trust_region"),
+                root=True,
+                phase="Numerical capabilities",
             ),
             _make_item(
                 "proximal_gradient",
@@ -719,6 +786,8 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 example="result = opt.optimizers.proximal_gradient(system, controls, step_size=0.1, maxiter=50)",
                 module="optimizer/optimizers/proximal.py",
                 tags=("composite", "proximal", "nonsmooth"),
+                root=True,
+                phase="Numerical capabilities",
             ),
         ),
     )
@@ -762,6 +831,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/guesses/simple.py",
                 phase="Phase 9",
                 tags=("deterministic", "simple"),
+                root=True,
             ),
             _make_item(
                 "ramp_guess",
@@ -780,6 +850,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/guesses/simple.py",
                 phase="Phase 9",
                 tags=("deterministic", "simple", "smooth"),
+                root=True,
             ),
             _make_item(
                 "sine_guess",
@@ -799,6 +870,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/guesses/harmonic.py",
                 phase="Phase 9",
                 tags=("deterministic", "harmonic", "smooth"),
+                root=True,
             ),
             _make_item(
                 "cosine_guess",
@@ -818,6 +890,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/guesses/harmonic.py",
                 phase="Phase 9",
                 tags=("deterministic", "harmonic", "smooth"),
+                root=True,
             ),
             _make_item(
                 "gaussian_guess",
@@ -838,6 +911,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/guesses/harmonic.py",
                 phase="Phase 9",
                 tags=("deterministic", "localized", "smooth"),
+                root=True,
             ),
             _make_item(
                 "sinc_guess",
@@ -857,6 +931,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/guesses/harmonic.py",
                 phase="Phase 9",
                 tags=("deterministic", "localized", "harmonic"),
+                root=True,
             ),
             _make_item(
                 "fourier_guess",
@@ -878,6 +953,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/guesses/harmonic.py",
                 phase="Phase 9",
                 tags=("deterministic", "fourier", "smooth", "low_frequency"),
+                root=True,
             ),
             _make_item(
                 "random_guess",
@@ -898,6 +974,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/guesses/random.py",
                 phase="Phase 9",
                 tags=("random", "baseline"),
+                root=True,
             ),
             _make_item(
                 "random_smooth_guess",
@@ -918,6 +995,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/guesses/random.py",
                 phase="Phase 9",
                 tags=("random", "smooth", "multi_start"),
+                root=True,
             ),
             _make_item(
                 "random_fourier_guess",
@@ -938,6 +1016,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/guesses/random.py",
                 phase="Phase 9",
                 tags=("random", "fourier", "smooth", "multi_start", "low_frequency"),
+                root=True,
             ),
             _make_item(
                 "scale_guess",
@@ -957,6 +1036,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/guesses/composite.py",
                 phase="Phase 9",
                 tags=("composite", "restart", "rescale"),
+                root=True,
             ),
             _make_item(
                 "mix_guess",
@@ -975,6 +1055,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/guesses/composite.py",
                 phase="Phase 9",
                 tags=("composite", "restart"),
+                root=True,
             ),
             _make_item(
                 "perturb_guess",
@@ -996,6 +1077,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/guesses/composite.py",
                 phase="Phase 9",
                 tags=("composite", "restart", "random"),
+                root=True,
             ),
         ),
     )
@@ -1033,6 +1115,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/utils/diagnostics.py",
                 phase="Phase 11",
                 tags=("diagnostic", "metrics"),
+                root=True,
             ),
             _make_item(
                 "diagnostic_report",
@@ -1053,6 +1136,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/utils/diagnostics.py",
                 phase="Phase 11",
                 tags=("diagnostic", "metrics", "residual", "gradient"),
+                root=True,
             ),
             _make_item(
                 "geometry_probe",
@@ -1073,6 +1157,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/utils/diagnostics.py",
                 phase="Phase 11",
                 tags=("residual", "jacobian", "geometry", "diagnostic"),
+                root=True,
             ),
             _make_item(
                 "finite_difference_gradient",
@@ -1095,6 +1180,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/utils/derivatives.py",
                 phase="Phase 11",
                 tags=("derivative", "finite_difference", "gradient"),
+                root=True,
             ),
             _make_item(
                 "verify_gradient",
@@ -1117,6 +1203,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/utils/derivatives.py",
                 phase="Phase 11",
                 tags=("derivative", "finite_difference", "gradient", "check"),
+                root=True,
             ),
             _make_item(
                 "finite_difference_jacobian",
@@ -1138,6 +1225,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/utils/derivatives.py",
                 phase="Phase 11",
                 tags=("derivative", "finite_difference", "jacobian", "residual"),
+                root=True,
             ),
             _make_item(
                 "verify_jacobian",
@@ -1158,6 +1246,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/utils/derivatives.py",
                 phase="Phase 11",
                 tags=("derivative", "finite_difference", "jacobian", "residual", "check"),
+                root=True,
             ),
             _make_item(
                 "nullspace_basis",
@@ -1177,6 +1266,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/utils/geometry.py",
                 phase="Phase 11",
                 tags=("residual", "jacobian", "geometry", "projection"),
+                root=True,
             ),
             _make_item(
                 "project_gradient",
@@ -1198,6 +1288,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/utils/geometry.py",
                 phase="Phase 11",
                 tags=("residual", "jacobian", "geometry", "projection"),
+                root=True,
             ),
             _make_item(
                 "repair_newton",
@@ -1223,6 +1314,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/utils/repairs.py",
                 phase="Phase 11",
                 tags=("residual", "repair", "jacobian"),
+                root=True,
             ),
             _make_item(
                 "control_spectrum",
@@ -1242,6 +1334,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/utils/spectrum.py",
                 phase="Phase 11",
                 tags=("spectrum", "diagnostic", "controls"),
+                root=True,
             ),
             _make_item(
                 "smoothness_report",
@@ -1257,6 +1350,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/utils/spectrum.py",
                 phase="Phase 11",
                 tags=("spectrum", "smoothness", "diagnostic", "controls"),
+                root=True,
             ),
             _make_item(
                 "RepairResult",
@@ -1272,11 +1366,12 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/utils/repairs.py",
                 phase="Phase 11",
                 tags=("result", "repair"),
+                root=True,
             ),
-            _make_item("diagnose_run", "utils", "diagnostic", "Classify a short OLGS or OLSS history as converging, slow, stalled, oscillating, diverging, or repeating rejections.", module="optimizer/utils/run_diagnostics.py", tags=("diagnostic", "short_run", "history")),
-            _make_item("curvature_probe", "utils", "diagnostic", "Probe local curvature, negative-curvature evidence, and a suggested gradient step.", module="optimizer/utils/run_diagnostics.py", tags=("diagnostic", "curvature", "hvp")),
-            _make_item("compare_methods", "utils", "diagnostic", "Compare several optimizers for a short in-memory budget from identical controls.", module="optimizer/utils/run_diagnostics.py", tags=("diagnostic", "comparison", "short_run")),
-            _make_item("shooting_geometry_probe", "utils", "diagnostic", "Report OLSS Jacobian rank, condition, weak variable blocks, and residual groups.", module="optimizer/utils/run_diagnostics.py", tags=("diagnostic", "shooting", "jacobian")),
+            _make_item("diagnose_run", "utils", "diagnostic", "Classify a short OLGS or OLSS history as converging, slow, stalled, oscillating, diverging, or repeating rejections.", module="optimizer/utils/run_diagnostics.py", tags=("diagnostic", "short_run", "history"), root=True, family=("olgs", "olss")),
+            _make_item("curvature_probe", "utils", "diagnostic", "Probe local curvature, negative-curvature evidence, and a suggested gradient step.", module="optimizer/utils/run_diagnostics.py", tags=("diagnostic", "curvature", "hvp"), root=True),
+            _make_item("compare_methods", "utils", "diagnostic", "Compare several optimizers for a short in-memory budget from identical controls.", module="optimizer/utils/run_diagnostics.py", tags=("diagnostic", "comparison", "short_run"), root=True),
+            _make_item("shooting_geometry_probe", "utils", "diagnostic", "Report OLSS Jacobian rank, condition, weak variable blocks, and residual groups.", module="optimizer/utils/run_diagnostics.py", tags=("diagnostic", "shooting", "jacobian"), root=True, family=("olss",)),
         ),
     )
 
@@ -1305,6 +1400,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 example="schedule = opt.schedules.ConstantSchedule(0.25)",
                 module="optimizer/schedules/step_size.py",
                 tags=("schedule", "step_size"),
+                root=True,
             ),
             _make_item(
                 "AdaptiveStepSchedule",
@@ -1323,10 +1419,11 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 example="schedule = opt.schedules.AdaptiveStepSchedule(initial_step=1.0, shrink=0.5, grow=1.2)",
                 module="optimizer/schedules/step_size.py",
                 tags=("schedule", "step_size", "adaptive"),
+                root=True,
             ),
-            _make_item("ExponentialDecaySchedule", "schedules", "schedule", "Exponential accepted-iteration step decay with a floor.", module="optimizer/schedules/step_size.py", tags=("schedule", "decay")),
-            _make_item("LinearWarmupSchedule", "schedules", "schedule", "Linear warmup from an initial to a target step.", module="optimizer/schedules/step_size.py", tags=("schedule", "warmup")),
-            _make_item("CosineDecaySchedule", "schedules", "schedule", "Cosine step decay over a fixed iteration horizon.", module="optimizer/schedules/step_size.py", tags=("schedule", "cosine", "decay")),
+            _make_item("ExponentialDecaySchedule", "schedules", "schedule", "Exponential accepted-iteration step decay with a floor.", module="optimizer/schedules/step_size.py", tags=("schedule", "decay"), root=True),
+            _make_item("LinearWarmupSchedule", "schedules", "schedule", "Linear warmup from an initial to a target step.", module="optimizer/schedules/step_size.py", tags=("schedule", "warmup"), root=True),
+            _make_item("CosineDecaySchedule", "schedules", "schedule", "Cosine step decay over a fixed iteration horizon.", module="optimizer/schedules/step_size.py", tags=("schedule", "cosine", "decay"), root=True),
         ),
     )
 
@@ -1387,6 +1484,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/core/evaluate.py",
                 phase="Phase 5",
                 tags=("evaluation", "metrics"),
+                family=("olgs", "olss"),
             ),
             _make_item(
                 "gradient",
@@ -1415,6 +1513,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 example="evaluation, gradient = opt.value_and_gradient(system, controls)",
                 module="optimizer/core/evaluate.py",
                 tags=("evaluation", "gradient", "capability"),
+                phase="Numerical capabilities",
             ),
             _make_item(
                 "OptimizerResult",
@@ -1453,6 +1552,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 related=("base.SystemResponse", "base.transact"),
                 module="optimizer/transactions.py",
                 tags=("transaction", "cli", "mcp", "system"),
+                family=("olgs", "olss"),
             ),
             _make_item(
                 "SystemResponse",
@@ -1463,6 +1563,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 related=("base.SystemRequest", "base.transact"),
                 module="optimizer/transactions.py",
                 tags=("transaction", "cli", "mcp", "system"),
+                family=("olgs", "olss"),
             ),
             _make_item(
                 "SystemTransactionAdapter",
@@ -1474,6 +1575,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 related=("base.SystemRequest", "base.transact"),
                 module="optimizer/transactions.py",
                 tags=("transaction", "adapter", "system"),
+                family=("olgs", "olss"),
             ),
             _make_item(
                 "transact",
@@ -1486,6 +1588,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 example="response = opt.transact(system, opt.SystemRequest('evaluate', {'controls': controls}))",
                 module="optimizer/transactions.py",
                 tags=("transaction", "cli", "mcp", "system"),
+                family=("olgs", "olss"),
             ),
             _make_item(
                 "Trace",
@@ -1529,6 +1632,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/library.py",
                 phase="Phase 13",
                 tags=("system", "api", "introspection"),
+                family=("olgs", "olss"),
             ),
             _make_item(
                 "plot_data",
@@ -1563,6 +1667,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/introspection.py",
                 phase="Phase 13",
                 tags=("api", "introspection", "tracker"),
+                family=("olgs", "olss"),
             ),
             _make_item(
                 "continuation",
@@ -1582,7 +1687,38 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 example="result = opt.continuation(system, controls, stages=[opt.ContinuationStage(...)])",
                 module="optimizer/continuation.py",
                 tags=("continuation", "curriculum", "coordinator"),
+                phase="Numerical capabilities",
             ),
+            _make_item("to_plain", "base", "helper", "Convert a library value to plain, strict-JSON data under the one serialization policy; non-finite floats become \"nan\", \"inf\", or \"-inf\".", returns={"type": "JSON data"}, related=("base.transact",), example="payload = opt.to_plain(result)", module="optimizer/serialization.py", family=("olgs", "olss"), tags=("serialization", "json")),
+            _make_item("system_family", "base", "helper", "Return \"olgs\" or \"olss\" from a system's static system_spec(); a missing family means OLGS.", returns={"type": "str"}, requires=("system.system_spec",), example="family = opt.system_family(system)", module="optimizer/families.py", family=("olgs", "olss"), tags=("system", "family", "introspection")),
+            _make_item("control_spec", "base", "helper", "Build a ControlSpec from channel keys and a control dimension.", returns={"type": "ControlSpec"}, example="spec = opt.control_spec(('ux', 'uy'), 33)", module="optimizer/library.py", tags=("controls", "data")),
+            _make_item("controls", "base", "helper", "Build Controls from a matrix-like payload for a ControlSpec.", returns={"type": "Controls"}, module="optimizer/library.py", tags=("controls", "data")),
+            _make_item("zeros", "base", "helper", "Build zero Controls for a ControlSpec.", returns={"type": "Controls"}, module="optimizer/library.py", tags=("controls", "data")),
+            _make_item("constant", "base", "helper", "Build constant Controls for a ControlSpec.", returns={"type": "Controls"}, module="optimizer/library.py", tags=("controls", "data")),
+            _make_item("Evaluation", "base", "result_object", "Snapshot of one system evaluation: controls, metrics, and J.", module="optimizer/result.py", tags=("evaluation", "result")),
+            _make_item("RunState", "base", "data_object", "Mutable state of one active optimization run: controls, metrics, step size, and optimizer memory.", module="optimizer/state.py", tags=("state", "warmstart")),
+            _make_item("warmstart", "base", "helper", "Create a safe WarmStartState from a result or active run state, optionally for a target optimizer.", returns={"type": "WarmStartState"}, module="optimizer/state.py", phase="Phase 3", tags=("warmstart", "state")),
+            _make_item("trace", "base", "helper", "Create an in-memory Trace ledger with the given or a random run id.", returns={"type": "Trace"}, module="optimizer/logs/trace.py", phase="Phase 4", tags=("trace", "logs")),
+            _make_item("Checkpoint", "base", "data_object", "Restorable snapshot of controls plus optional run state in a Trace.", module="optimizer/logs/checkpoint.py", tags=("trace", "checkpoint")),
+            _make_item("ChunkRecord", "base", "data_object", "In-memory Trace record for one optimizer chunk.", module="optimizer/logs/records.py", tags=("trace", "logs")),
+            _make_item("IterationRecord", "base", "data_object", "In-memory Trace record for one optimizer iteration.", module="optimizer/logs/records.py", tags=("trace", "logs")),
+            _make_item("EventRecord", "base", "data_object", "In-memory Trace event for actions outside iterations, such as rollback.", module="optimizer/logs/records.py", tags=("trace", "logs")),
+            _make_item("parallel_map", "base", "helper", "Map a function over items with local parallel execution configured by ParallelConfig.", returns={"type": "list"}, module="optimizer/utils/parallel.py", phase="Phase 5", family=("olgs", "olss"), tags=("parallel",)),
+            _make_item("ParallelConfig", "base", "data_object", "Configuration for local map-style parallel execution.", module="optimizer/utils/parallel.py", family=("olgs", "olss"), tags=("parallel", "config")),
+            _make_item("OptimizerContext", "base", "data_object", "Bound-system facade returned by context() for notebook and curriculum workflows.", module="optimizer/library.py", tags=("context", "notebook")),
+            _make_item("OptimizerLibrary", "base", "facade", "Facade class behind the root shortcuts; library is its default instance.", module="optimizer/library.py", family=("olgs", "olss"), tags=("facade",)),
+            _make_item("library", "base", "object", "Default OptimizerLibrary instance that serves the root shortcuts.", module="optimizer/library.py", family=("olgs", "olss"), tags=("facade",)),
+            _make_item("methods", "base", "helper", "Return the status record of every public root function, built from the catalog declarations.", returns={"type": "dict[str, MethodInfo]"}, module="optimizer/library.py", family=("olgs", "olss"), tags=("api", "introspection")),
+            _make_item("MethodInfo", "base", "data_object", "Status record for one public root function: name, status, source module, and phase.", module="optimizer/library.py", family=("olgs", "olss"), tags=("api", "introspection")),
+            _make_item("ContinuationStage", "base", "data_object", "One declared system transition and bounded optimizer segment of an OLGS continuation plan.", module="optimizer/continuation.py", tags=("continuation", "curriculum")),
+            _make_item("StageGate", "base", "data_object", "Explicit evidence required before an OLGS continuation advances to the next stage.", module="optimizer/continuation.py", tags=("continuation", "gate")),
+            _make_item("StageResult", "base", "result_object", "One completed continuation stage: its system, optimizer result, gate verdict, and control transfer.", module="optimizer/continuation.py", tags=("continuation", "result")),
+            _make_item("ContinuationResult", "base", "result_object", "Result chain of an OLGS continuation plan: stages, final result, final system, and stop reason.", module="optimizer/continuation.py", tags=("continuation", "result")),
+            _make_item("constant_schedule", "base", "helper", "Create a ConstantSchedule.", returns={"type": "ConstantSchedule"}, module="optimizer/library.py", tags=("schedule", "step_size")),
+            _make_item("adaptive_step_schedule", "base", "helper", "Create an AdaptiveStepSchedule from keyword arguments.", returns={"type": "AdaptiveStepSchedule"}, module="optimizer/library.py", tags=("schedule", "step_size", "adaptive")),
+            _make_item("exponential_decay_schedule", "base", "helper", "Create an ExponentialDecaySchedule from keyword arguments.", returns={"type": "ExponentialDecaySchedule"}, module="optimizer/library.py", tags=("schedule", "decay")),
+            _make_item("linear_warmup_schedule", "base", "helper", "Create a LinearWarmupSchedule from keyword arguments.", returns={"type": "LinearWarmupSchedule"}, module="optimizer/library.py", tags=("schedule", "warmup")),
+            _make_item("cosine_decay_schedule", "base", "helper", "Create a CosineDecaySchedule from keyword arguments.", returns={"type": "CosineDecaySchedule"}, module="optimizer/library.py", tags=("schedule", "cosine", "decay")),
         ),
     )
 
@@ -1628,6 +1764,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/core/engine.py",
                 phase="Phase 5",
                 tags=("engine", "advanced"),
+                root=True,
             ),
             _make_item(
                 "StepContext",
@@ -1645,6 +1782,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/core/engine.py",
                 phase="Phase 5",
                 tags=("engine", "contract"),
+                root=True,
             ),
             _make_item(
                 "StepProposal",
@@ -1666,6 +1804,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/core/engine.py",
                 phase="Phase 5",
                 tags=("engine", "contract"),
+                root=True,
             ),
             _make_item(
                 "AcceptanceDecision",
@@ -1683,6 +1822,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/core/engine.py",
                 phase="Phase 5",
                 tags=("engine", "acceptance"),
+                root=True,
             ),
             _make_item(
                 "SystemEvaluator",
@@ -1705,6 +1845,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/core/evaluate.py",
                 phase="Phase 5",
                 tags=("evaluation", "cache"),
+                root=True,
             ),
             _make_item(
                 "StoppingConfig",
@@ -1724,6 +1865,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/core/stopping.py",
                 phase="Phase 5",
                 tags=("stopping", "budget"),
+                root=True,
             ),
             _make_item(
                 "metric_guard",
@@ -1744,7 +1886,25 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/core/guards.py",
                 phase="Phase 11",
                 tags=("guard", "acceptance", "metrics"),
+                root=True,
             ),
+            _make_item("StopReason", "core", "data_object", "Meaning, outcome class, families, and continuability of one stop reason; StopReason.lookup(reason) also resolves labelled reasons such as stage_gate_failed:<label>.", related=("core.STOP_REASONS", "utils.diagnose_run"), module="optimizer/core/stop_reasons.py", family=("olgs", "olss"), tags=("stopping", "registry")),
+            _make_item("STOP_REASONS", "core", "registry", "Read-only registry of every stop reason the library assigns, keyed by name.", returns={"type": "Mapping[str, StopReason]"}, related=("core.StopReason",), example="opt.core.STOP_REASONS['maxiter'].outcome", module="optimizer/core/stop_reasons.py", family=("olgs", "olss"), tags=("stopping", "registry")),
+            _make_item("StopDecision", "core", "data_object", "Decision returned by stopping checks: whether to stop and the stop reason.", module="optimizer/core/stopping.py", tags=("stopping",)),
+            _make_item("StopTracker", "core", "helper", "Stateful stopping helper for one optimizer chunk.", module="optimizer/core/stopping.py", tags=("stopping",)),
+            _make_item("MetricGuard", "core", "guard", "Callable multi-metric accept rule built by metric_guard().", related=("core.metric_guard",), module="optimizer/core/guards.py", tags=("guard", "acceptance", "metrics"), root=True),
+            _make_item("default_accept", "core", "guard", "Default acceptance: accept trial controls when the selected metric does not get worse.", module="optimizer/core/engine.py", tags=("guard", "acceptance")),
+            _make_item("EvaluationOutcome", "core", "data_object", "Structured result of an evaluation attempt that may fail; returned by SystemEvaluator.try_evaluate.", module="optimizer/core/evaluate.py", tags=("evaluation", "outcome")),
+            _make_item("GradientOutcome", "core", "data_object", "Structured result of a gradient attempt that may fail; returned by SystemEvaluator.try_gradient.", module="optimizer/core/evaluate.py", tags=("gradient", "outcome")),
+            _make_item("ValueGradientOutcome", "core", "data_object", "Structured result of a combined value and gradient attempt that may fail.", module="optimizer/core/evaluate.py", tags=("evaluation", "gradient", "outcome")),
+            _make_item("RunObserver", "core", "protocol", "Passive sink for the engine lifecycle events.", module="optimizer/core/observer.py", tags=("observer", "events")),
+            _make_item("ObserverAdapter", "core", "base_class", "No-op observer base class; override only the event methods you need.", module="optimizer/core/observer.py", tags=("observer", "events")),
+            _make_item("SnapshotFacts", "core", "data_object", "Compact facts known at one point of the engine lifecycle.", module="optimizer/core/observer.py", tags=("observer", "events")),
+            _make_item("RunStartEvent", "core", "data_object", "The first validated state of one engine chunk, passed to observers.", module="optimizer/core/observer.py", tags=("observer", "events")),
+            _make_item("IterationEvent", "core", "data_object", "One attempted outer iteration, including a rejected or failed trial, passed to observers.", module="optimizer/core/observer.py", tags=("observer", "events")),
+            _make_item("CheckpointEvent", "core", "data_object", "Engine-selected reproducibility point carrying already-owned state, passed to observers.", module="optimizer/core/observer.py", tags=("observer", "events", "checkpoint")),
+            _make_item("ChunkEvent", "core", "data_object", "A completed engine chunk, passed to observers and the in-memory compatibility trace.", module="optimizer/core/observer.py", tags=("observer", "events")),
+            _make_item("TerminalEvent", "core", "data_object", "The final fact produced by one engine chunk, passed to observers.", module="optimizer/core/observer.py", tags=("observer", "events")),
         ),
     )
 
@@ -1765,6 +1925,10 @@ def _build_groups() -> dict[str, CatalogGroup]:
             _make_item("MethodSpec", "campaigns", "data_object", "Declared optimizer name and bounded options for one campaign stage.", module="optimizer/campaigns/__init__.py", tags=("campaign", "method")),
             _make_item("SelectionSpec", "campaigns", "data_object", "System-owned metric and direction used for ranking; never inferred from J.", module="optimizer/campaigns/__init__.py", tags=("campaign", "objective", "system_spec")),
             _make_item("SystemReference", "campaigns", "data_object", "Digest of the normalized system-owned semantic specification for one stage.", module="optimizer/campaigns/__init__.py", tags=("campaign", "provenance", "system_spec")),
+            _make_item("CandidateRef", "campaigns", "data_object", "One selected stage result tied to an exact system and checkpoint.", module="optimizer/campaigns/__init__.py", tags=("campaign", "provenance")),
+            _make_item("ModeResult", "campaigns", "result_object", "Candidates produced by a campaign mode, sorted by the system-owned objective.", module="optimizer/campaigns/__init__.py", tags=("campaign", "result")),
+            _make_item("ValidationResult", "campaigns", "result_object", "Explicit validation of a candidate against the system that produced it.", module="optimizer/campaigns/__init__.py", tags=("campaign", "validation")),
+            _make_item("random_smooth_guesses", "campaigns", "generator", "Generate count random smooth guesses with consecutive seeds.", returns={"type": "tuple[Controls, ...]"}, related=("guesses.random_smooth_guess",), module="optimizer/campaigns/__init__.py", tags=("campaign", "guess", "random")),
         ),
     )
 
@@ -1780,6 +1944,30 @@ def _build_groups() -> dict[str, CatalogGroup]:
             _make_item("CheckpointPolicy", "tracker", "policy", "Bound durable control artifacts while retaining every scalar iteration record.", module="optimizer/tracker/bridge.py", tags=("tracker", "checkpoint", "retention")),
             _make_item("read_timeline", "tracker", "reader", "Validate and read append-only tracker events without optimizer imports.", module="optimizer/tracker/reader.py", tags=("tracker", "reader", "read_only")),
             _make_item("load_checkpoint", "tracker", "reader", "Load a SHA-256 verified control artifact without a system object.", module="optimizer/tracker/artifacts.py", tags=("tracker", "checkpoint", "replay")),
+            _make_item("RunReceipt", "tracker", "data_object", "Small immutable receipt for one run, without redefining its problem.", module="optimizer/tracker/model.py", tags=("tracker", "receipt")),
+            _make_item("MetricDescriptor", "tracker", "data_object", "Declared meaning of one scalar metric saved by the tracker.", module="optimizer/tracker/model.py", tags=("tracker", "metrics")),
+            _make_item("SourceReference", "tracker", "data_object", "Small pointer to an authority owned outside the tracker.", module="optimizer/tracker/model.py", tags=("tracker", "provenance")),
+            _make_item("ScalarSnapshot", "tracker", "data_object", "Compact state view at one causal point in a run.", module="optimizer/tracker/model.py", tags=("tracker", "snapshot")),
+            _make_item("IterationRecord", "tracker", "data_object", "Raw before, proposal, trial, and after record for one outer iteration.", module="optimizer/tracker/model.py", tags=("tracker", "journal")),
+            _make_item("ChunkRecord", "tracker", "data_object", "One completed optimizer chunk with its resolved method and system facts.", module="optimizer/tracker/model.py", tags=("tracker", "journal")),
+            _make_item("InterventionRecord", "tracker", "data_object", "An action between normal iterations, linked to its numerical evidence.", module="optimizer/tracker/model.py", tags=("tracker", "journal")),
+            _make_item("AnalysisRecord", "tracker", "data_object", "A derived, explicitly scheduled analysis of a raw iteration window.", module="optimizer/tracker/model.py", tags=("tracker", "analysis")),
+            _make_item("LiveSnapshot", "tracker", "data_object", "Replaceable progress view for a local observer; not the scientific source.", module="optimizer/tracker/model.py", tags=("tracker", "live")),
+            _make_item("TerminalRecord", "tracker", "data_object", "The selected terminal result and any explicitly requested certificate.", module="optimizer/tracker/model.py", tags=("tracker", "terminal")),
+            _make_item("CheckpointReference", "tracker", "data_object", "Small JSON-safe pointer to a separately stored control artifact.", module="optimizer/tracker/artifacts.py", tags=("tracker", "checkpoint")),
+            _make_item("CheckpointData", "tracker", "data_object", "Loaded controls plus caller-supplied JSON metadata.", module="optimizer/tracker/artifacts.py", tags=("tracker", "checkpoint")),
+            _make_item("TimelineReadResult", "tracker", "data_object", "Complete timeline records and, if present, one ignored damaged tail line.", module="optimizer_log/reader.py", tags=("tracker", "reader")),
+            _make_item("follow_timeline", "tracker", "reader", "Read complete appended events and distinguish partial tails from corruption.", module="optimizer_log/reader.py", tags=("tracker", "reader", "live")),
+            _make_item("read_receipt", "tracker", "reader", "Read the stored run receipt exactly as written.", module="optimizer_log/reader.py", tags=("tracker", "reader")),
+            _make_item("read_live", "tracker", "reader", "Read the current replaceable observer snapshot, if the run has started.", module="optimizer_log/reader.py", tags=("tracker", "reader", "live")),
+            _make_item("read_terminal", "tracker", "reader", "Read the direct terminal-result index, if the run has ended.", module="optimizer_log/reader.py", tags=("tracker", "reader")),
+            _make_item("read_writer", "tracker", "reader", "Read explicit writer ownership and heartbeat state, if present.", module="optimizer_log/reader.py", tags=("tracker", "reader", "liveness")),
+            _make_item("inspect_writer", "tracker", "reader", "Report local writer liveness without taking ownership or modifying files.", module="optimizer_log/reader.py", tags=("tracker", "reader", "liveness")),
+            _make_item("metric_coverage", "tracker", "reader", "Compare declared metrics with observed and explicitly omitted metrics.", module="optimizer_log/reader.py", tags=("tracker", "reader", "metrics")),
+            _make_item("project_timeline", "tracker", "reader", "Create a generic read-only projection for API or interface consumers.", module="optimizer_log/reader.py", tags=("tracker", "reader")),
+            _make_item("validate_event", "tracker", "validator", "Validate one causal event envelope without importing optimizer code.", module="optimizer_log/reader.py", tags=("tracker", "validation")),
+            _make_item("validate_receipt", "tracker", "validator", "Validate the generic receipt fields required by read-only consumers.", module="optimizer_log/reader.py", tags=("tracker", "validation")),
+            _make_item("validate_timeline", "tracker", "validator", "Validate the one-start, one-terminal lifecycle of a complete prefix.", module="optimizer_log/reader.py", tags=("tracker", "validation")),
         ),
     )
 
@@ -1790,7 +1978,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
         common_returns={"type": "matplotlib figure/axes or saved image path"},
         workflow=("Request system-owned plot data explicitly.", "Validate/coerce the data.", "Render or save without rerunning the system."),
         items=(
-            _make_item("PlotData", "visualization", "data_object", "Named layers and metadata for one explicit visualization product.", module="optimizer/visualization/models.py", tags=("visualization", "data")),
+            _make_item("PlotData", "visualization", "data_object", "Named layers and metadata for one explicit visualization product.", module="optimizer/visualization/models.py", tags=("visualization", "data"), root=True),
             _make_item("plot_bloch", "visualization", "renderer", "Render validated Bloch layers without calling the system.", module="optimizer/visualization/bloch.py", tags=("visualization", "bloch", "renderer")),
             _make_item("draw_timeseries", "visualization", "renderer", "Draw named per-component channels vs a scalar parameter onto an existing 2D axis; shared by plot_bloch's projections subplot and the standalone panel functions.", module="optimizer/visualization/bloch.py", tags=("visualization", "timeseries", "renderer")),
             _make_item("draw_sphere", "visualization", "renderer", "Draw a light unit-sphere scaffold on an existing 3D axis.", module="optimizer/visualization/bloch.py", tags=("visualization", "bloch", "renderer")),
@@ -1802,6 +1990,8 @@ def _build_groups() -> dict[str, CatalogGroup]:
             _make_item("validate_controls_data", "visualization", "validator", "Validate generic plot data for a control-amplitude-vs-parameter panel (no Bloch-ball check).", module="optimizer/visualization/panels.py", tags=("visualization", "controls", "validation")),
             _make_item("save_figure", "visualization", "helper", "Save a renderer-produced figure to an explicit path.", module="optimizer/visualization/bloch.py", tags=("visualization", "export")),
             _make_item("save_panel", "visualization", "helper", "Save one panel figure as .pdf and .png from a shared path stem at one dpi.", module="optimizer/visualization/panels.py", tags=("visualization", "export", "panel")),
+            _make_item("PlotLayer", "visualization", "data_object", "One named data layer with generic coordinates and presentation hints.", module="optimizer/visualization/models.py", tags=("visualization", "data"), root=True),
+            _make_item("coerce_plot_data", "visualization", "helper", "Normalize a PlotData instance or an equivalent mapping into PlotData.", module="optimizer/visualization/models.py", tags=("visualization", "data")),
         ),
     )
 
@@ -1812,10 +2002,60 @@ def _build_groups() -> dict[str, CatalogGroup]:
         common_returns={"type": "validated system specification, controls, or capability result"},
         workflow=("Declare system_spec and control_spec.", "Expose evaluate/gradient/with_secondary.", "Add optional capabilities only when the system owns their meaning."),
         items=(
-            _make_item("get_system_spec", "system_olgs", "helper", "Return and validate the required static system semantic declaration.", module="optimizer/system_olgs/contract.py", tags=("system", "system_spec", "static")),
-            _make_item("require_system", "system_olgs", "validator", "Validate the required OLGS contract before an optimizer starts.", module="optimizer/system_olgs/contract.py", tags=("system", "contract")),
-            _make_item("with_secondary", "system_olgs", "helper", "Request a system-owned parameter-updated copy for explicit continuation.", module="optimizer/system_olgs/contract.py", tags=("system", "continuation")),
-            _make_item("optional_control_bounds", "system_olgs", "capability", "Read optional system-declared elementwise bounds.", module="optimizer/system_olgs/validation.py", tags=("system", "bounds", "capability")),
+            _make_item("get_system_spec", "system_olgs", "helper", "Return and validate the required static system semantic declaration.", module="optimizer/system_olgs/contract.py", tags=("system", "system_spec", "static"), root=True),
+            _make_item("require_system", "system_olgs", "validator", "Validate the required OLGS contract before an optimizer starts.", module="optimizer/system_olgs/contract.py", tags=("system", "contract"), root=True),
+            _make_item("with_secondary", "system_olgs", "helper", "Request a system-owned parameter-updated copy for explicit continuation.", module="optimizer/system_olgs/contract.py", tags=("system", "continuation"), root=True),
+            _make_item("optional_control_bounds", "system_olgs", "capability", "Read optional system-declared elementwise bounds.", module="optimizer/system_olgs/validation.py", tags=("system", "bounds", "capability"), root=True),
+            _make_item("OLGS", "system_olgs", "base_class", "Base class for a self-contained Open Loop Gradient System.", module="optimizer/system_olgs/olgs.py", tags=("system", "contract"), root=True),
+            _make_item("OLGSystem", "system_olgs", "protocol", "Protocol for the required OLGS public surface.", aliases=("OptimizerSystem",), module="optimizer/system_olgs/contract.py", tags=("system", "contract", "protocol"), root=True),
+            _make_item("SYSTEM_SPEC_SCHEMA", "system_olgs", "constant", "Schema identifier of the OLGS system_spec() declaration.", module="optimizer/system_olgs/specs.py", tags=("system_spec", "schema"), root=True),
+            _make_item("basic_system_spec", "system_olgs", "helper", "Build the minimum complete specification for a new OLGS system.", module="optimizer/system_olgs/specs.py", tags=("system_spec",), root=True),
+            _make_item("metric_spec", "system_olgs", "helper", "Build one normalized OLGS metric declaration for system_spec().", module="optimizer/system_olgs/specs.py", tags=("system_spec", "metric"), root=True),
+            _make_item("validate_system_spec", "system_olgs", "validator", "Validate and normalize a static OLGS system_spec() mapping.", module="optimizer/system_olgs/specs.py", tags=("system_spec", "validation"), root=True),
+            _make_item("validate_declared_metrics", "system_olgs", "validator", "Validate metric names and declared shapes without changing system values.", module="optimizer/system_olgs/specs.py", tags=("system_spec", "metric", "validation")),
+            _make_item("TRACKING_SPEC_SCHEMA", "system_olgs", "constant", "Schema identifier of the optional tracking specification.", module="optimizer/system_olgs/contract.py", tags=("tracking", "schema"), root=True),
+            _make_item("TrackingSpec", "system_olgs", "type_alias", "Type of the optional static tracking specification mapping.", module="optimizer/system_olgs/contract.py", tags=("tracking", "type"), root=True),
+            _make_item("Metrics", "system_olgs", "type_alias", "Type of an OLGS metrics mapping from metric name to value.", module="optimizer/system_olgs/contract.py", tags=("metrics", "type")),
+            _make_item("get_tracking_spec", "system_olgs", "helper", "Return optional static tracking metadata declared by a system.", module="optimizer/system_olgs/contract.py", tags=("tracking", "static"), root=True),
+            _make_item("contract_info", "system_olgs", "helper", "Return the generic OLGS contract without inspecting a concrete system.", module="optimizer/system_olgs/contract.py", tags=("contract", "introspection"), root=True),
+            _make_item("describe_system", "system_olgs", "helper", "Describe declared OLGS system capabilities without evaluating controls.", module="optimizer/system_olgs/contract.py", tags=("system", "introspection"), root=True),
+            _make_item("SystemProbe", "system_olgs", "data_object", "Presence of required, recommended, and optional OLGS hooks.", module="optimizer/system_olgs/contract.py", tags=("system", "introspection"), root=True),
+            _make_item("probe_system", "system_olgs", "helper", "Inspect OLGS hook presence without calling expensive methods.", module="optimizer/system_olgs/contract.py", tags=("system", "introspection"), root=True),
+            _make_item("get_secondary_update_hook", "system_olgs", "helper", "Return the system hook that applies secondary-parameter updates.", module="optimizer/system_olgs/contract.py", tags=("system", "continuation")),
+            _make_item("ControlBounds", "system_olgs", "data_object", "Elementwise lower and upper control limits in the system control layout.", module="optimizer/system_olgs/contract.py", tags=("bounds",), root=True),
+            _make_item("ValueGradient", "system_olgs", "data_object", "Validated system-owned objective metrics and analytical gradient pair.", module="optimizer/system_olgs/contract.py", tags=("gradient", "capability"), root=True),
+            _make_item("SupportsValueAndGradient", "system_olgs", "protocol", "Optional capability for sharing work between value and gradient calls.", module="optimizer/system_olgs/contract.py", tags=("capability", "protocol"), root=True),
+            _make_item("SupportsBounds", "system_olgs", "protocol", "Optional elementwise control-bound capability.", module="optimizer/system_olgs/contract.py", tags=("capability", "protocol", "bounds"), root=True),
+            _make_item("SupportsEqualityConstraints", "system_olgs", "protocol", "Optional hard equality-constraint capability: residuals and their Jacobian.", module="optimizer/system_olgs/contract.py", tags=("capability", "protocol", "constraints"), root=True),
+            _make_item("SupportsHVP", "system_olgs", "protocol", "Optional Hessian-vector product capability for second-order methods.", module="optimizer/system_olgs/contract.py", tags=("capability", "protocol", "hvp"), root=True),
+            _make_item("SupportsProximalObjective", "system_olgs", "protocol", "Optional composite-objective capability for proximal methods.", module="optimizer/system_olgs/contract.py", tags=("capability", "protocol", "proximal"), root=True),
+            _make_item("SupportsControlTransfer", "system_olgs", "protocol", "Optional system-owned feasibility-preserving control transfer.", module="optimizer/system_olgs/contract.py", tags=("capability", "protocol", "continuation"), root=True),
+            _make_item("SupportsPlotData", "system_olgs", "protocol", "Optional explicit data-product capability for visualization tools.", module="optimizer/system_olgs/contract.py", tags=("capability", "protocol", "visualization"), root=True),
+            _make_item("validate_control_spec", "system_olgs", "validator", "Call and validate system.control_spec().", module="optimizer/system_olgs/validation.py", tags=("controls", "validation")),
+            _make_item("validate_controls_for_system", "system_olgs", "validator", "Validate that controls match the system control specification.", module="optimizer/system_olgs/validation.py", tags=("controls", "validation"), root=True),
+            _make_item("validate_metrics", "system_olgs", "validator", "Validate and normalize an evaluation metrics mapping.", module="optimizer/system_olgs/validation.py", tags=("metrics", "validation"), root=True),
+            _make_item("evaluate_system", "system_olgs", "helper", "Validate controls, evaluate the system, and normalize its metrics.", module="optimizer/system_olgs/validation.py", tags=("evaluation", "validation"), root=True),
+            _make_item("gradient_system", "system_olgs", "helper", "Validate controls and return a gradient matching the system layout.", module="optimizer/system_olgs/validation.py", tags=("gradient", "validation"), root=True),
+            _make_item("value_and_gradient_system", "system_olgs", "capability", "Call and validate the optional combined objective and gradient hook.", module="optimizer/system_olgs/validation.py", tags=("gradient", "capability"), root=True),
+            _make_item("optional_residuals", "system_olgs", "capability", "Call the optional residual hook and validate a finite 1D vector.", module="optimizer/system_olgs/validation.py", tags=("residual", "capability"), root=True),
+            _make_item("optional_jacobian", "system_olgs", "capability", "Call the optional Jacobian hook and validate a finite 2D matrix.", module="optimizer/system_olgs/validation.py", tags=("jacobian", "capability"), root=True),
+            _make_item("optional_hvp", "system_olgs", "capability", "Call the optional Hessian-vector product hook and validate the Controls output.", module="optimizer/system_olgs/validation.py", tags=("hvp", "capability"), root=True),
+            _make_item("optional_hessian", "system_olgs", "capability", "Call the optional dense Hessian hook and validate its shape.", module="optimizer/system_olgs/validation.py", tags=("hessian", "capability"), root=True),
+            _make_item("optional_smooth_gradient", "system_olgs", "capability", "Call and validate the smooth-part gradient of a composite objective.", module="optimizer/system_olgs/validation.py", tags=("proximal", "capability"), root=True),
+            _make_item("optional_prox", "system_olgs", "capability", "Call and validate the optional proximal operator.", module="optimizer/system_olgs/validation.py", tags=("proximal", "capability"), root=True),
+            _make_item("optional_control_transfer", "system_olgs", "capability", "Call one explicit system-owned feasibility-preserving transfer hook.", module="optimizer/system_olgs/validation.py", tags=("continuation", "capability"), root=True),
+            _make_item("optional_plot_data", "system_olgs", "capability", "Call and validate an explicit system-owned visualization data product.", module="optimizer/system_olgs/validation.py", tags=("visualization", "capability"), root=True),
+            _make_item("finite_difference_jacobian", "system_olgs", "derivative", "Finite-difference Jacobian of system.residuals; the utils version adds named residual sets.", related=("utils.finite_difference_jacobian",), module="optimizer/system_olgs/derivatives.py", tags=("derivative", "finite_difference", "jacobian")),
+            _make_item("finite_difference_hessian", "system_olgs", "derivative", "Dense finite-difference Hessian of a scalar metric.", module="optimizer/system_olgs/derivatives.py", tags=("derivative", "finite_difference", "hessian"), root=True),
+            _make_item("finite_difference_hvp", "system_olgs", "derivative", "Finite-difference Hessian-vector product from gradient calls.", module="optimizer/system_olgs/derivatives.py", tags=("derivative", "finite_difference", "hvp"), root=True),
+            _make_item("get_jacobian", "system_olgs", "derivative", "Return (jacobian, source) from the analytical hook or finite differences.", module="optimizer/system_olgs/derivatives.py", tags=("derivative", "jacobian")),
+            _make_item("get_hvp", "system_olgs", "derivative", "Return (hvp, source) from the analytical hook or finite differences.", module="optimizer/system_olgs/derivatives.py", tags=("derivative", "hvp")),
+            _make_item("get_hessian", "system_olgs", "derivative", "Return (hessian, source) from the analytical hook or finite differences.", module="optimizer/system_olgs/derivatives.py", tags=("derivative", "hessian")),
+            _make_item("SystemEvaluation", "system_olgs", "data_object", "Optional structured evaluation output: controls, validated metrics, and system-owned data.", module="optimizer/system_olgs/results.py", tags=("result", "lifecycle")),
+            _make_item("ForwardResult", "system_olgs", "data_object", "Optional structured forward-propagation output: controls and system-owned data.", module="optimizer/system_olgs/results.py", tags=("result", "lifecycle")),
+            _make_item("BackwardResult", "system_olgs", "data_object", "Optional structured backward-propagation output: controls and system-owned data.", module="optimizer/system_olgs/results.py", tags=("result", "lifecycle")),
+            _make_item("GradientResult", "system_olgs", "data_object", "Optional structured gradient output: controls, gradient, optional metrics, and system-owned data.", module="optimizer/system_olgs/results.py", tags=("result", "lifecycle")),
+            _make_item("SimulationResult", "system_olgs", "data_object", "Optional structured simulation output: controls, metrics, trajectories, and system-owned data.", module="optimizer/system_olgs/results.py", tags=("result", "lifecycle")),
         ),
     )
 
@@ -1826,21 +2066,42 @@ def _build_groups() -> dict[str, CatalogGroup]:
         common_returns={"type": "validated OLSS declaration or shooting data object"},
         workflow=("Declare system_spec and shooting_spec.", "Implement residuals, jacobian, evaluate, verify, and with_secondary.", "Use optional capabilities only when the project owns their meaning."),
         items=(
-            _make_item("OLSS", "system_olss", "base_class", "Base class for a self-contained Open Loop Shooting System.", module="optimizer/system_olss/olss.py", tags=("shooting", "system", "contract")),
-            _make_item("ShootingBlock", "system_olss", "data_object", "One named, scaled block in a shooting vector.", module="optimizer/system_olss/variables.py", tags=("shooting", "variables")),
-            _make_item("ShootingSpec", "system_olss", "data_object", "Ordered layout of shooting-variable blocks.", module="optimizer/system_olss/variables.py", tags=("shooting", "variables")),
-            _make_item("ShootingVariables", "system_olss", "data_object", "Finite values attached to a ShootingSpec.", module="optimizer/system_olss/variables.py", tags=("shooting", "variables")),
-            _make_item("VerificationCheck", "system_olss", "data_object", "Named independent acceptance check included in OLSS qualification.", module="optimizer/system_olss/results.py", tags=("shooting", "verification")),
-            _make_item("basic_shooting_system_spec", "system_olss", "helper", "Build and validate the static OLSS declaration.", module="optimizer/system_olss/specs.py", tags=("shooting", "system_spec")),
-            _make_item("shooting_metric_spec", "system_olss", "helper", "Build one OLSS metric declaration for system_spec().", module="optimizer/system_olss/specs.py", tags=("shooting", "system_spec", "metric")),
-            _make_item("ShootingEvaluation", "system_olss", "data_object", "Candidate, residual vector, declared metrics, and working options of one evaluation.", module="optimizer/system_olss/results.py", tags=("shooting", "result")),
-            _make_item("ShootingVerification", "system_olss", "data_object", "Independent verification residuals, metrics, options, independence source, and named checks.", module="optimizer/system_olss/results.py", tags=("shooting", "verification", "result")),
-            _make_item("ShootingResult", "system_olss", "data_object", "One root solve: candidate, residuals, metrics, convergence, verification, qualification, stop reason, error, tolerance source, counters, and history.", module="optimizer/system_olss/results.py", tags=("shooting", "result")),
-            _make_item("MultiStartResult", "system_olss", "data_object", "All multistart results, qualified and unique roots, and the ranking with its selection source.", module="optimizer/system_olss/results.py", tags=("shooting", "multistart", "result")),
-            _make_item("ContinuationPoint", "system_olss", "data_object", "One verified pseudo-arclength branch point with its tangent.", module="optimizer/system_olss/results.py", tags=("shooting", "continuation", "result")),
-            _make_item("ShootingContinuationResult", "system_olss", "data_object", "Pseudo-arclength branch points, step history, stop reason, and verification tolerance.", module="optimizer/system_olss/results.py", tags=("shooting", "continuation", "result")),
-            _make_item("ParameterContinuationPoint", "system_olss", "data_object", "One natural-continuation stage: parameter value, attempted step, and its shooting result.", module="optimizer/system_olss/results.py", tags=("shooting", "continuation", "result")),
-            _make_item("ParameterContinuationResult", "system_olss", "data_object", "Natural-continuation stages, per-attempt step history, stop reason, and target status.", module="optimizer/system_olss/results.py", tags=("shooting", "continuation", "result")),
+            _make_item("OLSS", "system_olss", "base_class", "Base class for a self-contained Open Loop Shooting System.", module="optimizer/system_olss/olss.py", tags=("shooting", "system", "contract"), root=True),
+            _make_item("ShootingBlock", "system_olss", "data_object", "One named, scaled block in a shooting vector.", module="optimizer/system_olss/variables.py", tags=("shooting", "variables"), root=True),
+            _make_item("ShootingSpec", "system_olss", "data_object", "Ordered layout of shooting-variable blocks.", module="optimizer/system_olss/variables.py", tags=("shooting", "variables"), root=True),
+            _make_item("ShootingVariables", "system_olss", "data_object", "Finite values attached to a ShootingSpec.", module="optimizer/system_olss/variables.py", tags=("shooting", "variables"), root=True),
+            _make_item("VerificationCheck", "system_olss", "data_object", "Named independent acceptance check included in OLSS qualification.", module="optimizer/system_olss/results.py", tags=("shooting", "verification"), root=True),
+            _make_item("basic_shooting_system_spec", "system_olss", "helper", "Build and validate the static OLSS declaration.", module="optimizer/system_olss/specs.py", tags=("shooting", "system_spec"), root=True),
+            _make_item("shooting_metric_spec", "system_olss", "helper", "Build one OLSS metric declaration for system_spec().", module="optimizer/system_olss/specs.py", tags=("shooting", "system_spec", "metric"), root=True),
+            _make_item("ShootingEvaluation", "system_olss", "data_object", "Candidate, residual vector, declared metrics, and working options of one evaluation.", module="optimizer/system_olss/results.py", tags=("shooting", "result"), root=True),
+            _make_item("ShootingVerification", "system_olss", "data_object", "Independent verification residuals, metrics, options, independence source, and named checks.", module="optimizer/system_olss/results.py", tags=("shooting", "verification", "result"), root=True),
+            _make_item("ShootingResult", "system_olss", "data_object", "One root solve: candidate, residuals, metrics, convergence, verification, qualification, stop reason, error, tolerance source, counters, and history.", module="optimizer/system_olss/results.py", tags=("shooting", "result"), root=True),
+            _make_item("MultiStartResult", "system_olss", "data_object", "All multistart results, qualified and unique roots, and the ranking with its selection source.", module="optimizer/system_olss/results.py", tags=("shooting", "multistart", "result"), root=True),
+            _make_item("ContinuationPoint", "system_olss", "data_object", "One verified pseudo-arclength branch point with its tangent.", module="optimizer/system_olss/results.py", tags=("shooting", "continuation", "result"), root=True),
+            _make_item("ShootingContinuationResult", "system_olss", "data_object", "Pseudo-arclength branch points, step history, stop reason, and verification tolerance.", module="optimizer/system_olss/results.py", tags=("shooting", "continuation", "result"), root=True),
+            _make_item("ParameterContinuationPoint", "system_olss", "data_object", "One natural-continuation stage: parameter value, attempted step, and its shooting result.", module="optimizer/system_olss/results.py", tags=("shooting", "continuation", "result"), root=True),
+            _make_item("ParameterContinuationResult", "system_olss", "data_object", "Natural-continuation stages, per-attempt step history, stop reason, and target status.", module="optimizer/system_olss/results.py", tags=("shooting", "continuation", "result"), root=True),
+            _make_item("OpenLoopShootingSystem", "system_olss", "protocol", "Protocol for the seven required OLSS calls.", module="optimizer/system_olss/contract.py", tags=("shooting", "contract", "protocol"), root=True),
+            _make_item("SHOOTING_SYSTEM_SPEC_SCHEMA", "system_olss", "constant", "Schema identifier of the OLSS system_spec() declaration.", module="optimizer/system_olss/specs.py", tags=("shooting", "system_spec", "schema"), root=True),
+            _make_item("validate_shooting_system_spec", "system_olss", "validator", "Validate and normalize a static OLSS system_spec() mapping.", module="optimizer/system_olss/specs.py", tags=("shooting", "system_spec", "validation"), root=True),
+            _make_item("get_shooting_system_spec", "system_olss", "helper", "Return and validate the static OLSS system_spec() declaration.", module="optimizer/system_olss/contract.py", tags=("shooting", "system_spec"), root=True),
+            _make_item("validate_shooting_spec", "system_olss", "validator", "Call shooting_spec() and check it against the declared variable size.", module="optimizer/system_olss/contract.py", tags=("shooting", "variables", "validation")),
+            _make_item("require_shooting_system", "system_olss", "validator", "Validate the required OLSS contract before a solver starts.", module="optimizer/system_olss/contract.py", tags=("shooting", "contract"), root=True),
+            _make_item("ShootingSystemProbe", "system_olss", "data_object", "Presence of required and optional OLSS hooks, with required_ok.", module="optimizer/system_olss/contract.py", tags=("shooting", "introspection"), root=True),
+            _make_item("probe_shooting_system", "system_olss", "helper", "Inspect OLSS hook presence without calling numerical methods.", module="optimizer/system_olss/contract.py", tags=("shooting", "introspection"), root=True),
+            _make_item("describe_shooting_system", "system_olss", "helper", "Describe an OLSS system's declarations and hook presence without evaluating it.", module="optimizer/system_olss/contract.py", tags=("shooting", "introspection"), root=True),
+            _make_item("shooting_contract_info", "system_olss", "helper", "Return the generic OLSS contract: required and optional calls.", module="optimizer/system_olss/contract.py", tags=("shooting", "contract", "introspection"), root=True),
+            _make_item("ShootingOptions", "system_olss", "type_alias", "Type of the per-call OLSS numerical options mapping.", module="optimizer/system_olss/contract.py", tags=("shooting", "type")),
+            _make_item("ShootingMetrics", "system_olss", "type_alias", "Type of an OLSS metrics mapping from metric name to value.", module="optimizer/system_olss/contract.py", tags=("shooting", "type")),
+            _make_item("validate_variables_for_shooting_system", "system_olss", "validator", "Check that ShootingVariables match the system's shooting_spec().", module="optimizer/system_olss/validation.py", tags=("shooting", "variables", "validation")),
+            _make_item("residuals_system", "system_olss", "helper", "Call residuals and validate a finite vector of the declared size.", module="optimizer/system_olss/validation.py", tags=("shooting", "residual", "validation")),
+            _make_item("jacobian_system", "system_olss", "helper", "Call jacobian and validate a finite dense matrix of the declared shape.", module="optimizer/system_olss/validation.py", tags=("shooting", "jacobian", "validation")),
+            _make_item("residuals_and_jacobian_system", "system_olss", "helper", "Call the optional combined hook, or residuals and jacobian separately, and validate both.", module="optimizer/system_olss/validation.py", tags=("shooting", "residual", "jacobian", "validation")),
+            _make_item("evaluate_shooting_system", "system_olss", "helper", "Call evaluate and check the metrics against the declaration.", module="optimizer/system_olss/validation.py", tags=("shooting", "evaluation", "validation")),
+            _make_item("verify_shooting_system", "system_olss", "helper", "Call verify and normalize it into a ShootingVerification with its independence evidence.", module="optimizer/system_olss/validation.py", tags=("shooting", "verification", "validation")),
+            _make_item("roots_equivalent_system", "system_olss", "capability", "Call the optional system-owned root-equivalence predicate; None means use the numerical default.", module="optimizer/system_olss/validation.py", tags=("shooting", "multistart", "capability")),
+            _make_item("cost_gradient_system", "system_olss", "capability", "Call and validate the optional cost_gradient hook used by direct shooting.", module="optimizer/system_olss/validation.py", tags=("shooting", "cost", "capability")),
+            _make_item("shooting_bounds_system", "system_olss", "capability", "Read and validate optional elementwise shooting-variable bounds.", module="optimizer/system_olss/validation.py", tags=("shooting", "bounds", "capability")),
         ),
     )
 
@@ -1876,6 +2137,8 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 example="result = opt.shooting.solve_shooting(system, z0, verification_options={'rtol': 1e-11})",
                 module="optimizer/shooting/solvers.py",
                 tags=("shooting", "root", "verification"),
+                root=True,
+                phase="OLSS",
             ),
             _make_item(
                 "solve_shooting_multistart",
@@ -1889,6 +2152,8 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 example="campaign = opt.shooting.solve_shooting_multistart(system, seeds)",
                 module="optimizer/shooting/campaigns.py",
                 tags=("shooting", "multistart", "parallel", "ranking"),
+                root=True,
+                phase="OLSS",
             ),
             _make_item(
                 "continue_shooting",
@@ -1902,6 +2167,8 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 example="branch = opt.shooting.continue_shooting(system, z_prev, z_now, steps=20, step_size=0.1)",
                 module="optimizer/shooting/continuation.py",
                 tags=("shooting", "continuation", "pseudo_arclength", "fold"),
+                root=True,
+                phase="OLSS",
             ),
             _make_item(
                 "solve_direct_shooting",
@@ -1916,6 +2183,8 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 example="result = opt.shooting.solve_direct_shooting(system, z0)",
                 module="optimizer/shooting/solvers.py",
                 tags=("shooting", "cost", "constraints"),
+                root=True,
+                phase="OLSS",
             ),
             _make_item(
                 "verify_shooting_jacobian",
@@ -1929,14 +2198,16 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 example="check = opt.shooting.verify_shooting_jacobian(system, z0)",
                 module="optimizer/shooting/derivatives.py",
                 tags=("shooting", "jacobian", "derivative", "verification"),
+                root=True,
+                phase="OLSS",
             ),
-            _make_item("continue_parameter", "shooting", "coordinator", "Natural continuation over one secondary parameter with adaptive steps and exact target landing.", module="optimizer/shooting/continuation.py", tags=("shooting", "continuation", "parameter")),
-            _make_item("random_shooting_seeds", "shooting", "generator", "Generate scale-aware random shooting seeds.", module="optimizer/shooting/campaigns.py", tags=("shooting", "seed", "random")),
-            _make_item("perturb_shooting_seeds", "shooting", "generator", "Generate a scale-aware perturbation cloud around an anchor.", module="optimizer/shooting/campaigns.py", tags=("shooting", "seed", "perturbation")),
-            _make_item("refine_shooting_seeds", "shooting", "campaign", "Solve, select elites, perturb, and refine a shooting seed campaign.", module="optimizer/shooting/campaigns.py", tags=("shooting", "seed", "refine")),
-            _make_item("compare_shooting_replay", "shooting", "diagnostic", "Replay OLSS-recovered controls in OLGS and compare declared metrics.", module="optimizer/shooting/replay.py", tags=("shooting", "olgs", "replay")),
-            _make_item("finite_difference_shooting_jacobian", "shooting", "derivative", "Central-difference reference Jacobian of the OLSS residual vector; does not replace the declared Jacobian.", module="optimizer/shooting/derivatives.py", tags=("shooting", "jacobian", "derivative")),
-            _make_item("ShootingEvaluator", "shooting", "runtime", "Validated, cached, and counted OLSS evaluation shared by the shooting tools.", module="optimizer/shooting/evaluator.py", tags=("shooting", "evaluation", "cache")),
+            _make_item("continue_parameter", "shooting", "coordinator", "Natural continuation over one secondary parameter with adaptive steps and exact target landing.", module="optimizer/shooting/continuation.py", tags=("shooting", "continuation", "parameter"), root=True, phase="OLSS"),
+            _make_item("random_shooting_seeds", "shooting", "generator", "Generate scale-aware random shooting seeds.", module="optimizer/shooting/campaigns.py", tags=("shooting", "seed", "random"), root=True, phase="OLSS"),
+            _make_item("perturb_shooting_seeds", "shooting", "generator", "Generate a scale-aware perturbation cloud around an anchor.", module="optimizer/shooting/campaigns.py", tags=("shooting", "seed", "perturbation"), root=True, phase="OLSS"),
+            _make_item("refine_shooting_seeds", "shooting", "campaign", "Solve, select elites, perturb, and refine a shooting seed campaign.", module="optimizer/shooting/campaigns.py", tags=("shooting", "seed", "refine"), root=True, phase="OLSS"),
+            _make_item("compare_shooting_replay", "shooting", "diagnostic", "Replay OLSS-recovered controls in OLGS and compare declared metrics.", module="optimizer/shooting/replay.py", tags=("shooting", "olgs", "replay"), root=True, family=("olgs", "olss"), phase="OLSS"),
+            _make_item("finite_difference_shooting_jacobian", "shooting", "derivative", "Central-difference reference Jacobian of the OLSS residual vector; does not replace the declared Jacobian.", module="optimizer/shooting/derivatives.py", tags=("shooting", "jacobian", "derivative"), root=True, phase="OLSS"),
+            _make_item("ShootingEvaluator", "shooting", "runtime", "Validated, cached, and counted OLSS evaluation shared by the shooting tools.", module="optimizer/shooting/evaluator.py", tags=("shooting", "evaluation", "cache"), root=True, phase="OLSS"),
         ),
     )
 
@@ -1950,6 +2221,16 @@ def _build_groups() -> dict[str, CatalogGroup]:
             _make_item("read_timeline", "optimizer_log", "reader", "Read validated tracker events without importing optimizer numerics.", module="optimizer_log/reader.py", tags=("reader", "tracker", "read_only")),
             _make_item("follow_timeline", "optimizer_log", "reader", "Incrementally follow appended complete JSONL events.", module="optimizer_log/reader.py", tags=("reader", "tracker", "live")),
             _make_item("inspect_writer", "optimizer_log", "reader", "Inspect writer ownership/liveness without taking ownership.", module="optimizer_log/reader.py", tags=("reader", "tracker", "liveness")),
+            _make_item("TimelineReadResult", "optimizer_log", "data_object", "Complete timeline records and, if present, one ignored damaged tail line.", module="optimizer_log/reader.py", tags=("reader", "tracker")),
+            _make_item("read_receipt", "optimizer_log", "reader", "Read the stored run receipt exactly as written.", module="optimizer_log/reader.py", tags=("reader", "tracker")),
+            _make_item("read_live", "optimizer_log", "reader", "Read the current replaceable observer snapshot, if the run has started.", module="optimizer_log/reader.py", tags=("reader", "tracker", "live")),
+            _make_item("read_terminal", "optimizer_log", "reader", "Read the direct terminal-result index, if the run has ended.", module="optimizer_log/reader.py", tags=("reader", "tracker")),
+            _make_item("read_writer", "optimizer_log", "reader", "Read explicit writer ownership and heartbeat state, if present.", module="optimizer_log/reader.py", tags=("reader", "tracker", "liveness")),
+            _make_item("metric_coverage", "optimizer_log", "reader", "Compare declared metrics with observed and explicitly omitted metrics.", module="optimizer_log/reader.py", tags=("reader", "tracker", "metrics")),
+            _make_item("project_timeline", "optimizer_log", "reader", "Create a generic read-only projection for API or interface consumers.", module="optimizer_log/reader.py", tags=("reader", "tracker")),
+            _make_item("validate_event", "optimizer_log", "validator", "Validate one causal event envelope without importing optimizer code.", module="optimizer_log/reader.py", tags=("reader", "validation")),
+            _make_item("validate_receipt", "optimizer_log", "validator", "Validate the generic receipt fields required by read-only consumers.", module="optimizer_log/reader.py", tags=("reader", "validation")),
+            _make_item("validate_timeline", "optimizer_log", "validator", "Validate the one-start, one-terminal lifecycle of a complete prefix.", module="optimizer_log/reader.py", tags=("reader", "validation")),
         ),
     )
 
@@ -2064,6 +2345,43 @@ def path(name: str, *, h: bool = False) -> dict[str, Any] | str:
     return "\n".join(lines)
 
 
+def exports(group_name: str) -> builtins.list[str]:
+    """Return the sorted public names a namespace exports, built from its declarations.
+
+    The names are the declared names and their aliases. The package root
+    (``base``) also exports every declaration marked ``root``. Discovery helpers
+    such as ``info`` and ``list`` are not tools; each namespace adds its own.
+    """
+
+    return sorted(_namespace_items(group_name))
+
+
+def _namespace_items(group_name: str) -> dict[str, CatalogItem]:
+    """Map each public name of a namespace to the one declaration behind it."""
+
+    if group_name == "base":
+        items = [
+            item
+            for group_obj in _catalog().values()
+            for item in group_obj.items
+            if group_obj.name == "base" or item.root
+        ]
+    else:
+        items = builtins.list(group(group_name).items)
+    names: dict[str, CatalogItem] = {}
+    for item in items:
+        name = item.object_name or item.name
+        if name in names:
+            raise ValueError(
+                f"Two declarations export {name!r} from the {group_name} namespace: {names[name].id} and {item.id}."
+            )
+        names[name] = item
+    for item in items:
+        for alias in item.aliases:
+            names.setdefault(alias, item)
+    return names
+
+
 def attach_namespace_helpers(namespace: dict[str, Any], group_name: str) -> None:
     """Attach ``list``, ``info``, and per-callable ``.info`` helpers to a module."""
 
@@ -2087,23 +2405,29 @@ def attach_namespace_helpers(namespace: dict[str, Any], group_name: str) -> None
     namespace["list"] = namespace_list
     namespace["info"] = namespace_info
 
-    for item in group_obj.items:
-        obj = namespace.get(item.object_name or item.name)
+    for name, item in _namespace_items(group_name).items():
+        obj = namespace.get(name)
         if obj is not None:
             _attach_info(obj, item)
 
 
 def attach_root_helpers(namespace: dict[str, Any]) -> None:
-    """Attach ``.info`` helpers to top-level shortcut functions and classes."""
+    """Attach ``.info`` helpers to the root exports: base declarations and root shortcuts."""
 
-    for group_obj in _catalog().values():
-        for item in group_obj.items:
-            obj = namespace.get(item.object_name or item.name)
-            if obj is not None:
-                _attach_info(obj, item)
+    for name, item in _namespace_items("base").items():
+        obj = namespace.get(name)
+        if obj is not None:
+            _attach_info(obj, item)
 
 
 def _attach_info(obj: Any, item: CatalogItem) -> None:
+    # Only library functions and classes carry .info. Protocols are skipped: on
+    # Python 3.11 a later class attribute becomes a required protocol member.
+    # Constants and typing aliases are skipped: a typing alias forwards
+    # setattr to its origin class, such as collections.abc.Mapping.
+    if not (inspect.isfunction(obj) or inspect.isclass(obj)) or getattr(obj, "_is_protocol", False):
+        return
+
     def item_info(*, h: bool = False) -> dict[str, Any] | str:
         return item.render_human() if h else item.to_dict()
 
@@ -2112,10 +2436,7 @@ def _attach_info(obj: Any, item: CatalogItem) -> None:
     if isinstance(obj, type):
         setattr(obj, "info", staticmethod(item_info))
     else:
-        try:
-            setattr(obj, "info", item_info)
-        except (AttributeError, TypeError):
-            return
+        setattr(obj, "info", item_info)
 
 
 def _resolve_item(name: str) -> CatalogItem:
@@ -2131,6 +2452,14 @@ def _resolve_item(name: str) -> CatalogItem:
     if not matches:
         raise KeyError(f"Unknown catalog item {query!r}.")
     if len(matches) > 1:
+        # A bare name means the root export when there is one, and any of the
+        # declarations when they all describe the same re-exported object.
+        root_item = _namespace_items("base").get(query)
+        if root_item is not None and root_item in matches:
+            return root_item
+        objects = [item.public_object() for item in matches]
+        if objects[0] is not None and all(obj is objects[0] for obj in objects):
+            return matches[0]
         choices = ", ".join(item.id for item in matches)
         raise KeyError(f"Ambiguous catalog item {query!r}; use one of: {choices}.")
     return matches[0]
@@ -2152,6 +2481,7 @@ def _matches_query(item: CatalogItem, needle: str) -> bool:
         " ".join(item.aliases),
         " ".join(item.tags),
         " ".join(item.notes),
+        " ".join(item.family),
     ]
     haystack.extend(item.inputs.keys())
     haystack.extend(item.inputs.values())
@@ -2232,6 +2562,7 @@ __all__ = [
     "base",
     "campaigns",
     "core",
+    "exports",
     "group",
     "groups",
     "guesses",

@@ -27,6 +27,7 @@ bytecode out of the checkout.
 | Public API and discovery | `test_public_api.py`, `test_namespaces.py`, `test_catalog.py`, `test_catalog_coverage.py`, `test_api_reference.py`, `test_optimizer_context.py` |
 | Optimizers and engine | `test_optimizers.py`, `test_advanced_optimizers.py`, `test_engine.py`, `test_engine_trial_gradient.py`, `test_numerical_capabilities.py` |
 | Integrated OLGS/OLSS changes and transactions | `test_olgs_olss_integrations.py`, `test_transactions.py` |
+| Shared conventions: serialization, families, and stop reasons | `test_serialization.py`, `test_stop_reasons.py` |
 | OLSS contract and scenarios | `test_olss.py`, `test_olss_scenarios.py`, `test_olss_regressions.py` |
 | Guesses and utilities | `test_guesses.py`, `test_utils_tools.py`, `test_run_diagnostics.py` |
 | System contract, templates, and visualization | `test_system_contract.py`, `test_templates.py`, `test_system_spec_visualization.py` |

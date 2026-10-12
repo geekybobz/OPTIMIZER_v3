@@ -123,26 +123,24 @@ scales.
 
 ## Stop Reasons
 
-```text
-maxiter                  iteration budget consumed
-target                   target_metric reached target_value
-stall                    no improvement for stall_patience iterations
-nonfinite                metrics contained a non-finite numeric payload
-gradient_converged       gradient norm at or below gradient_tolerance
-stationary_nonminimum    gradient tolerance met, but sampled curvature is negative
-gradient_failed          the system gradient call failed
-smooth_gradient_failed   the smooth-gradient call of a proximal run failed
-proposal_failed          the step function raised or produced invalid controls
-nonfinite_trial          failed_trial_retries consecutive trials failed to evaluate
-interrupted              KeyboardInterrupt; the last valid state is kept
-stopped                  fallback label
-```
+`opt.core.STOP_REASONS` is the one registry of stop reasons for both families.
+Each entry gives the reason's meaning, its outcome class (`converged`,
+`stopped`, `failed`, or `interrupted`), the families that use it, and whether
+the final state is a valid start for another run. The generated
+[stop-reason table](../../API_REFERENCE.md#stop-reasons) lists every entry, and
+`opt.diagnose_run` reports the outcome and continuability of a run's reason.
 
-The first four come from this module, the next two from the stationarity check,
-and the rest from the loop's failure branches, described in
-[Core Lifecycle](CORE_LIFECYCLE.md#failure-branches). A method may also end a
-chunk with its own reason through `StepProposal.stop_reason`, for example
-`projected_kkt_converged` or `proximal_mapping_converged`.
+A chunk ends with one of these reasons:
+
+| Origin | Reasons |
+|---|---|
+| The rules of this module | `maxiter`, `target`, `stall`, `nonfinite` |
+| The stationarity check | `gradient_converged`, `stationary_nonminimum` |
+| The loop's failure branches, in [Core Lifecycle](CORE_LIFECYCLE.md#failure-branches) | `gradient_failed`, `smooth_gradient_failed`, `proposal_failed`, `nonfinite_trial`, `interrupted`, and the fallback `stopped` |
+| A method's own `StepProposal.stop_reason` | for example `projected_kkt_converged` or `proximal_mapping_converged` |
+
+A new reason enters the registry first: a test fails when the library assigns a
+reason the registry does not list.
 
 A trial that fails to evaluate is not a stop by itself: the iteration is
 recorded with reason `trial_evaluation_rejected`, the step size shrinks by

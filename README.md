@@ -50,9 +50,13 @@ declare a project system
     -> continue, switch, refine, or verify
 ```
 
-The runtime catalog is the declared public API. Use `opt.info()`, `opt.list()`,
-`opt.search()`, and `opt.path()` when exact runtime discovery is preferable to
-browsing documentation.
+The runtime catalog is the declared public API. Every export has exactly one
+catalog declaration, and the namespace exports, `opt.methods()`, and the
+[API Reference](API_REFERENCE.md) are built from those declarations. An entry is
+removed only after one release in which it still works, warns when used, and
+appears with its replacement in the release evidence. Use `opt.info()`,
+`opt.list()`, `opt.search()`, and `opt.path()` when exact runtime discovery is
+preferable to browsing documentation.
 
 ## Details
 

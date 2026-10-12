@@ -290,18 +290,13 @@ def emit_initial_failure(
 def classify_terminal_status(reason: str, *, degenerate: bool = False) -> str:
     """Map a stop reason to an evidence status without claiming optimality."""
 
-    if str(reason) == "interrupted":
+    from optimizer.core.stop_reasons import StopReason
+
+    entry = StopReason.lookup(reason)
+    if entry is not None and entry.outcome == "interrupted":
         return "interrupted"
-    if degenerate or str(reason) in {"no_usable_candidates"}:
+    if degenerate or str(reason) == "no_usable_candidates":
         return "degenerate"
-    if str(reason) in {
-        "gradient_failed",
-        "smooth_gradient_failed",
-        "initial_evaluation_failed",
-        "nonfinite",
-        "nonfinite_trial",
-        "proposal_failed",
-        "restoration_failed",
-    }:
+    if entry is not None and entry.outcome == "failed":
         return "failed"
     return "completed"

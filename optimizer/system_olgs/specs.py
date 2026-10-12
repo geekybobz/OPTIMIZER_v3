@@ -134,6 +134,7 @@ def basic_system_spec(
     return validate_system_spec(
         {
             "schema_version": SYSTEM_SPEC_SCHEMA,
+            "family": "olgs",
             "identity": {
                 "id": str(system_id),
                 "name": str(name or system_id),
@@ -158,6 +159,8 @@ def validate_system_spec(value: Mapping[str, Any]) -> dict[str, Any]:
     payload = _plain_mapping(value, name="system_spec()")
     if payload.get("schema_version") != SYSTEM_SPEC_SCHEMA:
         raise ValueError(f"system_spec() schema_version must be {SYSTEM_SPEC_SCHEMA!r}.")
+    if payload.get("family", "olgs") not in {None, "olgs"}:
+        raise ValueError("OLGS system_spec() family must be 'olgs' or omitted.")
 
     identity = _plain_mapping(payload.get("identity"), name="system_spec()['identity']")
     for field in ("id", "name", "system_type"):
@@ -194,6 +197,7 @@ def validate_system_spec(value: Mapping[str, Any]) -> dict[str, Any]:
 
     return {
         "schema_version": SYSTEM_SPEC_SCHEMA,
+        "family": "olgs",
         "identity": identity,
         "controls": controls,
         "parameters": dict(payload.get("parameters", {}) or {}),

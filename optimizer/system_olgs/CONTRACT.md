@@ -24,6 +24,9 @@ contract and the declared specification.
 
 `system_spec()` is the canonical discovery source. `opt.system_info(system)` combines
 that declaration with detected hooks. `describe()` is only a convenience view.
+The declaration states `family: "olgs"`, which `basic_system_spec` adds; a
+hand-written declaration without a family is still read as OLGS, and any other
+family is rejected. `opt.system_family(system)` applies this rule everywhere.
 
 ## Optional Capability Bundles
 

@@ -44,27 +44,7 @@ from optimizer.system_olgs import (
 from optimizer.system_olgs.contract import get_system_spec
 from optimizer.utils.derivatives import get_jacobian
 from optimizer.utils.geometry import jacobian_geometry
-
-
-def _json_safe(value: Any) -> Any:
-    """Convert common NumPy values into JSON-friendly payloads."""
-
-    if isinstance(value, np.ndarray):
-        if np.iscomplexobj(value):
-            return {
-                "real": np.real(value).tolist(),
-                "imag": np.imag(value).tolist(),
-            }
-        return value.tolist()
-    if isinstance(value, np.generic):
-        return value.item()
-    if isinstance(value, complex):
-        return {"real": float(value.real), "imag": float(value.imag)}
-    if isinstance(value, Mapping):
-        return {str(key): _json_safe(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_json_safe(item) for item in value]
-    return value
+from optimizer.serialization import to_plain
 
 
 def _metric_summary(metrics: Mapping[str, Any]) -> dict[str, Any]:
@@ -74,13 +54,13 @@ def _metric_summary(metrics: Mapping[str, Any]) -> dict[str, Any]:
     for key, value in metrics.items():
         arr = np.asarray(value)
         if arr.shape == ():
-            summary[key] = _json_safe(arr.item())
+            summary[key] = to_plain(arr.item())
         else:
             summary[key] = {
                 "shape": list(arr.shape),
                 "norm": float(np.linalg.norm(arr.reshape(-1))),
                 "max_abs": float(np.max(np.abs(arr))) if arr.size else 0.0,
-                "value": _json_safe(arr),
+                "value": to_plain(arr),
             }
     return summary
 

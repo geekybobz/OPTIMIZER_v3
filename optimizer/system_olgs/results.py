@@ -13,29 +13,7 @@ import numpy as np
 
 from optimizer.controls import Controls
 from optimizer.system_olgs.validation import validate_metrics
-
-
-def _json_safe(value: Any) -> Any:
-    if isinstance(value, np.ndarray):
-        if np.iscomplexobj(value):
-            return {"real": np.real(value).tolist(), "imag": np.imag(value).tolist()}
-        return value.tolist()
-    if isinstance(value, np.generic):
-        return value.item()
-    if isinstance(value, complex):
-        return {"real": float(value.real), "imag": float(value.imag)}
-    if isinstance(value, Controls):
-        return {
-            "name": value.name,
-            "spec": value.spec.to_dict(),
-            "matrix": value.as_matrix(copy=True).tolist(),
-            "meta": dict(value.meta),
-        }
-    if isinstance(value, Mapping):
-        return {str(key): _json_safe(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_json_safe(item) for item in value]
-    return value
+from optimizer.serialization import to_plain
 
 
 @dataclass(frozen=True)
@@ -44,7 +22,7 @@ class ForwardResult:
     data: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        return {"controls": _json_safe(self.controls), "data": _json_safe(self.data)}
+        return {"controls": to_plain(self.controls), "data": to_plain(self.data)}
 
 
 @dataclass(frozen=True)
@@ -53,7 +31,7 @@ class BackwardResult:
     data: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        return {"controls": _json_safe(self.controls), "data": _json_safe(self.data)}
+        return {"controls": to_plain(self.controls), "data": to_plain(self.data)}
 
 
 @dataclass(frozen=True)
@@ -78,9 +56,9 @@ class SystemEvaluation:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "controls": _json_safe(self.controls),
-            "metrics": _json_safe(self.metrics),
-            "data": _json_safe(self.data),
+            "controls": to_plain(self.controls),
+            "metrics": to_plain(self.metrics),
+            "data": to_plain(self.data),
         }
 
 
@@ -93,12 +71,12 @@ class GradientResult:
 
     def to_dict(self) -> dict[str, Any]:
         payload = {
-            "controls": _json_safe(self.controls),
-            "gradient": _json_safe(self.gradient),
-            "data": _json_safe(self.data),
+            "controls": to_plain(self.controls),
+            "gradient": to_plain(self.gradient),
+            "data": to_plain(self.data),
         }
         if self.metrics is not None:
-            payload["metrics"] = _json_safe(validate_metrics(self.metrics))
+            payload["metrics"] = to_plain(validate_metrics(self.metrics))
         return payload
 
 
@@ -115,8 +93,8 @@ class SimulationResult:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "controls": _json_safe(self.controls),
-            "metrics": _json_safe(validate_metrics(self.metrics)),
-            "trajectories": _json_safe(self.trajectories),
-            "data": _json_safe(self.data),
+            "controls": to_plain(self.controls),
+            "metrics": to_plain(validate_metrics(self.metrics)),
+            "trajectories": to_plain(self.trajectories),
+            "data": to_plain(self.data),
         }

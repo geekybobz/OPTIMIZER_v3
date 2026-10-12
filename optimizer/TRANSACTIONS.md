@@ -103,22 +103,31 @@ verification is independent of a working solve is decided by the solvers.
 
 ## Serialization
 
-`to_dict()` recursively converts supported values into JSON-safe forms:
+Responses, results, and reports share one conversion, `opt.to_plain`, so every
+`to_dict()` output is strict JSON (`json.dumps(..., allow_nan=False)` succeeds):
 
-- NumPy arrays become lists.
-- NumPy scalars become Python scalars.
-- `Controls`, shooting objects, and results use their `to_dict()` methods.
+- Non-finite numbers become the strings `"nan"`, `"inf"`, and `"-inf"`.
+- NumPy arrays become lists and NumPy scalars become Python values; complex
+  numbers and arrays become `{"real": ..., "imag": ...}`.
+- `Controls`, shooting objects, and results use their `to_dict()` methods;
+  other dataclasses become their fields.
 - System objects are represented by their type and `system_spec()`.
-- Mappings and sequences are converted recursively.
+- Callables become `"module:qualname"` references and paths become strings.
+- Mappings, sequences, and sets are converted recursively.
+- Any other object raises `TypeError`; durable output never falls back to
+  `repr()`.
 
-Serialization is representation only; it does not reconstruct arbitrary project
-systems or grant permission to import project code.
+Tracker journals are stricter: their records reject non-finite values, and the
+standalone reader validates them. Serialization is representation only; it does
+not reconstruct arbitrary project systems or grant permission to import project
+code.
 
 ## Failure rules
 
 - A system must provide `system_spec()`.
-- The declared family must be `olgs` or `olss`; missing family is treated as the
-  legacy OLGS declaration only at this adapter boundary.
+- The declared family must be `olgs` or `olss`. A missing family means OLGS,
+  by the library-wide rule of `opt.system_family`; specifications built with
+  `basic_system_spec` declare `olgs`.
 - A request family that disagrees with the detected family returns
   `family_mismatch` without invoking the requested operation.
 - An optional operation whose hook the system lacks returns

@@ -68,6 +68,10 @@ def render() -> str:
         for item in entries:
             detail = opt.info(item["id"])
             lines.extend(["", f"### `{detail['id']}`", "", _text(detail["summary"])])
+            scope = "Family: " + ", ".join(f"`{family}`" for family in detail["family"]) + "."
+            if detail.get("root"):
+                scope += f" Root shortcut: `opt.{detail['name']}`."
+            lines.extend(["", scope])
             if signature := detail.get("signature"):
                 lines.extend(["", "```python", f"{detail['name']}{signature}", "```"])
             for heading, key in (
@@ -90,8 +94,29 @@ def render() -> str:
                 lines.extend(["", "#### Example", "", "```python", str(example), "```"])
             if module := detail.get("module"):
                 lines.extend(["", f"Source: `{_text(module)}`."])
+    lines.extend(_stop_reason_table(opt.core.STOP_REASONS))
     lines.extend(["", "---", "", "[⌂ Home](README.md)", ""])
     return "\n".join(lines)
+
+
+def _stop_reason_table(registry: Mapping[str, Any]) -> list[str]:
+    lines = [
+        "",
+        "## Stop reasons",
+        "",
+        "Generated from `opt.core.STOP_REASONS`, the one registry of every stop reason the",
+        "library assigns. A labelled reason such as `stage_gate_failed:warmup` uses the entry",
+        "before the colon. Continuable means the final state is a valid start for another run.",
+        "",
+        "| Reason | Outcome | Families | Continuable | Meaning | Assigned by |",
+        "|---|---|---|---|---|---|",
+    ]
+    for name, entry in registry.items():
+        lines.append(
+            f"| `{_text(name)}` | {entry.outcome} | {', '.join(entry.families)} | "
+            f"{'yes' if entry.continuable else 'no'} | {_text(entry.meaning)} | {_text(entry.source)} |"
+        )
+    return lines
 
 
 def main() -> int:

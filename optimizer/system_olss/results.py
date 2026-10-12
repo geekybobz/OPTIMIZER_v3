@@ -8,18 +8,7 @@ from typing import Any, Mapping
 import numpy as np
 
 from optimizer.system_olss.variables import ShootingVariables
-
-
-def _plain(value: Any) -> Any:
-    if isinstance(value, np.ndarray):
-        return value.tolist()
-    if isinstance(value, np.generic):
-        return value.item()
-    if isinstance(value, Mapping):
-        return {str(key): _plain(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_plain(item) for item in value]
-    return value
+from optimizer.serialization import to_plain
 
 
 @dataclass(frozen=True)
@@ -47,11 +36,11 @@ class ShootingEvaluation:
     def to_dict(self) -> dict[str, Any]:
         return {
             "variables": self.variables.to_dict(),
-            "residuals": self.residuals.tolist(),
-            "residual_norm": self.residual_norm,
-            "residual_max_abs": self.residual_max_abs,
-            "metrics": _plain(self.metrics),
-            "options": _plain(self.options),
+            "residuals": to_plain(self.residuals),
+            "residual_norm": to_plain(self.residual_norm),
+            "residual_max_abs": to_plain(self.residual_max_abs),
+            "metrics": to_plain(self.metrics),
+            "options": to_plain(self.options),
         }
 
 
@@ -69,8 +58,8 @@ class VerificationCheck:
         return {
             "name": str(self.name),
             "passed": bool(self.passed),
-            "value": _plain(self.value),
-            "tolerance": _plain(self.tolerance),
+            "value": to_plain(self.value),
+            "tolerance": to_plain(self.tolerance),
             "message": str(self.message),
         }
 
@@ -113,11 +102,11 @@ class ShootingVerification:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "residuals": self.residuals.tolist(),
-            "residual_norm": self.residual_norm,
-            "residual_max_abs": self.residual_max_abs,
-            "metrics": _plain(self.metrics),
-            "options": _plain(self.options),
+            "residuals": to_plain(self.residuals),
+            "residual_norm": to_plain(self.residual_norm),
+            "residual_max_abs": to_plain(self.residual_max_abs),
+            "metrics": to_plain(self.metrics),
+            "options": to_plain(self.options),
             "numerical_success": bool(self.numerical_success),
             "message": self.message,
             "independent": bool(self.independent),
@@ -156,10 +145,10 @@ class ShootingResult:
     def to_dict(self) -> dict[str, Any]:
         return {
             "variables": self.variables.to_dict(),
-            "residuals": self.residuals.tolist(),
-            "residual_norm": self.residual_norm,
-            "residual_max_abs": self.residual_max_abs,
-            "metrics": _plain(self.metrics),
+            "residuals": to_plain(self.residuals),
+            "residual_norm": to_plain(self.residual_norm),
+            "residual_max_abs": to_plain(self.residual_max_abs),
+            "metrics": to_plain(self.metrics),
             "solver_converged": bool(self.solver_converged),
             "verified": bool(self.verified),
             "qualified": bool(self.qualified),
@@ -168,10 +157,10 @@ class ShootingResult:
             "stop_reason": self.stop_reason,
             "jacobian_source": self.jacobian_source,
             "verification": None if self.verification is None else self.verification.to_dict(),
-            "verification_tolerance": _plain(self.verification_tolerance),
+            "verification_tolerance": to_plain(self.verification_tolerance),
             "verification_tolerance_source": self.verification_tolerance_source,
-            "counters": _plain(self.counters),
-            "history": _plain(self.history),
+            "counters": to_plain(self.counters),
+            "history": to_plain(self.history),
             "error": self.error,
         }
 
@@ -214,8 +203,8 @@ class ContinuationPoint:
     def to_dict(self) -> dict[str, Any]:
         return {
             "variables": self.variables.to_dict(),
-            "residual_norm": _plain(self.residual_norm),
-            "tangent": _plain(self.tangent),
+            "residual_norm": to_plain(self.residual_norm),
+            "tangent": to_plain(self.tangent),
             "corrector_iterations": int(self.corrector_iterations),
             "verified": bool(self.verified),
             "verification_independent": bool(self.verification_independent),
@@ -239,9 +228,9 @@ class ShootingContinuationResult:
             "completed_steps": int(self.completed_steps),
             "requested_steps": int(self.requested_steps),
             "stop_reason": self.stop_reason,
-            "step_size": _plain(self.step_size),
-            "step_history": _plain(self.step_history),
-            "verification_tolerance": _plain(self.verification_tolerance),
+            "step_size": to_plain(self.step_size),
+            "step_history": to_plain(self.step_history),
+            "verification_tolerance": to_plain(self.verification_tolerance),
             "verification_tolerance_source": self.verification_tolerance_source,
         }
 
@@ -254,8 +243,8 @@ class ParameterContinuationPoint:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "parameter": _plain(self.parameter),
-            "attempted_step": _plain(self.attempted_step),
+            "parameter": to_plain(self.parameter),
+            "attempted_step": to_plain(self.attempted_step),
             "result": self.result.to_dict(),
         }
 
@@ -276,9 +265,9 @@ class ParameterContinuationResult:
     def to_dict(self) -> dict[str, Any]:
         return {
             "parameter": self.parameter,
-            "target": _plain(self.target),
+            "target": to_plain(self.target),
             "points": [point.to_dict() for point in self.points],
             "stop_reason": self.stop_reason,
             "reached_target": bool(self.reached_target),
-            "step_history": _plain(self.step_history),
+            "step_history": to_plain(self.step_history),
         }

@@ -23,15 +23,15 @@ surfaces and defaults.
 | [`guesses`](#guesses) | 13 | Initial Controls generators and restart helpers. |
 | [`utils`](#utils) | 17 | Diagnostics, derivative checks, residual geometry, repair, guards, and spectrum tools. |
 | [`schedules`](#schedules) | 5 | Small step-size policy objects for optimizer or repair workflows. |
-| [`base`](#base) | 17 | Base data objects and top-level entry points: Controls, results, warmstart state, trace, and bound context utilities. |
-| [`core`](#core) | 7 | Shared chunk engine: the proposal contract, validated system evaluation, acceptance guards, and stopping rules. |
-| [`campaigns`](#campaigns) | 6 | Durable multi-stage coordination using objective and provenance declared by system_spec(). |
-| [`tracker`](#tracker) | 5 | Passive durable run evidence; it records engine facts and never calls system numerics. |
-| [`visualization`](#visualization) | 12 | Render explicit system-owned plot data; visualization never invents a trajectory. |
-| [`system_olgs`](#system-olgs) | 4 | Mandatory static system semantics and capability-gated numerical hooks owned by each problem. |
-| [`system_olss`](#system-olss) | 15 | Construction types, validation, and discovery for project-owned OLSS contracts. |
+| [`base`](#base) | 47 | Base data objects and top-level entry points: Controls, results, warmstart state, trace, and bound context utilities. |
+| [`core`](#core) | 24 | Shared chunk engine: the proposal contract, validated system evaluation, acceptance guards, and stopping rules. |
+| [`campaigns`](#campaigns) | 10 | Durable multi-stage coordination using objective and provenance declared by system_spec(). |
+| [`tracker`](#tracker) | 29 | Passive durable run evidence; it records engine facts and never calls system numerics. |
+| [`visualization`](#visualization) | 14 | Render explicit system-owned plot data; visualization never invents a trajectory. |
+| [`system_olgs`](#system-olgs) | 54 | Mandatory static system semantics and capability-gated numerical hooks owned by each problem. |
+| [`system_olss`](#system-olss) | 36 | Construction types, validation, and discovery for project-owned OLSS contracts. |
 | [`shooting`](#shooting) | 12 | Root solving, verification, multistart, continuation, and direct shooting for OLSS systems. |
-| [`optimizer_log`](#optimizer-log) | 3 | Standalone, read-only tracker reader package; it is not yet a portal UI or command-line application. |
+| [`optimizer_log`](#optimizer-log) | 13 | Standalone, read-only tracker reader package; it is not yet a portal UI or command-line application. |
 
 ## optimizers
 
@@ -40,6 +40,8 @@ Methods that move Controls to improve system metrics.
 ### `optimizers.adam`
 
 Adaptive first-order optimizer with first and second moment state.
+
+Family: `olgs`. Root shortcut: `opt.adam`.
 
 ```python
 adam(system: 'Any', controls: 'Controls | None' = None, *, variant: 'str' = 'adam', maxiter: 'int' = 100, step_size: 'StepSize | None' = None, beta1: 'float' = 0.9, beta2: 'float' = 0.999, eps: 'float' = 1e-08, weight_decay: 'float' = 0.0, max_step_norm: 'float | None' = None, state: 'RunState | None' = None, warmstart: 'Any | None' = None, accept: 'Any | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, gradient_tolerance: 'float | None' = 1e-08, **engine_kwargs: 'Any') -> 'OptimizerResult'
@@ -117,6 +119,8 @@ Source: `optimizer/optimizers/adam.py`.
 
 Low-memory gradient optimizer with a velocity buffer.
 
+Family: `olgs`. Root shortcut: `opt.momentum`.
+
 ```python
 momentum(system: 'Any', controls: 'Controls | None' = None, *, variant: 'str' = 'heavy_ball', maxiter: 'int' = 100, step_size: 'StepSize | None' = None, momentum: 'float' = 0.9, max_step_norm: 'float | None' = None, state: 'RunState | None' = None, warmstart: 'Any | None' = None, accept: 'Any | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, gradient_tolerance: 'float | None' = 1e-08, **engine_kwargs: 'Any') -> 'OptimizerResult'
 ```
@@ -184,6 +188,8 @@ Source: `optimizer/optimizers/momentum.py`.
 
 Gradient descent family with fixed, normalized, backtracking, and Armijo steps.
 
+Family: `olgs`. Root shortcut: `opt.line_search`.
+
 ```python
 line_search(system: 'Any', controls: 'Controls | None' = None, *, variant: 'str' = 'backtracking', maxiter: 'int' = 100, step_size: 'float | None' = None, min_step: 'float' = 1e-12, max_step: 'float | None' = None, shrink: 'float' = 0.5, grow: 'float' = 1.0, max_backtracks: 'int' = 12, normalize: 'bool | None' = None, armijo_c1: 'float' = 0.0001, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, accept: 'Any | None' = None, gradient_tolerance: 'float | None' = 1e-08, state: 'RunState | None' = None, warmstart: 'Any | None' = None, **engine_kwargs: 'Any') -> 'OptimizerResult'
 ```
@@ -250,6 +256,8 @@ Source: `optimizer/optimizers/line_search.py`.
 ### `optimizers.adagrad`
 
 Adaptive first-order method with cumulative squared-gradient scaling.
+
+Family: `olgs`. Root shortcut: `opt.adagrad`.
 
 ```python
 adagrad(system: 'Any', controls: 'Controls | None' = None, *, maxiter: 'int' = 100, step_size: 'StepSize | None' = None, eps: 'float' = 1e-08, initial_accumulator: 'float' = 0.0, max_step_norm: 'float | None' = None, state: 'RunState | None' = None, warmstart: 'Any | None' = None, accept: 'Any | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, gradient_tolerance: 'float | None' = 1e-08, **engine_kwargs: 'Any') -> 'OptimizerResult'
@@ -365,6 +373,8 @@ Source: `optimizer/optimizers/adaptive.py`.
 
 Adaptive first-order method with moving-average squared-gradient scaling.
 
+Family: `olgs`. Root shortcut: `opt.rmsprop`.
+
 ```python
 rmsprop(system: 'Any', controls: 'Controls | None' = None, *, maxiter: 'int' = 100, step_size: 'StepSize | None' = None, decay: 'float' = 0.9, eps: 'float' = 1e-08, initial_accumulator: 'float' = 0.0, max_step_norm: 'float | None' = None, state: 'RunState | None' = None, warmstart: 'Any | None' = None, accept: 'Any | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, gradient_tolerance: 'float | None' = 1e-08, **engine_kwargs: 'Any') -> 'OptimizerResult'
 ```
@@ -471,6 +481,8 @@ Source: `optimizer/optimizers/adaptive.py`.
 
 Limited-memory quasi-Newton polish method using accepted curvature history.
 
+Family: `olgs`. Root shortcut: `opt.lbfgs`.
+
 ```python
 lbfgs(system: 'Any', controls: 'Controls | None' = None, *, maxiter: 'int' = 100, history_size: 'int' = 10, step_size: 'float | None' = None, curvature_eps: 'float' = 1e-12, max_step_norm: 'float | None' = None, reject_shrink: 'float' = 0.5, state: 'RunState | None' = None, warmstart: 'Any | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, gradient_tolerance: 'float | None' = 1e-08, **engine_kwargs: 'Any') -> 'OptimizerResult'
 ```
@@ -536,6 +548,8 @@ Source: `optimizer/optimizers/lbfgs.py`.
 
 Low-memory nonlinear conjugate-gradient optimizer.
 
+Family: `olgs`. Root shortcut: `opt.nonlinear_cg`.
+
 ```python
 nonlinear_cg(system: 'Any', controls: 'Controls | None' = None, *, variant: 'str' = 'polak_ribiere_plus', maxiter: 'int' = 100, step_size: 'float | None' = None, max_step_norm: 'float | None' = None, restart_on_nondescent: 'bool' = True, reject_shrink: 'float' = 0.5, state: 'RunState | None' = None, warmstart: 'Any | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, gradient_tolerance: 'float | None' = 1e-08, **engine_kwargs: 'Any') -> 'OptimizerResult'
 ```
@@ -601,6 +615,8 @@ Source: `optimizer/optimizers/nonlinear_cg.py`.
 
 Low-memory nonlinear conjugate-gradient optimizer.
 
+Family: `olgs`. Root shortcut: `opt.nonlinear_cg`.
+
 ```python
 nonlinear_cg(system: 'Any', controls: 'Controls | None' = None, *, variant: 'str' = 'polak_ribiere_plus', maxiter: 'int' = 100, step_size: 'float | None' = None, max_step_norm: 'float | None' = None, restart_on_nondescent: 'bool' = True, reject_shrink: 'float' = 0.5, state: 'RunState | None' = None, warmstart: 'Any | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, gradient_tolerance: 'float | None' = 1e-08, **engine_kwargs: 'Any') -> 'OptimizerResult'
 ```
@@ -665,6 +681,8 @@ Source: `optimizer/optimizers/nonlinear_cg.py`.
 ### `optimizers.cma_es`
 
 Derivative-free population search with isotropic or diagonal sampling radius.
+
+Family: `olgs`. Root shortcut: `opt.cma_es`.
 
 ```python
 cma_es(system: 'Any', controls: 'Controls | None' = None, *, variant: 'str' = 'diagonal', maxiter: 'int' = 100, population_size: 'int | None' = None, elite_fraction: 'float' = 0.5, sigma: 'float' = 0.1, min_sigma: 'float' = 1e-08, covariance_lr: 'float' = 0.2, seed: 'int | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, state: 'RunState | None' = None, warmstart: 'Any | None' = None, stopping: 'StoppingConfig | None' = None, target_value: 'float | None' = None, target_metric: 'str | None' = None, target_mode: 'str | None' = None, stall_patience: 'int | None' = None, stall_tolerance: 'float' = 0.0, stall_metric: 'str | None' = None, stall_mode: 'str | None' = None, trace: 'Trace | None' = None, create_trace: 'bool' = True, observers: 'Iterable[RunObserver] | None' = None, api_context: 'Mapping[str, Any] | None' = None, system_params: 'Mapping[str, Any] | None' = None, stage: 'str | None' = None, chunk: 'int' = 0, use_cache: 'bool' = True, checkpoint_start: 'bool' = True, checkpoint_best: 'bool' = True, checkpoint_final: 'bool' = True) -> 'OptimizerResult'
@@ -736,6 +754,8 @@ Source: `optimizer/optimizers/cma_es.py`.
 
 Equality- and bound-constrained descent with restoration and projected-KKT stopping.
 
+Family: `olgs`. Root shortcut: `opt.projected_gradient`.
+
 ```python
 projected_gradient(system: 'Any', controls: 'Controls | None' = None, *, maxiter: 'int' = 100, step_size: 'float' = 0.1, residual_name: 'str' = 'hard', feasibility_tolerance: 'float' = 1e-08, stationarity_tolerance: 'float' = 1e-08, damping: 'float' = 1e-10, restoration_maxiter: 'int' = 5, max_backtracks: 'int' = 8, shrink: 'float' = 0.5, max_step_norm: 'float | None' = None, state: 'RunState | None' = None, warmstart: 'Any | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, **engine_kwargs: 'Any') -> 'OptimizerResult'
 ```
@@ -792,6 +812,8 @@ Source: `optimizer/optimizers/projected.py`.
 
 Matrix-free Newton method using conjugate gradients and analytical Hessian-vector products.
 
+Family: `olgs`. Root shortcut: `opt.newton_cg`.
+
 ```python
 newton_cg(system: 'Any', controls: 'Controls | None' = None, *, maxiter: 'int' = 100, step_size: 'float' = 1.0, gradient_tolerance: 'float' = 1e-08, cg_tolerance: 'float' = 0.001, cg_maxiter: 'int' = 50, damping: 'float' = 0.0, curvature_tolerance: 'float' = 1e-12, max_step_norm: 'float | None' = None, reject_shrink: 'float' = 0.5, state: 'RunState | None' = None, warmstart: 'Any | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, **engine_kwargs: 'Any') -> 'OptimizerResult'
 ```
@@ -846,6 +868,8 @@ Source: `optimizer/optimizers/newton_cg.py`.
 
 Steihaug trust-region method with model-ratio acceptance and matrix-free HVPs.
 
+Family: `olgs`. Root shortcut: `opt.trust_region`.
+
 ```python
 trust_region(system: 'Any', controls: 'Controls | None' = None, *, maxiter: 'int' = 100, initial_radius: 'float' = 1.0, max_radius: 'float' = 100.0, gradient_tolerance: 'float' = 1e-08, cg_tolerance: 'float' = 0.001, cg_maxiter: 'int' = 50, damping: 'float' = 0.0, curvature_tolerance: 'float' = 1e-12, acceptance_threshold: 'float' = 0.1, shrink_threshold: 'float' = 0.25, grow_threshold: 'float' = 0.75, shrink_factor: 'float' = 0.25, grow_factor: 'float' = 2.0, state: 'RunState | None' = None, warmstart: 'Any | None' = None, **engine_kwargs: 'Any') -> 'OptimizerResult'
 ```
@@ -898,6 +922,8 @@ Source: `optimizer/optimizers/trust_region.py`.
 
 Composite-objective descent using a system smooth gradient and proximal operator.
 
+Family: `olgs`. Root shortcut: `opt.proximal_gradient`.
+
 ```python
 proximal_gradient(system: 'Any', controls: 'Controls | None' = None, *, maxiter: 'int' = 100, step_size: 'float' = 0.1, mapping_tolerance: 'float' = 1e-08, max_step_norm: 'float | None' = None, reject_shrink: 'float' = 0.5, state: 'RunState | None' = None, warmstart: 'Any | None' = None, accept_metric: 'str | None' = None, accept_tolerance: 'float' = 0.0, **engine_kwargs: 'Any') -> 'OptimizerResult'
 ```
@@ -949,6 +975,8 @@ Initial Controls generators and restart helpers.
 
 Selected-channel constant Controls.
 
+Family: `olgs`. Root shortcut: `opt.constant_guess`.
+
 ```python
 constant_guess(target: 'Any', *, value: 'float | Mapping[str, float] | Sequence[float]' = 0.0, channels: 'str | Iterable[str] | None' = None, endpoint: 'str | None' = 'free', name: 'str | None' = None, meta: 'Mapping[str, Any] | None' = None) -> 'Controls'
 ```
@@ -990,6 +1018,8 @@ Source: `optimizer/guesses/simple.py`.
 
 Monotone ramp between per-channel start and stop values.
 
+Family: `olgs`. Root shortcut: `opt.ramp_guess`.
+
 ```python
 ramp_guess(target: 'Any', *, start: 'float | Mapping[str, float] | Sequence[float]' = 0.0, stop: 'float | Mapping[str, float] | Sequence[float]' = 1.0, channels: 'str | Iterable[str] | None' = None, kind: 'str' = 'linear', endpoint: 'str | None' = 'free', name: 'str | None' = None, meta: 'Mapping[str, Any] | None' = None) -> 'Controls'
 ```
@@ -1030,6 +1060,8 @@ Source: `optimizer/guesses/simple.py`.
 ### `guesses.sine_guess`
 
 Sine-wave guess with channel-wise frequency and phase.
+
+Family: `olgs`. Root shortcut: `opt.sine_guess`.
 
 ```python
 sine_guess(target: 'Any', *, amplitude: 'float | Mapping[str, float] | Sequence[float]' = 1.0, frequency: 'float | Mapping[str, float] | Sequence[float]' = 1.0, phase: 'float | Mapping[str, float] | Sequence[float]' = 0.0, offset: 'float | Mapping[str, float] | Sequence[float]' = 0.0, channels: 'str | Iterable[str] | None' = None, envelope: 'str | None' = None, endpoint: 'str | None' = 'free', scale: 'str' = 'max_abs', name: 'str | None' = None, meta: 'Mapping[str, Any] | None' = None) -> 'Controls'
@@ -1073,6 +1105,8 @@ Source: `optimizer/guesses/harmonic.py`.
 
 Cosine-wave guess with channel-wise frequency and phase.
 
+Family: `olgs`. Root shortcut: `opt.cosine_guess`.
+
 ```python
 cosine_guess(target: 'Any', *, amplitude: 'float | Mapping[str, float] | Sequence[float]' = 1.0, frequency: 'float | Mapping[str, float] | Sequence[float]' = 1.0, phase: 'float | Mapping[str, float] | Sequence[float]' = 0.0, offset: 'float | Mapping[str, float] | Sequence[float]' = 0.0, channels: 'str | Iterable[str] | None' = None, envelope: 'str | None' = None, endpoint: 'str | None' = 'free', scale: 'str' = 'max_abs', name: 'str | None' = None, meta: 'Mapping[str, Any] | None' = None) -> 'Controls'
 ```
@@ -1113,6 +1147,8 @@ Source: `optimizer/guesses/harmonic.py`.
 ### `guesses.gaussian_guess`
 
 Localized Gaussian pulse guess.
+
+Family: `olgs`. Root shortcut: `opt.gaussian_guess`.
 
 ```python
 gaussian_guess(target: 'Any', *, amplitude: 'float | Mapping[str, float] | Sequence[float]' = 1.0, center: 'float | Mapping[str, float] | Sequence[float]' = 0.5, width: 'float | Mapping[str, float] | Sequence[float]' = 0.15, offset: 'float | Mapping[str, float] | Sequence[float]' = 0.0, channels: 'str | Iterable[str] | None' = None, envelope: 'str | None' = None, endpoint: 'str | None' = 'free', scale: 'str' = 'max_abs', name: 'str | None' = None, meta: 'Mapping[str, Any] | None' = None) -> 'Controls'
@@ -1159,6 +1195,8 @@ Source: `optimizer/guesses/harmonic.py`.
 
 Centered sinc pulse with controllable side-lobe width.
 
+Family: `olgs`. Root shortcut: `opt.sinc_guess`.
+
 ```python
 sinc_guess(target: 'Any', *, amplitude: 'float | Mapping[str, float] | Sequence[float]' = 1.0, center: 'float | Mapping[str, float] | Sequence[float]' = 0.5, width: 'float | Mapping[str, float] | Sequence[float]' = 4.0, offset: 'float | Mapping[str, float] | Sequence[float]' = 0.0, channels: 'str | Iterable[str] | None' = None, envelope: 'str | None' = None, endpoint: 'str | None' = 'free', scale: 'str' = 'max_abs', name: 'str | None' = None, meta: 'Mapping[str, Any] | None' = None) -> 'Controls'
 ```
@@ -1202,6 +1240,8 @@ Source: `optimizer/guesses/harmonic.py`.
 ### `guesses.fourier_guess`
 
 Low-frequency Fourier-series deterministic guess.
+
+Family: `olgs`. Root shortcut: `opt.fourier_guess`.
 
 ```python
 fourier_guess(target: 'Any', *, amplitude: 'float | Mapping[str, float] | Sequence[float]' = 1.0, modes: 'int' = 5, frequency_base: 'float' = 1.0, coefficients: 'Any' = None, phases: 'Any' = 0.0, decay: 'str' = '1/k', offset: 'float | Mapping[str, float] | Sequence[float]' = 0.0, channels: 'str | Iterable[str] | None' = None, envelope: 'str | None' = None, endpoint: 'str | None' = 'free', scale: 'str' = 'max_abs', name: 'str | None' = None, meta: 'Mapping[str, Any] | None' = None) -> 'Controls'
@@ -1255,6 +1295,8 @@ Source: `optimizer/guesses/harmonic.py`.
 
 Raw random control guess.
 
+Family: `olgs`. Root shortcut: `opt.random_guess`.
+
 ```python
 random_guess(target: 'Any', *, amplitude: 'float | tuple[float, float] | Mapping[str, float] | Sequence[float]' = 1.0, distribution: 'str' = 'uniform', offset: 'float | Mapping[str, float] | Sequence[float]' = 0.0, channels: 'str | Iterable[str] | None' = None, seed: 'int | None' = None, envelope: 'str | None' = None, endpoint: 'str | None' = 'free', scale: 'str' = 'max_abs', name: 'str | None' = None, meta: 'Mapping[str, Any] | None' = None) -> 'Controls'
 ```
@@ -1305,6 +1347,8 @@ Source: `optimizer/guesses/random.py`.
 
 Random guess smoothed by a Gaussian correlation kernel.
 
+Family: `olgs`. Root shortcut: `opt.random_smooth_guess`.
+
 ```python
 random_smooth_guess(target: 'Any', *, amplitude: 'float | tuple[float, float] | Mapping[str, float] | Sequence[float]' = 1.0, correlation: 'float' = 0.15, distribution: 'str' = 'normal', offset: 'float | Mapping[str, float] | Sequence[float]' = 0.0, channels: 'str | Iterable[str] | None' = None, seed: 'int | None' = None, envelope: 'str | None' = 'hann', endpoint: 'str | None' = 'free', scale: 'str' = 'max_abs', name: 'str | None' = None, meta: 'Mapping[str, Any] | None' = None) -> 'Controls'
 ```
@@ -1351,6 +1395,8 @@ Source: `optimizer/guesses/random.py`.
 ### `guesses.random_fourier_guess`
 
 Random low-frequency Fourier-series guess.
+
+Family: `olgs`. Root shortcut: `opt.random_fourier_guess`.
 
 ```python
 random_fourier_guess(target: 'Any', *, amplitude: 'float | tuple[float, float] | Mapping[str, float] | Sequence[float]' = 1.0, modes: 'int' = 5, frequency_base: 'float' = 1.0, coefficient_scale: 'float' = 1.0, decay: 'str' = '1/k', offset: 'float | Mapping[str, float] | Sequence[float]' = 0.0, channels: 'str | Iterable[str] | None' = None, seed: 'int | None' = None, envelope: 'str | None' = None, endpoint: 'str | None' = 'free', scale: 'str' = 'max_abs', name: 'str | None' = None, meta: 'Mapping[str, Any] | None' = None) -> 'Controls'
@@ -1400,6 +1446,8 @@ Source: `optimizer/guesses/random.py`.
 
 Rescale existing Controls without mutating them.
 
+Family: `olgs`. Root shortcut: `opt.scale_guess`.
+
 ```python
 scale_guess(controls: 'Controls', *, amplitude: 'float | Mapping[str, float] | Sequence[float]' = 1.0, offset: 'float | Mapping[str, float] | Sequence[float]' = 0.0, scale: 'str' = 'max_abs', channels: 'str | Sequence[str] | None' = None, endpoint: 'str | None' = 'free', name: 'str | None' = None, meta: 'Mapping[str, Any] | None' = None) -> 'Controls'
 ```
@@ -1441,6 +1489,8 @@ Source: `optimizer/guesses/composite.py`.
 ### `guesses.mix_guess`
 
 Weighted mix of compatible Controls objects.
+
+Family: `olgs`. Root shortcut: `opt.mix_guess`.
 
 ```python
 mix_guess(guesses: 'Sequence[Controls] | Controls', *more_guesses: 'Controls', weights: 'Sequence[float] | None' = None, name: 'str | None' = None, meta: 'Mapping[str, Any] | None' = None) -> 'Controls'
@@ -1485,6 +1535,8 @@ Source: `optimizer/guesses/composite.py`.
 ### `guesses.perturb_guess`
 
 Add a generated perturbation to existing Controls.
+
+Family: `olgs`. Root shortcut: `opt.perturb_guess`.
 
 ```python
 perturb_guess(controls: 'Controls', *, amplitude: 'float | tuple[float, float] | Mapping[str, float] | Sequence[float]' = 0.01, kind: 'str' = 'random_fourier', seed: 'int | None' = None, channels: 'str | Sequence[str] | None' = None, name: 'str | None' = None, **kwargs: 'Any') -> 'Controls'
@@ -1538,6 +1590,8 @@ Diagnostics, derivative checks, residual geometry, repair, guards, and spectrum 
 
 Evaluate and summarize current system metrics.
 
+Family: `olgs`. Root shortcut: `opt.metric_report`.
+
 ```python
 metric_report(system: 'Any', controls: 'Controls') -> 'dict[str, Any]'
 ```
@@ -1578,6 +1632,8 @@ Source: `optimizer/utils/diagnostics.py`.
 ### `utils.diagnostic_report`
 
 Metrics plus control, residual, and optional gradient summaries.
+
+Family: `olgs`. Root shortcut: `opt.diagnostic_report`.
 
 ```python
 diagnostic_report(system: 'Any', controls: 'Controls', *, residuals: 'str | None' = 'hard', include_gradient: 'bool' = True) -> 'dict[str, Any]'
@@ -1628,6 +1684,8 @@ Source: `optimizer/utils/diagnostics.py`.
 
 Residual/Jacobian rank, conditioning, and repair feasibility summary.
 
+Family: `olgs`. Root shortcut: `opt.geometry_probe`.
+
 ```python
 geometry_probe(system: 'Any', controls: 'Controls', *, residuals: 'str' = 'hard', fallback: 'bool' = True, eps: 'float' = 1e-06, rcond: 'float | None' = None) -> 'dict[str, Any]'
 ```
@@ -1676,6 +1734,8 @@ Source: `optimizer/utils/diagnostics.py`.
 ### `utils.finite_difference_gradient`
 
 Full coordinate finite-difference gradient for a scalar metric.
+
+Family: `olgs`. Root shortcut: `opt.finite_difference_gradient`.
 
 ```python
 finite_difference_gradient(system: 'Any', controls: 'Controls', *, metric: 'str | None' = None, eps: 'float' = 1e-06, method: 'str' = 'central') -> 'Controls'
@@ -1731,6 +1791,8 @@ Source: `optimizer/utils/derivatives.py`.
 
 Directional finite-difference check of the analytical gradient.
 
+Family: `olgs`. Root shortcut: `opt.verify_gradient`.
+
 ```python
 verify_gradient(system: 'Any', controls: 'Controls', *, metric: 'str | None' = None, eps: 'float' = 1e-06, directions: 'int | np.ndarray' = 8, seed: 'int | None' = 12345, rtol: 'float' = 0.0001, atol: 'float' = 1e-07) -> 'dict[str, Any]'
 ```
@@ -1785,6 +1847,8 @@ Source: `optimizer/utils/derivatives.py`.
 
 Full finite-difference Jacobian of system residuals.
 
+Family: `olgs`. Root shortcut: `opt.finite_difference_jacobian`.
+
 ```python
 finite_difference_jacobian(system: 'Any', controls: 'Controls', *, residuals: 'str' = 'hard', eps: 'float' = 1e-06, method: 'str' = 'central') -> 'np.ndarray'
 ```
@@ -1836,6 +1900,8 @@ Source: `optimizer/utils/derivatives.py`.
 
 Directional finite-difference check of analytical residual Jacobian.
 
+Family: `olgs`. Root shortcut: `opt.verify_jacobian`.
+
 ```python
 verify_jacobian(system: 'Any', controls: 'Controls', *, residuals: 'str' = 'hard', eps: 'float' = 1e-06, directions: 'int | np.ndarray' = 8, seed: 'int | None' = 12345, rtol: 'float' = 0.0001, atol: 'float' = 1e-07, fallback: 'bool' = False) -> 'dict[str, Any]'
 ```
@@ -1883,6 +1949,8 @@ Source: `optimizer/utils/derivatives.py`.
 
 Basis columns for the local residual-Jacobian nullspace.
 
+Family: `olgs`. Root shortcut: `opt.nullspace_basis`.
+
 ```python
 nullspace_basis(system: 'Any', controls: 'Controls', *, residuals: 'str' = 'hard', rcond: 'float | None' = None, fallback: 'bool' = True, eps: 'float' = 1e-06) -> 'np.ndarray'
 ```
@@ -1928,6 +1996,8 @@ Source: `optimizer/utils/geometry.py`.
 ### `utils.project_gradient`
 
 Remove local residual row-space component from a gradient-like Controls object.
+
+Family: `olgs`. Root shortcut: `opt.project_gradient`.
 
 ```python
 project_gradient(system: 'Any', controls: 'Controls', gradient: 'Controls', *, residuals: 'str' = 'hard', damping: 'float' = 0.0, fallback: 'bool' = True, eps: 'float' = 1e-06, return_info: 'bool' = False) -> 'Controls | dict[str, Any]'
@@ -1979,6 +2049,8 @@ Source: `optimizer/utils/geometry.py`.
 ### `utils.repair_newton`
 
 Newton/LM-style residual repair that moves controls to reduce a named residual vector.
+
+Family: `olgs`. Root shortcut: `opt.repair_newton`.
 
 ```python
 repair_newton(system: 'Any', controls: 'Controls', *, residuals: 'str' = 'hard', method: 'str' = 'lm', maxiter: 'int' = 10, tolerance: 'float' = 1e-10, damping: 'float' = 1e-08, fallback: 'bool' = True, eps: 'float' = 1e-06, rcond: 'float | None' = None, max_step_norm: 'float | None' = None, line_search: 'bool' = True, shrink: 'float' = 0.5, max_backtracks: 'int' = 8) -> 'RepairResult'
@@ -2046,6 +2118,8 @@ Source: `optimizer/utils/repairs.py`.
 
 FFT-based channel-wise amplitude and power summaries.
 
+Family: `olgs`. Root shortcut: `opt.control_spectrum`.
+
 ```python
 control_spectrum(controls: 'Controls', *, dt: 'float | None' = None, high_frequency_cutoff: 'float | None' = None) -> 'dict[str, Any]'
 ```
@@ -2092,6 +2166,8 @@ Source: `optimizer/utils/spectrum.py`.
 
 Finite-difference roughness, jump, and total-variation summaries.
 
+Family: `olgs`. Root shortcut: `opt.smoothness_report`.
+
 ```python
 smoothness_report(controls: 'Controls') -> 'dict[str, Any]'
 ```
@@ -2136,6 +2212,8 @@ Source: `optimizer/utils/spectrum.py`.
 
 Result object returned by repair_newton.
 
+Family: `olgs`. Root shortcut: `opt.RepairResult`.
+
 ```python
 RepairResult(controls: 'Controls', residuals: 'np.ndarray', residual_norm: 'float', residual_max_abs: 'float', converged: 'bool', iterations: 'int', method: 'str', residual_name: 'str', jacobian_source: 'str', history: 'list[dict[str, Any]]' = <factory>, stop_reason: 'str' = 'unknown') -> None
 ```
@@ -2178,6 +2256,8 @@ Source: `optimizer/utils/repairs.py`.
 
 Classify a short OLGS or OLSS history as converging, slow, stalled, oscillating, diverging, or repeating rejections.
 
+Family: `olgs`, `olss`. Root shortcut: `opt.diagnose_run`.
+
 ```python
 diagnose_run(result: 'Any', *, mode: 'str | None' = None) -> 'dict[str, Any]'
 ```
@@ -2187,6 +2267,8 @@ Source: `optimizer/utils/run_diagnostics.py`.
 ### `utils.curvature_probe`
 
 Probe local curvature, negative-curvature evidence, and a suggested gradient step.
+
+Family: `olgs`. Root shortcut: `opt.curvature_probe`.
 
 ```python
 curvature_probe(system: 'Any', controls: 'Controls', *, directions: 'int' = 8, eps: 'float' = 1e-05, seed: 'int' = 0) -> 'dict[str, Any]'
@@ -2198,6 +2280,8 @@ Source: `optimizer/utils/run_diagnostics.py`.
 
 Compare several optimizers for a short in-memory budget from identical controls.
 
+Family: `olgs`. Root shortcut: `opt.compare_methods`.
+
 ```python
 compare_methods(system: 'Any', controls: 'Controls', methods: 'Iterable[str | Callable[..., Any]] | Mapping[str, Callable[..., Any]]', *, iterations: 'int' = 10, options: 'Mapping[str, Mapping[str, Any]] | None' = None) -> 'dict[str, Any]'
 ```
@@ -2207,6 +2291,8 @@ Source: `optimizer/utils/run_diagnostics.py`.
 ### `utils.shooting_geometry_probe`
 
 Report OLSS Jacobian rank, condition, weak variable blocks, and residual groups.
+
+Family: `olss`. Root shortcut: `opt.shooting_geometry_probe`.
 
 ```python
 shooting_geometry_probe(system: 'Any', variables: 'Any', *, options: 'Mapping[str, Any] | None' = None, rcond: 'float | None' = None) -> 'dict[str, Any]'
@@ -2221,6 +2307,8 @@ Small step-size policy objects for optimizer or repair workflows.
 ### `schedules.ConstantSchedule`
 
 Schedule that always returns the same step size.
+
+Family: `olgs`. Root shortcut: `opt.ConstantSchedule`.
 
 ```python
 ConstantSchedule(value: 'float') -> None
@@ -2259,6 +2347,8 @@ Source: `optimizer/schedules/step_size.py`.
 ### `schedules.AdaptiveStepSchedule`
 
 Shrink/grow step-size policy with optional min/max clamps.
+
+Family: `olgs`. Root shortcut: `opt.AdaptiveStepSchedule`.
 
 ```python
 AdaptiveStepSchedule(initial_step: 'float' = 0.001, shrink: 'float' = 0.5, grow: 'float' = 1.0, min_step: 'float' = 1e-12, max_step: 'float | None' = None) -> None
@@ -2301,6 +2391,8 @@ Source: `optimizer/schedules/step_size.py`.
 
 Exponential accepted-iteration step decay with a floor.
 
+Family: `olgs`. Root shortcut: `opt.ExponentialDecaySchedule`.
+
 ```python
 ExponentialDecaySchedule(initial_step: 'float' = 0.001, decay: 'float' = 0.99, min_step: 'float' = 1e-12) -> None
 ```
@@ -2311,6 +2403,8 @@ Source: `optimizer/schedules/step_size.py`.
 
 Linear warmup from an initial to a target step.
 
+Family: `olgs`. Root shortcut: `opt.LinearWarmupSchedule`.
+
 ```python
 LinearWarmupSchedule(initial_step: 'float', target_step: 'float', warmup_steps: 'int') -> None
 ```
@@ -2320,6 +2414,8 @@ Source: `optimizer/schedules/step_size.py`.
 ### `schedules.CosineDecaySchedule`
 
 Cosine step decay over a fixed iteration horizon.
+
+Family: `olgs`. Root shortcut: `opt.CosineDecaySchedule`.
 
 ```python
 CosineDecaySchedule(initial_step: 'float', total_steps: 'int', min_step: 'float' = 0.0) -> None
@@ -2334,6 +2430,8 @@ Base data objects and top-level entry points: Controls, results, warmstart state
 ### `base.ControlSpec`
 
 Named control layout: channel keys, control_dim, dtype, dt, and metadata.
+
+Family: `olgs`.
 
 ```python
 ControlSpec(keys: 'Sequence[str]', control_dim: 'int', dtype: 'Any' = <class 'float'>, dt: 'float | None' = None, meta: 'Mapping[str, Any]' = <factory>) -> None
@@ -2374,6 +2472,8 @@ Source: `optimizer/controls.py`.
 
 Named control values backed by a dense (n_controls, control_dim) matrix.
 
+Family: `olgs`.
+
 ```python
 Controls(spec: 'ControlSpec', values: 'np.ndarray | Sequence[Sequence[float]]', *, name: 'str | None' = None, meta: 'Mapping[str, Any] | None' = None, copy: 'bool' = True) -> 'None'
 ```
@@ -2413,6 +2513,8 @@ Source: `optimizer/controls.py`.
 
 Evaluate a system/Controls pair and wrap metrics in Evaluation.
 
+Family: `olgs`, `olss`.
+
 ```python
 evaluate(system: '_Any', controls: '_Any', *, use_cache: 'bool' = True) -> '_Any'
 ```
@@ -2451,6 +2553,8 @@ Source: `optimizer/core/evaluate.py`.
 ### `base.gradient`
 
 Call and validate the system analytical gradient.
+
+Family: `olgs`.
 
 ```python
 gradient(system: '_Any', controls: '_Any', *, use_cache: 'bool' = True) -> 'Controls'
@@ -2496,6 +2600,8 @@ Source: `optimizer/core/evaluate.py`.
 
 Call and validate a combined objective/analytical-gradient system capability.
 
+Family: `olgs`.
+
 ```python
 value_and_gradient(system: '_Any', controls: 'Controls', *, use_cache: 'bool' = True) -> 'tuple[Evaluation, Controls]'
 ```
@@ -2533,6 +2639,8 @@ Source: `optimizer/core/evaluate.py`.
 ### `base.OptimizerResult`
 
 Standard return object from optimizer calls.
+
+Family: `olgs`.
 
 ```python
 OptimizerResult(controls: 'Controls', metrics: 'dict[str, Any]', stop_reason: 'str', iterations: 'int', optimizer: 'str', objective_metric: 'str' = 'J', state: 'RunState | None' = None, trace: 'Any | None' = None, system_params: 'dict[str, Any]' = <factory>, trace_id: 'str | None' = None, checkpoint_ids: 'dict[str, str]' = <factory>, tracking_failures: 'tuple[dict[str, str], ...]' = ()) -> None
@@ -2574,6 +2682,8 @@ Source: `optimizer/result.py`.
 
 Safe handoff state for starting or continuing an optimizer.
 
+Family: `olgs`.
+
 ```python
 WarmStartState(controls: 'Controls', metrics: 'dict[str, Any]' = <factory>, step_size: 'float | None' = None, optimizer_state: 'dict[str, Any] | None' = None, source_optimizer: 'str | None' = None, target_optimizer: 'str | None' = None, trace_id: 'str | None' = None, checkpoint_ids: 'dict[str, str]' = <factory>, system_params: 'dict[str, Any]' = <factory>) -> None
 ```
@@ -2612,6 +2722,8 @@ Source: `optimizer/state.py`.
 
 Family-aware operation request used by shared core and future CLI/MCP adapters.
 
+Family: `olgs`, `olss`.
+
 ```python
 SystemRequest(operation: 'str', payload: 'Mapping[str, Any]' = <factory>, options: 'Mapping[str, Any]' = <factory>, family: 'str | None' = None, request_id: 'str' = <factory>) -> None
 ```
@@ -2642,6 +2754,8 @@ Source: `optimizer/transactions.py`.
 
 Stable success/error response envelope for one system transaction.
 
+Family: `olgs`, `olss`.
+
 ```python
 SystemResponse(request_id: 'str', family: 'str', operation: 'str', ok: 'bool', result: 'Any' = None, error: 'Mapping[str, Any] | None' = None) -> None
 ```
@@ -2663,6 +2777,8 @@ Source: `optimizer/transactions.py`.
 ### `base.SystemTransactionAdapter`
 
 Bind one OLGS or OLSS system to the shared request/response execution shape.
+
+Family: `olgs`, `olss`.
 
 ```python
 SystemTransactionAdapter(system: 'Any') -> 'None'
@@ -2691,6 +2807,8 @@ Source: `optimizer/transactions.py`.
 ### `base.transact`
 
 Execute a direct system operation through a family-aware structured envelope.
+
+Family: `olgs`, `olss`.
 
 ```python
 transact(system: 'Any', request: 'SystemRequest | Mapping[str, Any]') -> 'SystemResponse'
@@ -2726,6 +2844,8 @@ Source: `optimizer/transactions.py`.
 ### `base.Trace`
 
 In-memory run ledger for iteration records, chunk records, events, and checkpoints.
+
+Family: `olgs`.
 
 ```python
 Trace(run_id: 'str', iteration_records: 'list[IterationRecord]' = <factory>, chunk_records: 'list[ChunkRecord]' = <factory>, event_records: 'list[EventRecord]' = <factory>, checkpoints: 'dict[str, Checkpoint]' = <factory>, labels: 'dict[str, list[str]]' = <factory>) -> None
@@ -2765,6 +2885,8 @@ Source: `optimizer/logs/trace.py`.
 ### `base.context`
 
 Bind a system once for notebook/curriculum convenience.
+
+Family: `olgs`.
 
 ```python
 context(system: '_Any', *, trace: 'Trace | str | None' = None, **defaults: '_Any') -> 'OptimizerContext'
@@ -2807,6 +2929,8 @@ Source: `optimizer/library.py`.
 
 Return declared system capabilities and optional static metadata without evaluating controls.
 
+Family: `olgs`, `olss`.
+
 ```python
 system_info(system: '_Any') -> 'dict[str, _Any]'
 ```
@@ -2844,6 +2968,8 @@ Source: `optimizer/library.py`.
 ### `base.plot_data`
 
 Request one explicit system-owned visualization data product without rendering it.
+
+Family: `olgs`.
 
 ```python
 plot_data(system: '_Any', controls: 'Controls', *, kind: 'str', **options: '_Any') -> 'PlotData'
@@ -2890,6 +3016,8 @@ Source: `optimizer/core/evaluate.py`.
 
 Return the current registered optimizer, OLGS contract, and tracker capability surface.
 
+Family: `olgs`, `olss`.
+
 ```python
 context_info(system: '_Any | None' = None) -> 'dict[str, _Any]'
 ```
@@ -2932,6 +3060,8 @@ Source: `optimizer/introspection.py`.
 ### `base.continuation`
 
 Run explicit system-parameter stages with safe control transfer and stage gates.
+
+Family: `olgs`.
 
 ```python
 continuation(system: '_Any', controls: 'Controls', *, stages: '_Iterable[ContinuationStage | dict[str, _Any]]', **kwargs: '_Any') -> 'ContinuationResult'
@@ -2977,6 +3107,478 @@ result = opt.continuation(system, controls, stages=[opt.ContinuationStage(...)])
 
 Source: `optimizer/continuation.py`.
 
+### `base.to_plain`
+
+Convert a library value to plain, strict-JSON data under the one serialization policy; non-finite floats become "nan", "inf", or "-inf".
+
+Family: `olgs`, `olss`.
+
+```python
+to_plain(value: 'Any') -> 'Any'
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | JSON data |
+
+#### Related
+
+- base.transact
+
+#### Example
+
+```python
+payload = opt.to_plain(result)
+```
+
+Source: `optimizer/serialization.py`.
+
+### `base.system_family`
+
+Return "olgs" or "olss" from a system's static system_spec(); a missing family means OLGS.
+
+Family: `olgs`, `olss`.
+
+```python
+system_family(system: 'Any') -> 'str'
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | str |
+
+#### Requires
+
+- system.system_spec
+
+#### Example
+
+```python
+family = opt.system_family(system)
+```
+
+Source: `optimizer/families.py`.
+
+### `base.control_spec`
+
+Build a ControlSpec from channel keys and a control dimension.
+
+Family: `olgs`.
+
+```python
+control_spec(keys: '_Iterable[str]', control_dim: 'int', **kwargs: '_Any') -> 'ControlSpec'
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | ControlSpec |
+
+#### Example
+
+```python
+spec = opt.control_spec(('ux', 'uy'), 33)
+```
+
+Source: `optimizer/library.py`.
+
+### `base.controls`
+
+Build Controls from a matrix-like payload for a ControlSpec.
+
+Family: `olgs`.
+
+```python
+controls(spec: 'ControlSpec', values: '_Any', **kwargs: '_Any') -> 'Controls'
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | Controls |
+
+Source: `optimizer/library.py`.
+
+### `base.zeros`
+
+Build zero Controls for a ControlSpec.
+
+Family: `olgs`.
+
+```python
+zeros(spec: 'ControlSpec', **kwargs: '_Any') -> 'Controls'
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | Controls |
+
+Source: `optimizer/library.py`.
+
+### `base.constant`
+
+Build constant Controls for a ControlSpec.
+
+Family: `olgs`.
+
+```python
+constant(spec: 'ControlSpec', value: '_Any', **kwargs: '_Any') -> 'Controls'
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | Controls |
+
+Source: `optimizer/library.py`.
+
+### `base.Evaluation`
+
+Snapshot of one system evaluation: controls, metrics, and J.
+
+Family: `olgs`.
+
+```python
+Evaluation(controls: 'Controls', metrics: 'dict[str, Any]', system_state: 'dict[str, Any] | None' = None, objective_metric: 'str' = 'J') -> None
+```
+
+Source: `optimizer/result.py`.
+
+### `base.RunState`
+
+Mutable state of one active optimization run: controls, metrics, step size, and optimizer memory.
+
+Family: `olgs`.
+
+```python
+RunState(controls: 'Controls', metrics: 'dict[str, Any]' = <factory>, iteration: 'int' = 0, global_iteration: 'int' = 0, step_size: 'float | None' = None, optimizer_name: 'str | None' = None, optimizer_state: 'dict[str, Any]' = <factory>, best_controls: 'Controls | None' = None, best_metrics: 'dict[str, Any] | None' = None, stop_reason: 'str | None' = None, trace_id: 'str | None' = None, checkpoint_ids: 'dict[str, str]' = <factory>, system_params: 'dict[str, Any]' = <factory>) -> None
+```
+
+Source: `optimizer/state.py`.
+
+### `base.warmstart`
+
+Create a safe WarmStartState from a result or active run state, optionally for a target optimizer.
+
+Family: `olgs`.
+
+```python
+warmstart(result_or_state: '_Any', *, target_optimizer: 'str | None' = None) -> 'WarmStartState'
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | WarmStartState |
+
+Source: `optimizer/state.py`.
+
+### `base.trace`
+
+Create an in-memory Trace ledger with the given or a random run id.
+
+Family: `olgs`.
+
+```python
+trace(run_id: 'str | None' = None) -> 'Trace'
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | Trace |
+
+Source: `optimizer/logs/trace.py`.
+
+### `base.Checkpoint`
+
+Restorable snapshot of controls plus optional run state in a Trace.
+
+Family: `olgs`.
+
+```python
+Checkpoint(id: 'str', label: 'str', controls: 'Controls', state: 'RunState | None' = None, metrics: 'dict[str, Any]' = <factory>, system_params: 'dict[str, Any]' = <factory>, optimizer_state: 'dict[str, Any]' = <factory>, iteration: 'int' = 0, stage: 'str | None' = None, previous_id: 'str | None' = None, random_state: 'dict[str, Any] | None' = None) -> None
+```
+
+Source: `optimizer/logs/checkpoint.py`.
+
+### `base.ChunkRecord`
+
+In-memory Trace record for one optimizer chunk.
+
+Family: `olgs`.
+
+```python
+ChunkRecord(run_id: 'str', optimizer: 'str', chunk: 'int', start_iteration: 'int', end_iteration: 'int', start_metrics: 'dict[str, Any]' = <factory>, end_metrics: 'dict[str, Any]' = <factory>, system_params: 'dict[str, Any]' = <factory>, stage: 'str | None' = None, accepted: 'bool | None' = None, reason: 'str | None' = None) -> None
+```
+
+Source: `optimizer/logs/records.py`.
+
+### `base.IterationRecord`
+
+In-memory Trace record for one optimizer iteration.
+
+Family: `olgs`.
+
+```python
+IterationRecord(run_id: 'str', optimizer: 'str', iteration: 'int', global_iteration: 'int', metrics: 'dict[str, Any]' = <factory>, system_params: 'dict[str, Any]' = <factory>, technical: 'dict[str, Any]' = <factory>, stage: 'str | None' = None, accepted: 'bool | None' = None, reason: 'str | None' = None) -> None
+```
+
+Source: `optimizer/logs/records.py`.
+
+### `base.EventRecord`
+
+In-memory Trace event for actions outside iterations, such as rollback.
+
+Family: `olgs`.
+
+```python
+EventRecord(run_id: 'str', event: 'str', payload: 'dict[str, Any]' = <factory>) -> None
+```
+
+Source: `optimizer/logs/records.py`.
+
+### `base.parallel_map`
+
+Map a function over items with local parallel execution configured by ParallelConfig.
+
+Family: `olgs`, `olss`.
+
+```python
+parallel_map(function: '_Callable[[_Any], _Any]', items: '_Iterable[_Any]', *, config: 'ParallelConfig | None' = None) -> 'list[_Any]'
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | list |
+
+Source: `optimizer/utils/parallel.py`.
+
+### `base.ParallelConfig`
+
+Configuration for local map-style parallel execution.
+
+Family: `olgs`, `olss`.
+
+```python
+ParallelConfig(backend: 'str' = 'serial', workers: 'int | None' = None, chunksize: 'int' = 1) -> None
+```
+
+Source: `optimizer/utils/parallel.py`.
+
+### `base.OptimizerContext`
+
+Bound-system facade returned by context() for notebook and curriculum workflows.
+
+Family: `olgs`.
+
+```python
+OptimizerContext(system: 'Any', library: "'OptimizerLibrary'", trace: 'Trace | None' = None, defaults: 'dict[str, Any] | None' = None) -> None
+```
+
+Source: `optimizer/library.py`.
+
+### `base.OptimizerLibrary`
+
+Facade class behind the root shortcuts; library is its default instance.
+
+Family: `olgs`, `olss`.
+
+```python
+OptimizerLibrary() -> 'None'
+```
+
+Source: `optimizer/library.py`.
+
+### `base.library`
+
+Default OptimizerLibrary instance that serves the root shortcuts.
+
+Family: `olgs`, `olss`.
+
+Source: `optimizer/library.py`.
+
+### `base.methods`
+
+Return the status record of every public root function, built from the catalog declarations.
+
+Family: `olgs`, `olss`.
+
+```python
+methods() -> 'dict[str, MethodInfo]'
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | dict[str, MethodInfo] |
+
+Source: `optimizer/library.py`.
+
+### `base.MethodInfo`
+
+Status record for one public root function: name, status, source module, and phase.
+
+Family: `olgs`, `olss`.
+
+```python
+MethodInfo(name: 'str', status: 'str', module: 'str', phase: 'str') -> None
+```
+
+Source: `optimizer/library.py`.
+
+### `base.ContinuationStage`
+
+One declared system transition and bounded optimizer segment of an OLGS continuation plan.
+
+Family: `olgs`.
+
+```python
+ContinuationStage(label: 'str', optimizer: 'str | OptimizerCallable', secondary_updates: 'Mapping[str, Any]' = <factory>, optimizer_options: 'Mapping[str, Any]' = <factory>, gate: 'StageGate' = <factory>, system_factory: 'SystemFactory | None' = None, control_transfer: 'ControlTransfer | None' = None) -> None
+```
+
+Source: `optimizer/continuation.py`.
+
+### `base.StageGate`
+
+Explicit evidence required before an OLGS continuation advances to the next stage.
+
+Family: `olgs`.
+
+```python
+StageGate(objective_target: 'float | None' = None, objective_mode: 'str' = 'min', feasibility_tolerance: 'float | None' = None, residual_name: 'str' = 'hard', stationarity_tolerance: 'float | None' = None) -> None
+```
+
+Source: `optimizer/continuation.py`.
+
+### `base.StageResult`
+
+One completed continuation stage: its system, optimizer result, gate verdict, and control transfer.
+
+Family: `olgs`.
+
+```python
+StageResult(index: 'int', stage: 'ContinuationStage', system: 'Any', result: 'OptimizerResult', gate_passed: 'bool', gate_metrics: 'Mapping[str, Any]', transfer: 'str', parent_checkpoint_ids: 'Mapping[str, str]') -> None
+```
+
+Source: `optimizer/continuation.py`.
+
+### `base.ContinuationResult`
+
+Result chain of an OLGS continuation plan: stages, final result, final system, and stop reason.
+
+Family: `olgs`.
+
+```python
+ContinuationResult(stages: 'tuple[StageResult, ...]', final_result: 'OptimizerResult', final_system: 'Any', stop_reason: 'str', plan_id: 'str') -> None
+```
+
+Source: `optimizer/continuation.py`.
+
+### `base.constant_schedule`
+
+Create a ConstantSchedule.
+
+Family: `olgs`.
+
+```python
+constant_schedule(value: 'float') -> 'ConstantSchedule'
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | ConstantSchedule |
+
+Source: `optimizer/library.py`.
+
+### `base.adaptive_step_schedule`
+
+Create an AdaptiveStepSchedule from keyword arguments.
+
+Family: `olgs`.
+
+```python
+adaptive_step_schedule(**kwargs: 'Any') -> 'AdaptiveStepSchedule'
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | AdaptiveStepSchedule |
+
+Source: `optimizer/library.py`.
+
+### `base.exponential_decay_schedule`
+
+Create an ExponentialDecaySchedule from keyword arguments.
+
+Family: `olgs`.
+
+```python
+exponential_decay_schedule(**kwargs: 'Any') -> 'ExponentialDecaySchedule'
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | ExponentialDecaySchedule |
+
+Source: `optimizer/library.py`.
+
+### `base.linear_warmup_schedule`
+
+Create a LinearWarmupSchedule from keyword arguments.
+
+Family: `olgs`.
+
+```python
+linear_warmup_schedule(**kwargs: 'Any') -> 'LinearWarmupSchedule'
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | LinearWarmupSchedule |
+
+Source: `optimizer/library.py`.
+
+### `base.cosine_decay_schedule`
+
+Create a CosineDecaySchedule from keyword arguments.
+
+Family: `olgs`.
+
+```python
+cosine_decay_schedule(**kwargs: 'Any') -> 'CosineDecaySchedule'
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | CosineDecaySchedule |
+
+Source: `optimizer/library.py`.
+
 ## core
 
 Shared chunk engine: the proposal contract, validated system evaluation, acceptance guards, and stopping rules.
@@ -2984,6 +3586,8 @@ Shared chunk engine: the proposal contract, validated system evaluation, accepta
 ### `core.run_chunk`
 
 Shared optimizer engine for custom StepProposal functions.
+
+Family: `olgs`. Root shortcut: `opt.run_chunk`.
 
 ```python
 run_chunk(system: 'Any', controls: 'Controls | None' = None, *, step: 'StepFunction', optimizer_name: 'str', maxiter: 'int', state: 'RunState | None' = None, warmstart: 'WarmStartState | None' = None, trace: 'Trace | None' = None, create_trace: 'bool' = True, observers: 'Iterable[RunObserver] | None' = None, step_size: 'float | None' = None, stopping: 'StoppingConfig | None' = None, target_value: 'float | None' = None, target_metric: 'str | None' = None, target_mode: 'str | None' = None, stall_patience: 'int | None' = None, stall_tolerance: 'float' = 0.0, stall_metric: 'str | None' = None, stall_mode: 'str | None' = None, gradient_tolerance: 'float | None' = None, stationary_curvature_tolerance: 'float' = 1e-10, accept: 'AcceptFunction | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, system_params: 'Mapping[str, Any] | None' = None, api_context: 'Mapping[str, Any] | None' = None, random_state: 'RandomStateSource | None' = None, stage: 'str | None' = None, chunk: 'int' = 0, use_cache: 'bool' = True, enforce_bounds: 'bool' = True, failed_trial_retries: 'int' = 3, failed_trial_shrink: 'float' = 0.5, checkpoint_start: 'bool' = True, checkpoint_latest: 'bool' = True, checkpoint_accepted: 'bool' = True, checkpoint_best: 'bool' = True, checkpoint_final: 'bool' = True, gradient_source: 'str' = 'gradient', prefer_value_and_gradient: 'bool' = True) -> 'OptimizerResult'
@@ -3043,6 +3647,8 @@ Source: `optimizer/core/engine.py`.
 
 Read-only bundle the engine hands to a proposal function each iteration.
 
+Family: `olgs`. Root shortcut: `opt.StepContext`.
+
 ```python
 StepContext(system: 'OptimizerSystem', evaluator: 'SystemEvaluator', state: 'RunState', evaluation: 'Evaluation', gradient: 'Controls', objective_direction: 'str', iteration: 'int', stage: 'str | None' = None) -> None
 ```
@@ -3078,6 +3684,8 @@ Source: `optimizer/core/engine.py`.
 ### `core.StepProposal`
 
 Trial update returned by one optimizer iteration.
+
+Family: `olgs`. Root shortcut: `opt.StepProposal`.
 
 ```python
 StepProposal(controls: 'Controls', step_size: 'float | None' = None, optimizer_state: 'Mapping[str, Any] | None' = None, optimizer_state_on_accept: 'Mapping[str, Any] | None' = None, optimizer_state_on_reject: 'Mapping[str, Any] | None' = None, step_size_on_accept: 'float | None' = None, step_size_on_reject: 'float | None' = None, technical: 'Mapping[str, Any]' = <factory>, reason: 'str | None' = None, stop_reason: 'str | None' = None) -> None
@@ -3122,6 +3730,8 @@ Source: `optimizer/core/engine.py`.
 
 Engine verdict on whether a trial replaces the current controls.
 
+Family: `olgs`. Root shortcut: `opt.AcceptanceDecision`.
+
 ```python
 AcceptanceDecision(accepted: 'bool', reason: 'str', technical: 'dict[str, Any]' = <factory>, optimizer_state_update: 'Mapping[str, Any] | None' = None, next_step_size: 'float | None' = None) -> None
 ```
@@ -3157,6 +3767,8 @@ Source: `optimizer/core/engine.py`.
 ### `core.SystemEvaluator`
 
 Validation and cache wrapper around an optimizer-facing system.
+
+Family: `olgs`. Root shortcut: `opt.SystemEvaluator`.
 
 ```python
 SystemEvaluator(system: 'Any', *, use_cache: 'bool' = True, cache_size: 'int | None' = 32) -> 'None'
@@ -3206,6 +3818,8 @@ Source: `optimizer/core/evaluate.py`.
 
 Declarative stopping rules for one chunk: budget, target, stall, and finiteness.
 
+Family: `olgs`. Root shortcut: `opt.StoppingConfig`.
+
 ```python
 StoppingConfig(maxiter: 'int', target_value: 'float | None' = None, target_metric: 'str | None' = None, target_mode: 'str | None' = None, stall_patience: 'int | None' = None, stall_tolerance: 'float' = 0.0, stall_metric: 'str | None' = None, stall_mode: 'str | None' = None, check_finite: 'bool' = True) -> None
 ```
@@ -3242,6 +3856,8 @@ Source: `optimizer/core/stopping.py`.
 ### `core.metric_guard`
 
 Build a reusable multi-metric accept/reject guard for run_chunk or optimizer accept hooks.
+
+Family: `olgs`. Root shortcut: `opt.metric_guard`.
 
 ```python
 metric_guard(*, improve: 'str' = 'J', mode: 'str' = 'min', tolerance: 'float' = 0.0, require: 'Mapping[str, RuleSpec] | None' = None) -> 'MetricGuard'
@@ -3286,6 +3902,231 @@ guard = opt.core.metric_guard(improve='J', require={'fidelity': ('>=', 0.0)})
 
 Source: `optimizer/core/guards.py`.
 
+### `core.StopReason`
+
+Meaning, outcome class, families, and continuability of one stop reason; StopReason.lookup(reason) also resolves labelled reasons such as stage_gate_failed:<label>.
+
+Family: `olgs`, `olss`.
+
+```python
+StopReason(name: 'str', meaning: 'str', families: 'tuple[str, ...]', outcome: 'str', continuable: 'bool', source: 'str') -> None
+```
+
+#### Related
+
+- core.STOP_REASONS
+- utils.diagnose_run
+
+Source: `optimizer/core/stop_reasons.py`.
+
+### `core.STOP_REASONS`
+
+Read-only registry of every stop reason the library assigns, keyed by name.
+
+Family: `olgs`, `olss`.
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | Mapping[str, StopReason] |
+
+#### Related
+
+- core.StopReason
+
+#### Example
+
+```python
+opt.core.STOP_REASONS['maxiter'].outcome
+```
+
+Source: `optimizer/core/stop_reasons.py`.
+
+### `core.StopDecision`
+
+Decision returned by stopping checks: whether to stop and the stop reason.
+
+Family: `olgs`.
+
+```python
+StopDecision(stop: 'bool', reason: 'str | None' = None, details: 'dict[str, Any]' = <factory>) -> None
+```
+
+Source: `optimizer/core/stopping.py`.
+
+### `core.StopTracker`
+
+Stateful stopping helper for one optimizer chunk.
+
+Family: `olgs`.
+
+```python
+StopTracker(config: 'StoppingConfig', *, initial_metrics: 'Mapping[str, Any] | None' = None) -> 'None'
+```
+
+Source: `optimizer/core/stopping.py`.
+
+### `core.MetricGuard`
+
+Callable multi-metric accept rule built by metric_guard().
+
+Family: `olgs`. Root shortcut: `opt.MetricGuard`.
+
+```python
+MetricGuard(improve: 'str' = 'J', mode: 'str' = 'min', tolerance: 'float' = 0.0, require: 'Mapping[str, RuleSpec]' = <factory>) -> None
+```
+
+#### Related
+
+- core.metric_guard
+
+Source: `optimizer/core/guards.py`.
+
+### `core.default_accept`
+
+Default acceptance: accept trial controls when the selected metric does not get worse.
+
+Family: `olgs`.
+
+```python
+default_accept(current: 'Evaluation', trial: 'Evaluation', proposal: 'StepProposal', state: 'RunState', *, metric: 'str' = 'J', mode: 'str' = 'min', tolerance: 'float' = 0.0) -> 'AcceptanceDecision'
+```
+
+Source: `optimizer/core/engine.py`.
+
+### `core.EvaluationOutcome`
+
+Structured result of an evaluation attempt that may fail; returned by SystemEvaluator.try_evaluate.
+
+Family: `olgs`.
+
+```python
+EvaluationOutcome(evaluation: 'Evaluation | None', ok: 'bool', reason: 'str', error: 'str | None' = None) -> None
+```
+
+Source: `optimizer/core/evaluate.py`.
+
+### `core.GradientOutcome`
+
+Structured result of a gradient attempt that may fail; returned by SystemEvaluator.try_gradient.
+
+Family: `olgs`.
+
+```python
+GradientOutcome(gradient: 'Controls | None', ok: 'bool', reason: 'str', error: 'str | None' = None) -> None
+```
+
+Source: `optimizer/core/evaluate.py`.
+
+### `core.ValueGradientOutcome`
+
+Structured result of a combined value and gradient attempt that may fail.
+
+Family: `olgs`.
+
+```python
+ValueGradientOutcome(value_gradient: 'ValueGradient | None', ok: 'bool', reason: 'str', error: 'str | None' = None) -> None
+```
+
+Source: `optimizer/core/evaluate.py`.
+
+### `core.RunObserver`
+
+Passive sink for the engine lifecycle events.
+
+Family: `olgs`.
+
+```python
+RunObserver(*args, **kwargs)
+```
+
+Source: `optimizer/core/observer.py`.
+
+### `core.ObserverAdapter`
+
+No-op observer base class; override only the event methods you need.
+
+Family: `olgs`.
+
+```python
+ObserverAdapter()
+```
+
+Source: `optimizer/core/observer.py`.
+
+### `core.SnapshotFacts`
+
+Compact facts known at one point of the engine lifecycle.
+
+Family: `olgs`.
+
+```python
+SnapshotFacts(metrics: 'dict[str, Any]' = <factory>, metric_sources: 'dict[str, str]' = <factory>, counters: 'dict[str, int]' = <factory>) -> None
+```
+
+Source: `optimizer/core/observer.py`.
+
+### `core.RunStartEvent`
+
+The first validated state of one engine chunk, passed to observers.
+
+Family: `olgs`.
+
+```python
+RunStartEvent(optimizer: 'str', phase: 'str', initial: 'SnapshotFacts', chunk: 'int' = 0, stage: 'str | None' = None, system_params: 'dict[str, Any]' = <factory>, api_context: 'dict[str, Any]' = <factory>) -> None
+```
+
+Source: `optimizer/core/observer.py`.
+
+### `core.IterationEvent`
+
+One attempted outer iteration, including a rejected or failed trial, passed to observers.
+
+Family: `olgs`.
+
+```python
+IterationEvent(optimizer: 'str', iteration: 'int', global_iteration: 'int', stage: 'str | None', system_params: 'dict[str, Any]', before: 'SnapshotFacts', trial: 'SnapshotFacts | None', after: 'SnapshotFacts', best_after: 'SnapshotFacts | None', technical: 'dict[str, Any]', accepted: 'bool | None', reason: 'str | None', chunk: 'int' = 0) -> None
+```
+
+Source: `optimizer/core/observer.py`.
+
+### `core.CheckpointEvent`
+
+Engine-selected reproducibility point carrying already-owned state, passed to observers.
+
+Family: `olgs`.
+
+```python
+CheckpointEvent(label: 'str', reason: 'str', controls: 'Controls', snapshot: 'SnapshotFacts', optimizer: 'str', optimizer_state: 'dict[str, Any]', system_params: 'dict[str, Any]', api_context: 'dict[str, Any]', iteration: 'int', global_iteration: 'int', chunk: 'int', stage: 'str | None' = None, random_state: 'dict[str, Any]' = <factory>, random_state_source: 'str' = 'not_supplied') -> None
+```
+
+Source: `optimizer/core/observer.py`.
+
+### `core.ChunkEvent`
+
+A completed engine chunk, passed to observers and the in-memory compatibility trace.
+
+Family: `olgs`.
+
+```python
+ChunkEvent(optimizer: 'str', chunk: 'int', start_iteration: 'int', end_iteration: 'int', start_metrics: 'dict[str, Any]', end_metrics: 'dict[str, Any]', system_params: 'dict[str, Any]', stage: 'str | None', accepted: 'bool | None', reason: 'str | None') -> None
+```
+
+Source: `optimizer/core/observer.py`.
+
+### `core.TerminalEvent`
+
+The final fact produced by one engine chunk, passed to observers.
+
+Family: `olgs`.
+
+```python
+TerminalEvent(optimizer: 'str', status: 'str', reason: 'str', final: 'SnapshotFacts', best: 'SnapshotFacts | None', iteration: 'int', global_iteration: 'int', stage: 'str | None', chunk: 'int' = 0, system_params: 'dict[str, Any]' = <factory>, certification: 'dict[str, Any]' = <factory>) -> None
+```
+
+Source: `optimizer/core/observer.py`.
+
 ## campaigns
 
 Durable multi-stage coordination using objective and provenance declared by system_spec().
@@ -3293,6 +4134,8 @@ Durable multi-stage coordination using objective and provenance declared by syst
 ### `campaigns.Campaign`
 
 Campaign object with durable stage, system-fingerprint, and selection evidence.
+
+Family: `olgs`.
 
 ```python
 Campaign(system: 'Any', root: 'str | Path', *, system_factory: 'SystemFactory | None' = None, campaign_id: 'str | None' = None) -> 'None'
@@ -3303,6 +4146,8 @@ Source: `optimizer/campaigns/__init__.py`.
 ### `campaigns.create`
 
 Create a new campaign rooted at a new directory.
+
+Family: `olgs`.
 
 ```python
 create(system: 'Any', root: 'str | Path', *, system_factory: 'SystemFactory | None' = None, campaign_id: 'str | None' = None) -> 'Campaign'
@@ -3330,6 +4175,8 @@ Source: `optimizer/campaigns/__init__.py`.
 ### `campaigns.open`
 
 Open saved campaign evidence with a caller-owned system resolver.
+
+Family: `olgs`.
 
 ```python
 open(root: 'str | Path', *, system_resolver: 'SystemResolver') -> 'Campaign'
@@ -3359,6 +4206,8 @@ Source: `optimizer/campaigns/__init__.py`.
 
 Declared optimizer name and bounded options for one campaign stage.
 
+Family: `olgs`.
+
 ```python
 MethodSpec(name: 'str', options: 'Mapping[str, Any]' = <factory>) -> None
 ```
@@ -3368,6 +4217,8 @@ Source: `optimizer/campaigns/__init__.py`.
 ### `campaigns.SelectionSpec`
 
 System-owned metric and direction used for ranking; never inferred from J.
+
+Family: `olgs`.
 
 ```python
 SelectionSpec(metric_id: 'str', label: 'str', direction: 'str') -> None
@@ -3379,9 +4230,69 @@ Source: `optimizer/campaigns/__init__.py`.
 
 Digest of the normalized system-owned semantic specification for one stage.
 
+Family: `olgs`.
+
 ```python
 SystemReference(system_id: 'str', fingerprint: 'str', system_spec: 'dict[str, Any]') -> None
 ```
+
+Source: `optimizer/campaigns/__init__.py`.
+
+### `campaigns.CandidateRef`
+
+One selected stage result tied to an exact system and checkpoint.
+
+Family: `olgs`.
+
+```python
+CandidateRef(candidate_id: 'str', mode: 'str', stage_dir: 'Path', result: 'OptimizerResult', system: 'SystemReference', selection: 'SelectionSpec', checkpoint: 'dict[str, Any]', source_id: 'str | None' = None) -> None
+```
+
+Source: `optimizer/campaigns/__init__.py`.
+
+### `campaigns.ModeResult`
+
+Candidates produced by a campaign mode, sorted by the system-owned objective.
+
+Family: `olgs`.
+
+```python
+ModeResult(mode: 'str', candidates: 'tuple[CandidateRef, ...]', selected: 'CandidateRef') -> None
+```
+
+Source: `optimizer/campaigns/__init__.py`.
+
+### `campaigns.ValidationResult`
+
+Explicit validation of a candidate against the system that produced it.
+
+Family: `olgs`.
+
+```python
+ValidationResult(source_id: 'str', system_fingerprint: 'str', metrics: 'Mapping[str, Any]', gradient_norm: 'float | None', counters: 'Mapping[str, int]', artifact: 'Path') -> None
+```
+
+Source: `optimizer/campaigns/__init__.py`.
+
+### `campaigns.random_smooth_guesses`
+
+Generate count random smooth guesses with consecutive seeds.
+
+Family: `olgs`.
+
+```python
+random_smooth_guesses(system: 'Any', count: 'int', *, amplitude: 'Any', seed: 'int' = 0, **options: 'Any') -> 'tuple[Controls, ...]'
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | tuple[Controls, ...] |
+
+#### Related
+
+- guesses.random_smooth_guess
 
 Source: `optimizer/campaigns/__init__.py`.
 
@@ -3393,6 +4304,8 @@ Passive durable run evidence; it records engine facts and never calls system num
 
 Append-only receipt, timeline, checkpoint, live, and terminal writer.
 
+Family: `olgs`.
+
 ```python
 RunJournal(run_dir: 'Path', receipt: 'RunReceipt', *, _create_token: 'object | None' = None) -> 'None'
 ```
@@ -3402,6 +4315,8 @@ Source: `optimizer/tracker/journal.py`.
 ### `tracker.JournalObserver`
 
 Passive bridge from already-computed core facts to a RunJournal.
+
+Family: `olgs`.
 
 ```python
 JournalObserver(journal: 'RunJournal', *, save_all_checkpoints: 'bool' = False, checkpoint_policy: 'CheckpointPolicy | None' = None) -> 'None'
@@ -3413,6 +4328,8 @@ Source: `optimizer/tracker/bridge.py`.
 
 Bound durable control artifacts while retaining every scalar iteration record.
 
+Family: `olgs`.
+
 ```python
 CheckpointPolicy(save_all: 'bool' = False, persist_start: 'bool' = True, persist_selected_best: 'bool' = True, persist_failure: 'bool' = True, persist_final: 'bool' = True) -> None
 ```
@@ -3422,6 +4339,8 @@ Source: `optimizer/tracker/bridge.py`.
 ### `tracker.read_timeline`
 
 Validate and read append-only tracker events without optimizer imports.
+
+Family: `olgs`.
 
 ```python
 read_timeline(run_dir: 'str | Path') -> 'TimelineReadResult'
@@ -3433,11 +4352,301 @@ Source: `optimizer/tracker/reader.py`.
 
 Load a SHA-256 verified control artifact without a system object.
 
+Family: `olgs`.
+
 ```python
 load_checkpoint(run_dir: 'str | Path', reference: 'CheckpointReference | Mapping[str, Any]', *, verify: 'bool' = True) -> 'CheckpointData'
 ```
 
 Source: `optimizer/tracker/artifacts.py`.
+
+### `tracker.RunReceipt`
+
+Small immutable receipt for one run, without redefining its problem.
+
+Family: `olgs`.
+
+```python
+RunReceipt(run_id: 'str', objective_label: 'str', direction: 'str', references: 'dict[str, SourceReference]', objective_metric: 'str' = 'J', selection_rule: 'str' = 'best_finite_value', metric_descriptors: 'dict[str, MetricDescriptor]' = <factory>, api_context: 'dict[str, Any]' = <factory>, method_config: 'dict[str, Any]' = <factory>, provenance: 'dict[str, Any]' = <factory>, seed: 'int | None' = None, created_utc: 'str' = <factory>, schema_version: 'str' = 'optimizer.tracker/v3') -> None
+```
+
+Source: `optimizer/tracker/model.py`.
+
+### `tracker.MetricDescriptor`
+
+Declared meaning of one scalar metric saved by the tracker.
+
+Family: `olgs`.
+
+```python
+MetricDescriptor(metric_id: 'str', label: 'str', role: 'str' = 'diagnostic', direction: 'str | None' = None, unit: 'str | None' = None, source: 'str | None' = None) -> None
+```
+
+Source: `optimizer/tracker/model.py`.
+
+### `tracker.SourceReference`
+
+Small pointer to an authority owned outside the tracker.
+
+Family: `olgs`.
+
+```python
+SourceReference(identifier: 'str', path: 'str | None' = None, content_hash: 'str | None' = None, version: 'str | None' = None) -> None
+```
+
+Source: `optimizer/tracker/model.py`.
+
+### `tracker.ScalarSnapshot`
+
+Compact state view at one causal point in a run.
+
+Family: `olgs`.
+
+```python
+ScalarSnapshot(metrics: 'dict[str, Any]' = <factory>, metric_sources: 'dict[str, str]' = <factory>, counters: 'dict[str, int]' = <factory>, omitted_metrics: 'tuple[str, ...]' = ()) -> None
+```
+
+Source: `optimizer/tracker/model.py`.
+
+### `tracker.IterationRecord`
+
+Raw before, proposal, trial, and after record for one outer iteration.
+
+Family: `olgs`.
+
+```python
+IterationRecord(iteration: 'int', method: 'str', before: 'ScalarSnapshot', after: 'ScalarSnapshot', accepted: 'bool', reason: 'str', trial: 'ScalarSnapshot | None' = None, proposal: 'dict[str, Any]' = <factory>, phase: 'str | None' = None, best_after: 'ScalarSnapshot | None' = None, global_iteration: 'int | None' = None, chunk: 'int' = 0, system_params: 'dict[str, Any]' = <factory>) -> None
+```
+
+Source: `optimizer/tracker/model.py`.
+
+### `tracker.ChunkRecord`
+
+One completed optimizer chunk with its resolved method and system facts.
+
+Family: `olgs`.
+
+```python
+ChunkRecord(method: 'str', chunk: 'int', start_iteration: 'int', end_iteration: 'int', start_metrics: 'dict[str, Any]', end_metrics: 'dict[str, Any]', start_omitted_metrics: 'tuple[str, ...]' = (), end_omitted_metrics: 'tuple[str, ...]' = (), system_params: 'dict[str, Any]' = <factory>, phase: 'str | None' = None, accepted: 'bool | None' = None, reason: 'str | None' = None) -> None
+```
+
+Source: `optimizer/tracker/model.py`.
+
+### `tracker.InterventionRecord`
+
+An action between normal iterations, linked to its numerical evidence.
+
+Family: `olgs`.
+
+```python
+InterventionRecord(action_code: 'str', reason: 'str', before: 'ScalarSnapshot', after: 'ScalarSnapshot', outcome_code: 'str', parameters: 'dict[str, Any]' = <factory>, analysis_event_id: 'str | None' = None) -> None
+```
+
+Source: `optimizer/tracker/model.py`.
+
+### `tracker.AnalysisRecord`
+
+A derived, explicitly scheduled analysis of a raw iteration window.
+
+Family: `olgs`.
+
+```python
+AnalysisRecord(analysis_code: 'str', start_iteration: 'int', end_iteration: 'int', inputs: 'dict[str, Any]' = <factory>, findings: 'dict[str, Any]' = <factory>, counters: 'dict[str, int]' = <factory>) -> None
+```
+
+Source: `optimizer/tracker/model.py`.
+
+### `tracker.LiveSnapshot`
+
+Replaceable progress view for a local observer; not the scientific source.
+
+Family: `olgs`.
+
+```python
+LiveSnapshot(status: 'str', phase: 'str', iteration: 'int | None', method: 'str | None', current: 'ScalarSnapshot | None', best: 'ScalarSnapshot | None') -> None
+```
+
+Source: `optimizer/tracker/model.py`.
+
+### `tracker.TerminalRecord`
+
+The selected terminal result and any explicitly requested certificate.
+
+Family: `olgs`.
+
+```python
+TerminalRecord(status: 'str', reason: 'str', final: 'ScalarSnapshot', best: 'ScalarSnapshot | None' = None, selected_checkpoint: 'dict[str, Any] | None' = None, selection_fallback: 'str | None' = None, certification: 'dict[str, Any]' = <factory>, method: 'str | None' = None, phase: 'str | None' = None, iteration: 'int | None' = None, global_iteration: 'int | None' = None, chunk: 'int | None' = None, system_params: 'dict[str, Any]' = <factory>) -> None
+```
+
+Source: `optimizer/tracker/model.py`.
+
+### `tracker.CheckpointReference`
+
+Small JSON-safe pointer to a separately stored control artifact.
+
+Family: `olgs`.
+
+```python
+CheckpointReference(checkpoint_id: 'str', label: 'str', relative_path: 'str', shape: 'tuple[int, int]', sha256: 'str | None' = None) -> None
+```
+
+Source: `optimizer/tracker/artifacts.py`.
+
+### `tracker.CheckpointData`
+
+Loaded controls plus caller-supplied JSON metadata.
+
+Family: `olgs`.
+
+```python
+CheckpointData(reference: 'CheckpointReference', controls: 'Controls', optimizer_state: 'dict[str, Any]', snapshot: 'dict[str, Any]', api_context: 'dict[str, Any]', metadata: 'dict[str, Any]') -> None
+```
+
+Source: `optimizer/tracker/artifacts.py`.
+
+### `tracker.TimelineReadResult`
+
+Complete timeline records and, if present, one ignored damaged tail line.
+
+Family: `olgs`.
+
+```python
+TimelineReadResult(records: 'tuple[dict[str, Any], ...]', recovered_tail: 'dict[str, Any] | None' = None, next_offset: 'int' = 0, last_sequence: 'int | None' = None, unsupported_events: 'tuple[dict[str, Any], ...]' = (), stalled: 'bool' = False, reason: 'str | None' = None, corrupt_at_offset: 'int | None' = None) -> None
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `tracker.follow_timeline`
+
+Read complete appended events and distinguish partial tails from corruption.
+
+Family: `olgs`.
+
+```python
+follow_timeline(run_dir: 'str | Path', *, offset: 'int' = 0, previous_sequence: 'int | None' = None) -> 'TimelineReadResult'
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `tracker.read_receipt`
+
+Read the stored run receipt exactly as written.
+
+Family: `olgs`.
+
+```python
+read_receipt(run_dir: 'str | Path') -> 'dict[str, Any]'
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `tracker.read_live`
+
+Read the current replaceable observer snapshot, if the run has started.
+
+Family: `olgs`.
+
+```python
+read_live(run_dir: 'str | Path') -> 'dict[str, Any] | None'
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `tracker.read_terminal`
+
+Read the direct terminal-result index, if the run has ended.
+
+Family: `olgs`.
+
+```python
+read_terminal(run_dir: 'str | Path') -> 'dict[str, Any] | None'
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `tracker.read_writer`
+
+Read explicit writer ownership and heartbeat state, if present.
+
+Family: `olgs`.
+
+```python
+read_writer(run_dir: 'str | Path') -> 'dict[str, Any] | None'
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `tracker.inspect_writer`
+
+Report local writer liveness without taking ownership or modifying files.
+
+Family: `olgs`.
+
+```python
+inspect_writer(run_dir: 'str | Path') -> 'dict[str, Any]'
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `tracker.metric_coverage`
+
+Compare declared metrics with observed and explicitly omitted metrics.
+
+Family: `olgs`.
+
+```python
+metric_coverage(receipt: 'Mapping[str, Any]', records: 'tuple[dict[str, Any], ...] | list[dict[str, Any]]') -> 'dict[str, tuple[str, ...]]'
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `tracker.project_timeline`
+
+Create a generic read-only projection for API or interface consumers.
+
+Family: `olgs`.
+
+```python
+project_timeline(records: 'tuple[dict[str, Any], ...] | list[dict[str, Any]]', *, kind: 'str | None' = None, fields: 'Mapping[str, str] | None' = None) -> 'tuple[dict[str, Any], ...]'
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `tracker.validate_event`
+
+Validate one causal event envelope without importing optimizer code.
+
+Family: `olgs`.
+
+```python
+validate_event(payload: 'Mapping[str, Any]', *, expected_run_id: 'str | None' = None, previous_sequence: 'int | None' = None) -> 'bool'
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `tracker.validate_receipt`
+
+Validate the generic receipt fields required by read-only consumers.
+
+Family: `olgs`.
+
+```python
+validate_receipt(payload: 'Mapping[str, Any]') -> 'None'
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `tracker.validate_timeline`
+
+Validate the one-start, one-terminal lifecycle of a complete prefix.
+
+Family: `olgs`.
+
+```python
+validate_timeline(records: 'tuple[dict[str, Any], ...] | list[dict[str, Any]]') -> 'None'
+```
+
+Source: `optimizer_log/reader.py`.
 
 ## visualization
 
@@ -3446,6 +4655,8 @@ Render explicit system-owned plot data; visualization never invents a trajectory
 ### `visualization.PlotData`
 
 Named layers and metadata for one explicit visualization product.
+
+Family: `olgs`, `olss`. Root shortcut: `opt.PlotData`.
 
 ```python
 PlotData(kind: 'str', layers: 'Sequence[PlotLayer]', annotations: 'Mapping[str, Any]' = <factory>, metadata: 'Mapping[str, Any]' = <factory>) -> None
@@ -3457,6 +4668,8 @@ Source: `optimizer/visualization/models.py`.
 
 Render validated Bloch layers without calling the system.
 
+Family: `olgs`, `olss`.
+
 ```python
 plot_bloch(value: 'PlotData | dict[str, Any]', *, projections: 'bool' = True, equator: 'bool' = True, elevation: 'float' = 14.0, azimuth: 'float' = -54.0, figsize: 'tuple[float, float] | None' = None, colorbar: 'bool' = True, axes: 'bool' = False) -> 'tuple[Any, ...]'
 ```
@@ -3466,6 +4679,8 @@ Source: `optimizer/visualization/bloch.py`.
 ### `visualization.draw_timeseries`
 
 Draw named per-component channels vs a scalar parameter onto an existing 2D axis; shared by plot_bloch's projections subplot and the standalone panel functions.
+
+Family: `olgs`, `olss`.
 
 ```python
 draw_timeseries(ax: 'Any', data: 'PlotData', *, palette: 'Sequence[str]' = ('#0072B2', '#E69F00', '#009E73'), component_labels: 'Sequence[str]' = ('x', 'y', 'z'), ylabel: 'str' = 'Bloch components', xlim: 'tuple[float, float] | None' = None, ylim: 'tuple[float, float] | None' = (-1.14, 1.14), prefix_labels: 'bool' = True, legend_ncols: 'int' = 2) -> 'None'
@@ -3477,6 +4692,8 @@ Source: `optimizer/visualization/bloch.py`.
 
 Draw a light unit-sphere scaffold on an existing 3D axis.
 
+Family: `olgs`, `olss`.
+
 ```python
 draw_sphere(ax: 'Any', *, equator: 'bool' = True, elevation: 'float' = 14.0, azimuth: 'float' = -54.0, nu: 'int' = 25, nv: 'int' = 13, axes: 'bool' = False, axes_color: 'str' = '#555555') -> 'Any'
 ```
@@ -3486,6 +4703,8 @@ Source: `optimizer/visualization/bloch.py`.
 ### `visualization.style_context`
 
 Apply the compact serif plotting style without mutating global rcParams.
+
+Family: `olgs`, `olss`.
 
 ```python
 style_context() -> 'Iterator[None]'
@@ -3497,6 +4716,8 @@ Source: `optimizer/visualization/bloch.py`.
 
 Validate generic plot data for rendering inside the Bloch ball.
 
+Family: `olgs`, `olss`.
+
 ```python
 validate_bloch_data(value: 'PlotData | dict[str, Any]', *, tolerance: 'float' = 1e-08) -> 'PlotData'
 ```
@@ -3506,6 +4727,8 @@ Source: `optimizer/visualization/bloch.py`.
 ### `visualization.plot_bloch_panel`
 
 Render one standalone Bloch-sphere panel (single figure, no projections subplot).
+
+Family: `olgs`, `olss`.
 
 ```python
 plot_bloch_panel(value: 'PlotData | Mapping[str, Any]', *, equator: 'bool' = True, elevation: 'float' = 14.0, azimuth: 'float' = -54.0, figsize: 'tuple[float, float] | None' = None, colorbar: 'bool' = True, axes: 'bool' = False) -> 'tuple[Any, Any]'
@@ -3517,6 +4740,8 @@ Source: `optimizer/visualization/panels.py`.
 
 Render one standalone Bloch-component-vs-parameter panel from validated Bloch trajectory data.
 
+Family: `olgs`, `olss`.
+
 ```python
 plot_projection_panel(value: 'PlotData | Mapping[str, Any]', *, component_labels: 'Sequence[str]' = ('$r_x$', '$r_y$', '$r_z$'), xlim: 'tuple[float, float] | None' = None, figsize: 'tuple[float, float]' = (3.4, 3.0)) -> 'tuple[Any, Any]'
 ```
@@ -3526,6 +4751,8 @@ Source: `optimizer/visualization/panels.py`.
 ### `visualization.plot_controls_panel`
 
 Render one standalone control-amplitude-vs-parameter panel; uses CONTROL_COLORS and skips the Bloch-ball check.
+
+Family: `olgs`, `olss`.
 
 ```python
 plot_controls_panel(value: 'PlotData | Mapping[str, Any]', *, component_labels: 'Sequence[str]' = ('$u_x$', '$u_y$', '$u_z$'), xlim: 'tuple[float, float] | None' = None, figsize: 'tuple[float, float]' = (4.5, 2.75)) -> 'tuple[Any, Any]'
@@ -3537,6 +4764,8 @@ Source: `optimizer/visualization/panels.py`.
 
 Validate generic plot data for a control-amplitude-vs-parameter panel (no Bloch-ball check).
 
+Family: `olgs`, `olss`.
+
 ```python
 validate_controls_data(value: 'PlotData | Mapping[str, Any]') -> 'PlotData'
 ```
@@ -3546,6 +4775,8 @@ Source: `optimizer/visualization/panels.py`.
 ### `visualization.save_figure`
 
 Save a renderer-produced figure to an explicit path.
+
+Family: `olgs`, `olss`.
 
 ```python
 save_figure(figure: 'Any', path: 'Any', *, dpi: 'int' = 400, close: 'bool' = False) -> 'None'
@@ -3557,11 +4788,37 @@ Source: `optimizer/visualization/bloch.py`.
 
 Save one panel figure as .pdf and .png from a shared path stem at one dpi.
 
+Family: `olgs`, `olss`.
+
 ```python
 save_panel(figure: 'Any', out_stem: 'str | Path', *, formats: 'tuple[str, ...]' = ('pdf', 'png'), dpi: 'int' = 400, close: 'bool' = True) -> 'tuple[Path, ...]'
 ```
 
 Source: `optimizer/visualization/panels.py`.
+
+### `visualization.PlotLayer`
+
+One named data layer with generic coordinates and presentation hints.
+
+Family: `olgs`, `olss`. Root shortcut: `opt.PlotLayer`.
+
+```python
+PlotLayer(name: 'str', coordinates: 'Mapping[str, Any]', label: 'str | None' = None, style: 'Mapping[str, Any]' = <factory>, metadata: 'Mapping[str, Any]' = <factory>) -> None
+```
+
+Source: `optimizer/visualization/models.py`.
+
+### `visualization.coerce_plot_data`
+
+Normalize a PlotData instance or an equivalent mapping into PlotData.
+
+Family: `olgs`, `olss`.
+
+```python
+coerce_plot_data(value: 'PlotData | Mapping[str, Any]') -> 'PlotData'
+```
+
+Source: `optimizer/visualization/models.py`.
 
 ## system olgs
 
@@ -3570,6 +4827,8 @@ Mandatory static system semantics and capability-gated numerical hooks owned by 
 ### `system_olgs.get_system_spec`
 
 Return and validate the required static system semantic declaration.
+
+Family: `olgs`. Root shortcut: `opt.get_system_spec`.
 
 ```python
 get_system_spec(system: 'Any') -> 'dict[str, Any]'
@@ -3581,6 +4840,8 @@ Source: `optimizer/system_olgs/contract.py`.
 
 Validate the required OLGS contract before an optimizer starts.
 
+Family: `olgs`. Root shortcut: `opt.require_system`.
+
 ```python
 require_system(system: 'Any') -> 'OLGSystem'
 ```
@@ -3590,6 +4851,8 @@ Source: `optimizer/system_olgs/contract.py`.
 ### `system_olgs.with_secondary`
 
 Request a system-owned parameter-updated copy for explicit continuation.
+
+Family: `olgs`. Root shortcut: `opt.with_secondary`.
 
 ```python
 with_secondary(system: 'Any', **updates: 'Any') -> 'Any'
@@ -3601,11 +4864,609 @@ Source: `optimizer/system_olgs/contract.py`.
 
 Read optional system-declared elementwise bounds.
 
+Family: `olgs`. Root shortcut: `opt.optional_control_bounds`.
+
 ```python
 optional_control_bounds(system: 'Any') -> 'ControlBounds'
 ```
 
 Source: `optimizer/system_olgs/validation.py`.
+
+### `system_olgs.OLGS`
+
+Base class for a self-contained Open Loop Gradient System.
+
+Family: `olgs`. Root shortcut: `opt.OLGS`.
+
+```python
+OLGS()
+```
+
+Source: `optimizer/system_olgs/olgs.py`.
+
+### `system_olgs.OLGSystem`
+
+Protocol for the required OLGS public surface.
+
+Family: `olgs`. Root shortcut: `opt.OLGSystem`.
+
+```python
+OLGSystem(*args, **kwargs)
+```
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.SYSTEM_SPEC_SCHEMA`
+
+Schema identifier of the OLGS system_spec() declaration.
+
+Family: `olgs`. Root shortcut: `opt.SYSTEM_SPEC_SCHEMA`.
+
+Source: `optimizer/system_olgs/specs.py`.
+
+### `system_olgs.basic_system_spec`
+
+Build the minimum complete specification for a new OLGS system.
+
+Family: `olgs`. Root shortcut: `opt.basic_system_spec`.
+
+```python
+basic_system_spec(system_id: 'str', *, name: 'str | None' = None, system_type: 'str' = 'generic', description: 'str' = '', control_spec: 'ControlSpec | Mapping[str, Any]', objective_direction: 'str' = 'minimize', metrics: 'Mapping[str, Any] | Iterable[str] | None' = None, parameters: 'Mapping[str, Any] | None' = None, derivatives: 'Mapping[str, Any] | None' = None, constraints: 'Mapping[str, Any] | None' = None, visualizations: 'Mapping[str, Any] | None' = None, allow_additional_metrics: 'bool' = False) -> 'dict[str, Any]'
+```
+
+Source: `optimizer/system_olgs/specs.py`.
+
+### `system_olgs.metric_spec`
+
+Build one normalized OLGS metric declaration for system_spec().
+
+Family: `olgs`. Root shortcut: `opt.metric_spec`.
+
+```python
+metric_spec(label: 'str', *, description: 'str | None' = None, role: 'str' = 'diagnostic', dtype: 'str' = 'float', shape: 'Iterable[int]' = (), unit: 'str | None' = None, required: 'bool' = False, allow_nonfinite: 'bool' = False) -> 'dict[str, Any]'
+```
+
+Source: `optimizer/system_olgs/specs.py`.
+
+### `system_olgs.validate_system_spec`
+
+Validate and normalize a static OLGS system_spec() mapping.
+
+Family: `olgs`. Root shortcut: `opt.validate_system_spec`.
+
+```python
+validate_system_spec(value: 'Mapping[str, Any]') -> 'dict[str, Any]'
+```
+
+Source: `optimizer/system_olgs/specs.py`.
+
+### `system_olgs.validate_declared_metrics`
+
+Validate metric names and declared shapes without changing system values.
+
+Family: `olgs`.
+
+```python
+validate_declared_metrics(metrics: 'Mapping[str, Any]', system_spec: 'Mapping[str, Any]') -> 'dict[str, Any]'
+```
+
+Source: `optimizer/system_olgs/specs.py`.
+
+### `system_olgs.TRACKING_SPEC_SCHEMA`
+
+Schema identifier of the optional tracking specification.
+
+Family: `olgs`. Root shortcut: `opt.TRACKING_SPEC_SCHEMA`.
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.TrackingSpec`
+
+Type of the optional static tracking specification mapping.
+
+Family: `olgs`. Root shortcut: `opt.TrackingSpec`.
+
+```python
+TrackingSpec(*args, **kwargs)
+```
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.Metrics`
+
+Type of an OLGS metrics mapping from metric name to value.
+
+Family: `olgs`.
+
+```python
+Metrics(*args, **kwargs)
+```
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.get_tracking_spec`
+
+Return optional static tracking metadata declared by a system.
+
+Family: `olgs`. Root shortcut: `opt.get_tracking_spec`.
+
+```python
+get_tracking_spec(system: 'Any') -> 'dict[str, Any] | None'
+```
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.contract_info`
+
+Return the generic OLGS contract without inspecting a concrete system.
+
+Family: `olgs`. Root shortcut: `opt.contract_info`.
+
+```python
+contract_info() -> 'dict[str, Any]'
+```
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.describe_system`
+
+Describe declared OLGS system capabilities without evaluating controls.
+
+Family: `olgs`. Root shortcut: `opt.describe_system`.
+
+```python
+describe_system(system: 'Any') -> 'dict[str, Any]'
+```
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.SystemProbe`
+
+Presence of required, recommended, and optional OLGS hooks.
+
+Family: `olgs`. Root shortcut: `opt.SystemProbe`.
+
+```python
+SystemProbe(has_system_spec: 'bool', has_control_spec: 'bool', has_evaluate: 'bool', has_gradient: 'bool', has_with_secondary: 'bool', has_forward_prop: 'bool', has_back_prop: 'bool', has_metrics: 'bool', has_describe: 'bool', has_tracking_spec: 'bool', has_constraint_spec: 'bool', has_value_and_gradient: 'bool', has_residuals: 'bool', has_jacobian: 'bool', has_control_bounds: 'bool', has_control_transfer: 'bool', has_hessian: 'bool', has_hvp: 'bool', has_smooth_gradient: 'bool', has_prox: 'bool', has_second_derivative: 'bool', has_simulate: 'bool', has_plot_data: 'bool', has_cache_reset: 'bool', has_cache_status: 'bool') -> None
+```
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.probe_system`
+
+Inspect OLGS hook presence without calling expensive methods.
+
+Family: `olgs`. Root shortcut: `opt.probe_system`.
+
+```python
+probe_system(system: 'Any') -> 'SystemProbe'
+```
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.get_secondary_update_hook`
+
+Return the system hook that applies secondary-parameter updates.
+
+Family: `olgs`.
+
+```python
+get_secondary_update_hook(system: 'Any') -> 'Any'
+```
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.ControlBounds`
+
+Elementwise lower and upper control limits in the system control layout.
+
+Family: `olgs`. Root shortcut: `opt.ControlBounds`.
+
+```python
+ControlBounds(lower: 'Controls', upper: 'Controls') -> None
+```
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.ValueGradient`
+
+Validated system-owned objective metrics and analytical gradient pair.
+
+Family: `olgs`. Root shortcut: `opt.ValueGradient`.
+
+```python
+ValueGradient(metrics: 'Mapping[str, Any]', gradient: 'Controls') -> None
+```
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.SupportsValueAndGradient`
+
+Optional capability for sharing work between value and gradient calls.
+
+Family: `olgs`. Root shortcut: `opt.SupportsValueAndGradient`.
+
+```python
+SupportsValueAndGradient(*args, **kwargs)
+```
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.SupportsBounds`
+
+Optional elementwise control-bound capability.
+
+Family: `olgs`. Root shortcut: `opt.SupportsBounds`.
+
+```python
+SupportsBounds(*args, **kwargs)
+```
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.SupportsEqualityConstraints`
+
+Optional hard equality-constraint capability: residuals and their Jacobian.
+
+Family: `olgs`. Root shortcut: `opt.SupportsEqualityConstraints`.
+
+```python
+SupportsEqualityConstraints(*args, **kwargs)
+```
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.SupportsHVP`
+
+Optional Hessian-vector product capability for second-order methods.
+
+Family: `olgs`. Root shortcut: `opt.SupportsHVP`.
+
+```python
+SupportsHVP(*args, **kwargs)
+```
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.SupportsProximalObjective`
+
+Optional composite-objective capability for proximal methods.
+
+Family: `olgs`. Root shortcut: `opt.SupportsProximalObjective`.
+
+```python
+SupportsProximalObjective(*args, **kwargs)
+```
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.SupportsControlTransfer`
+
+Optional system-owned feasibility-preserving control transfer.
+
+Family: `olgs`. Root shortcut: `opt.SupportsControlTransfer`.
+
+```python
+SupportsControlTransfer(*args, **kwargs)
+```
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.SupportsPlotData`
+
+Optional explicit data-product capability for visualization tools.
+
+Family: `olgs`. Root shortcut: `opt.SupportsPlotData`.
+
+```python
+SupportsPlotData(*args, **kwargs)
+```
+
+Source: `optimizer/system_olgs/contract.py`.
+
+### `system_olgs.validate_control_spec`
+
+Call and validate system.control_spec().
+
+Family: `olgs`.
+
+```python
+validate_control_spec(system: 'OLGSystem') -> 'ControlSpec'
+```
+
+Source: `optimizer/system_olgs/validation.py`.
+
+### `system_olgs.validate_controls_for_system`
+
+Validate that controls match the system control specification.
+
+Family: `olgs`. Root shortcut: `opt.validate_controls_for_system`.
+
+```python
+validate_controls_for_system(system: 'OLGSystem', controls: 'Controls') -> 'ControlSpec'
+```
+
+Source: `optimizer/system_olgs/validation.py`.
+
+### `system_olgs.validate_metrics`
+
+Validate and normalize an evaluation metrics mapping.
+
+Family: `olgs`. Root shortcut: `opt.validate_metrics`.
+
+```python
+validate_metrics(metrics: 'Metrics', *, system_spec: 'dict[str, Any] | None' = None, objective_metric: 'str | None' = None) -> 'dict[str, Any]'
+```
+
+Source: `optimizer/system_olgs/validation.py`.
+
+### `system_olgs.evaluate_system`
+
+Validate controls, evaluate the system, and normalize its metrics.
+
+Family: `olgs`. Root shortcut: `opt.evaluate_system`.
+
+```python
+evaluate_system(system: 'OLGSystem', controls: 'Controls', *, system_spec: 'dict[str, Any] | None' = None) -> 'dict[str, Any]'
+```
+
+Source: `optimizer/system_olgs/validation.py`.
+
+### `system_olgs.gradient_system`
+
+Validate controls and return a gradient matching the system layout.
+
+Family: `olgs`. Root shortcut: `opt.gradient_system`.
+
+```python
+gradient_system(system: 'OLGSystem', controls: 'Controls') -> 'Controls'
+```
+
+Source: `optimizer/system_olgs/validation.py`.
+
+### `system_olgs.value_and_gradient_system`
+
+Call and validate the optional combined objective and gradient hook.
+
+Family: `olgs`. Root shortcut: `opt.value_and_gradient_system`.
+
+```python
+value_and_gradient_system(system: 'Any', controls: 'Controls', *, system_spec: 'dict[str, Any] | None' = None) -> 'ValueGradient'
+```
+
+Source: `optimizer/system_olgs/validation.py`.
+
+### `system_olgs.optional_residuals`
+
+Call the optional residual hook and validate a finite 1D vector.
+
+Family: `olgs`. Root shortcut: `opt.optional_residuals`.
+
+```python
+optional_residuals(system: 'Any', controls: 'Controls', *, name: 'str' = 'hard') -> 'np.ndarray'
+```
+
+Source: `optimizer/system_olgs/validation.py`.
+
+### `system_olgs.optional_jacobian`
+
+Call the optional Jacobian hook and validate a finite 2D matrix.
+
+Family: `olgs`. Root shortcut: `opt.optional_jacobian`.
+
+```python
+optional_jacobian(system: 'Any', controls: 'Controls', *, name: 'str' = 'hard') -> 'np.ndarray'
+```
+
+Source: `optimizer/system_olgs/validation.py`.
+
+### `system_olgs.optional_hvp`
+
+Call the optional Hessian-vector product hook and validate the Controls output.
+
+Family: `olgs`. Root shortcut: `opt.optional_hvp`.
+
+```python
+optional_hvp(system: 'Any', controls: 'Controls', vector: 'Controls | np.ndarray') -> 'Controls'
+```
+
+Source: `optimizer/system_olgs/validation.py`.
+
+### `system_olgs.optional_hessian`
+
+Call the optional dense Hessian hook and validate its shape.
+
+Family: `olgs`. Root shortcut: `opt.optional_hessian`.
+
+```python
+optional_hessian(system: 'Any', controls: 'Controls') -> 'np.ndarray'
+```
+
+Source: `optimizer/system_olgs/validation.py`.
+
+### `system_olgs.optional_smooth_gradient`
+
+Call and validate the smooth-part gradient of a composite objective.
+
+Family: `olgs`. Root shortcut: `opt.optional_smooth_gradient`.
+
+```python
+optional_smooth_gradient(system: 'Any', controls: 'Controls') -> 'Controls'
+```
+
+Source: `optimizer/system_olgs/validation.py`.
+
+### `system_olgs.optional_prox`
+
+Call and validate the optional proximal operator.
+
+Family: `olgs`. Root shortcut: `opt.optional_prox`.
+
+```python
+optional_prox(system: 'Any', controls: 'Controls', step_size: 'float') -> 'Controls'
+```
+
+Source: `optimizer/system_olgs/validation.py`.
+
+### `system_olgs.optional_control_transfer`
+
+Call one explicit system-owned feasibility-preserving transfer hook.
+
+Family: `olgs`. Root shortcut: `opt.optional_control_transfer`.
+
+```python
+optional_control_transfer(system: 'Any', controls: 'Controls', *, operation: 'str', options: 'Mapping[str, Any] | None' = None) -> 'tuple[Controls, dict[str, Any]]'
+```
+
+Source: `optimizer/system_olgs/validation.py`.
+
+### `system_olgs.optional_plot_data`
+
+Call and validate an explicit system-owned visualization data product.
+
+Family: `olgs`. Root shortcut: `opt.optional_plot_data`.
+
+```python
+optional_plot_data(system: 'Any', controls: 'Controls', *, kind: 'str', **options: 'Any') -> 'Any'
+```
+
+Source: `optimizer/system_olgs/validation.py`.
+
+### `system_olgs.finite_difference_jacobian`
+
+Finite-difference Jacobian of system.residuals; the utils version adds named residual sets.
+
+Family: `olgs`.
+
+```python
+finite_difference_jacobian(system: 'Any', controls: 'Controls', *, residuals: 'str' = 'hard', eps: 'float' = 1e-06, method: 'str' = 'central') -> 'np.ndarray'
+```
+
+#### Related
+
+- utils.finite_difference_jacobian
+
+Source: `optimizer/system_olgs/derivatives.py`.
+
+### `system_olgs.finite_difference_hessian`
+
+Dense finite-difference Hessian of a scalar metric.
+
+Family: `olgs`. Root shortcut: `opt.finite_difference_hessian`.
+
+```python
+finite_difference_hessian(system: 'Any', controls: 'Controls', *, metric: 'str | None' = None, eps: 'float' = 1e-05, method: 'str' = 'central') -> 'np.ndarray'
+```
+
+Source: `optimizer/system_olgs/derivatives.py`.
+
+### `system_olgs.finite_difference_hvp`
+
+Finite-difference Hessian-vector product from gradient calls.
+
+Family: `olgs`. Root shortcut: `opt.finite_difference_hvp`.
+
+```python
+finite_difference_hvp(system: 'Any', controls: 'Controls', vector: 'Controls | np.ndarray', *, eps: 'float' = 1e-06) -> 'Controls'
+```
+
+Source: `optimizer/system_olgs/derivatives.py`.
+
+### `system_olgs.get_jacobian`
+
+Return (jacobian, source) from the analytical hook or finite differences.
+
+Family: `olgs`.
+
+```python
+get_jacobian(system: 'Any', controls: 'Controls', *, residuals: 'str' = 'hard', fallback: 'bool' = True, eps: 'float' = 1e-06) -> 'tuple[np.ndarray, str]'
+```
+
+Source: `optimizer/system_olgs/derivatives.py`.
+
+### `system_olgs.get_hvp`
+
+Return (hvp, source) from the analytical hook or finite differences.
+
+Family: `olgs`.
+
+```python
+get_hvp(system: 'Any', controls: 'Controls', vector: 'Controls | np.ndarray', *, fallback: 'bool' = True, eps: 'float' = 1e-06) -> 'tuple[Controls, str]'
+```
+
+Source: `optimizer/system_olgs/derivatives.py`.
+
+### `system_olgs.get_hessian`
+
+Return (hessian, source) from the analytical hook or finite differences.
+
+Family: `olgs`.
+
+```python
+get_hessian(system: 'Any', controls: 'Controls', *, metric: 'str | None' = None, fallback: 'bool' = True, eps: 'float' = 1e-05) -> 'tuple[np.ndarray, str]'
+```
+
+Source: `optimizer/system_olgs/derivatives.py`.
+
+### `system_olgs.SystemEvaluation`
+
+Optional structured evaluation output: controls, validated metrics, and system-owned data.
+
+Family: `olgs`.
+
+```python
+SystemEvaluation(controls: 'Controls', metrics: 'dict[str, Any]', data: 'dict[str, Any]' = <factory>) -> None
+```
+
+Source: `optimizer/system_olgs/results.py`.
+
+### `system_olgs.ForwardResult`
+
+Optional structured forward-propagation output: controls and system-owned data.
+
+Family: `olgs`.
+
+```python
+ForwardResult(controls: 'Controls', data: 'dict[str, Any]' = <factory>) -> None
+```
+
+Source: `optimizer/system_olgs/results.py`.
+
+### `system_olgs.BackwardResult`
+
+Optional structured backward-propagation output: controls and system-owned data.
+
+Family: `olgs`.
+
+```python
+BackwardResult(controls: 'Controls', data: 'dict[str, Any]' = <factory>) -> None
+```
+
+Source: `optimizer/system_olgs/results.py`.
+
+### `system_olgs.GradientResult`
+
+Optional structured gradient output: controls, gradient, optional metrics, and system-owned data.
+
+Family: `olgs`.
+
+```python
+GradientResult(controls: 'Controls', gradient: 'Controls', metrics: 'dict[str, Any] | None' = None, data: 'dict[str, Any]' = <factory>) -> None
+```
+
+Source: `optimizer/system_olgs/results.py`.
+
+### `system_olgs.SimulationResult`
+
+Optional structured simulation output: controls, metrics, trajectories, and system-owned data.
+
+Family: `olgs`.
+
+```python
+SimulationResult(controls: 'Controls', metrics: 'dict[str, Any]', trajectories: 'dict[str, Any]' = <factory>, data: 'dict[str, Any]' = <factory>) -> None
+```
+
+Source: `optimizer/system_olgs/results.py`.
 
 ## system olss
 
@@ -3614,6 +5475,8 @@ Construction types, validation, and discovery for project-owned OLSS contracts.
 ### `system_olss.OLSS`
 
 Base class for a self-contained Open Loop Shooting System.
+
+Family: `olss`. Root shortcut: `opt.OLSS`.
 
 ```python
 OLSS()
@@ -3625,6 +5488,8 @@ Source: `optimizer/system_olss/olss.py`.
 
 One named, scaled block in a shooting vector.
 
+Family: `olss`. Root shortcut: `opt.ShootingBlock`.
+
 ```python
 ShootingBlock(name: 'str', shape: 'tuple[int, ...]' = (), meaning: 'str' = '', unit: 'str | None' = None, scale: 'float' = 1.0, role: 'str' = 'variable', metadata: 'Mapping[str, Any]' = <factory>) -> None
 ```
@@ -3634,6 +5499,8 @@ Source: `optimizer/system_olss/variables.py`.
 ### `system_olss.ShootingSpec`
 
 Ordered layout of shooting-variable blocks.
+
+Family: `olss`. Root shortcut: `opt.ShootingSpec`.
 
 ```python
 ShootingSpec(blocks: 'tuple[ShootingBlock, ...]', dtype: 'str' = 'float64', metadata: 'Mapping[str, Any]' = <factory>) -> None
@@ -3645,6 +5512,8 @@ Source: `optimizer/system_olss/variables.py`.
 
 Finite values attached to a ShootingSpec.
 
+Family: `olss`. Root shortcut: `opt.ShootingVariables`.
+
 ```python
 ShootingVariables(spec: 'ShootingSpec', values: 'np.ndarray', name: 'str' = 'shooting', metadata: 'Mapping[str, Any]' = <factory>) -> None
 ```
@@ -3654,6 +5523,8 @@ Source: `optimizer/system_olss/variables.py`.
 ### `system_olss.VerificationCheck`
 
 Named independent acceptance check included in OLSS qualification.
+
+Family: `olss`. Root shortcut: `opt.VerificationCheck`.
 
 ```python
 VerificationCheck(name: 'str', passed: 'bool', value: 'Any' = None, tolerance: 'Any' = None, message: 'str' = '') -> None
@@ -3665,6 +5536,8 @@ Source: `optimizer/system_olss/results.py`.
 
 Build and validate the static OLSS declaration.
 
+Family: `olss`. Root shortcut: `opt.basic_shooting_system_spec`.
+
 ```python
 basic_shooting_system_spec(system_id: 'str', *, shooting_spec: 'ShootingSpec', residual_size: 'int', name: 'str | None' = None, system_type: 'str' = 'shooting', description: 'str' = '', residual_groups: 'Iterable[Mapping[str, Any]] | None' = None, metrics: 'Mapping[str, Any] | Iterable[str] | None' = None, parameters: 'Mapping[str, Any] | None' = None, jacobian_source: 'str' = 'analytical', capabilities: 'Mapping[str, Any] | None' = None, selection_metric: 'str | None' = None, selection_direction: 'str' = 'minimize', reconstruction: 'Mapping[str, Any] | None' = None, verification_options: 'Mapping[str, Any] | None' = None, verification_tolerance: 'float | None' = None, allow_additional_metrics: 'bool' = False) -> 'dict[str, Any]'
 ```
@@ -3674,6 +5547,8 @@ Source: `optimizer/system_olss/specs.py`.
 ### `system_olss.shooting_metric_spec`
 
 Build one OLSS metric declaration for system_spec().
+
+Family: `olss`. Root shortcut: `opt.shooting_metric_spec`.
 
 ```python
 shooting_metric_spec(label: 'str', *, description: 'str | None' = None, role: 'str' = 'diagnostic', dtype: 'str' = 'float', shape: 'Iterable[int]' = (), unit: 'str | None' = None, required: 'bool' = False, allow_nonfinite: 'bool' = False) -> 'dict[str, Any]'
@@ -3685,6 +5560,8 @@ Source: `optimizer/system_olss/specs.py`.
 
 Candidate, residual vector, declared metrics, and working options of one evaluation.
 
+Family: `olss`. Root shortcut: `opt.ShootingEvaluation`.
+
 ```python
 ShootingEvaluation(variables: 'ShootingVariables', residuals: 'np.ndarray', metrics: 'Mapping[str, Any]', options: 'Mapping[str, Any]' = <factory>) -> None
 ```
@@ -3694,6 +5571,8 @@ Source: `optimizer/system_olss/results.py`.
 ### `system_olss.ShootingVerification`
 
 Independent verification residuals, metrics, options, independence source, and named checks.
+
+Family: `olss`. Root shortcut: `opt.ShootingVerification`.
 
 ```python
 ShootingVerification(residuals: 'np.ndarray', metrics: 'Mapping[str, Any]', options: 'Mapping[str, Any]' = <factory>, numerical_success: 'bool' = True, message: 'str' = 'verified', independent: 'bool' = False, independence_source: 'str' = 'unspecified', checks: 'tuple[VerificationCheck, ...]' = ()) -> None
@@ -3705,6 +5584,8 @@ Source: `optimizer/system_olss/results.py`.
 
 One root solve: candidate, residuals, metrics, convergence, verification, qualification, stop reason, error, tolerance source, counters, and history.
 
+Family: `olss`. Root shortcut: `opt.ShootingResult`.
+
 ```python
 ShootingResult(variables: 'ShootingVariables', residuals: 'np.ndarray', metrics: 'dict[str, Any]', solver_converged: 'bool', verified: 'bool', qualified: 'bool', iterations: 'int', method: 'str', stop_reason: 'str', jacobian_source: 'str', verification: 'ShootingVerification | None' = None, counters: 'dict[str, int]' = <factory>, history: 'list[dict[str, Any]]' = <factory>, error: 'str | None' = None, verification_tolerance: 'float | None' = None, verification_tolerance_source: 'str | None' = None) -> None
 ```
@@ -3714,6 +5595,8 @@ Source: `optimizer/system_olss/results.py`.
 ### `system_olss.MultiStartResult`
 
 All multistart results, qualified and unique roots, and the ranking with its selection source.
+
+Family: `olss`. Root shortcut: `opt.MultiStartResult`.
 
 ```python
 MultiStartResult(results: 'list[ShootingResult]', qualified: 'list[ShootingResult]', unique_qualified: 'list[ShootingResult]', ranked: 'list[ShootingResult]', selection_metric: 'str | None', selection_direction: 'str | None', selection_source: 'str | None' = None) -> None
@@ -3725,6 +5608,8 @@ Source: `optimizer/system_olss/results.py`.
 
 One verified pseudo-arclength branch point with its tangent.
 
+Family: `olss`. Root shortcut: `opt.ContinuationPoint`.
+
 ```python
 ContinuationPoint(variables: 'ShootingVariables', residual_norm: 'float', tangent: 'np.ndarray', corrector_iterations: 'int', verified: 'bool', verification_independent: 'bool' = False) -> None
 ```
@@ -3734,6 +5619,8 @@ Source: `optimizer/system_olss/results.py`.
 ### `system_olss.ShootingContinuationResult`
 
 Pseudo-arclength branch points, step history, stop reason, and verification tolerance.
+
+Family: `olss`. Root shortcut: `opt.ShootingContinuationResult`.
 
 ```python
 ShootingContinuationResult(points: 'list[ContinuationPoint]', completed_steps: 'int', requested_steps: 'int', stop_reason: 'str', step_size: 'float', step_history: 'list[dict[str, Any]]' = <factory>, verification_tolerance: 'float | None' = None, verification_tolerance_source: 'str | None' = None) -> None
@@ -3745,6 +5632,8 @@ Source: `optimizer/system_olss/results.py`.
 
 One natural-continuation stage: parameter value, attempted step, and its shooting result.
 
+Family: `olss`. Root shortcut: `opt.ParameterContinuationPoint`.
+
 ```python
 ParameterContinuationPoint(parameter: 'float', result: 'ShootingResult', attempted_step: 'float') -> None
 ```
@@ -3755,11 +5644,261 @@ Source: `optimizer/system_olss/results.py`.
 
 Natural-continuation stages, per-attempt step history, stop reason, and target status.
 
+Family: `olss`. Root shortcut: `opt.ParameterContinuationResult`.
+
 ```python
 ParameterContinuationResult(parameter: 'str', target: 'float', points: 'list[ParameterContinuationPoint]', stop_reason: 'str', reached_target: 'bool', step_history: 'list[dict[str, Any]]' = <factory>) -> None
 ```
 
 Source: `optimizer/system_olss/results.py`.
+
+### `system_olss.OpenLoopShootingSystem`
+
+Protocol for the seven required OLSS calls.
+
+Family: `olss`. Root shortcut: `opt.OpenLoopShootingSystem`.
+
+```python
+OpenLoopShootingSystem(*args, **kwargs)
+```
+
+Source: `optimizer/system_olss/contract.py`.
+
+### `system_olss.SHOOTING_SYSTEM_SPEC_SCHEMA`
+
+Schema identifier of the OLSS system_spec() declaration.
+
+Family: `olss`. Root shortcut: `opt.SHOOTING_SYSTEM_SPEC_SCHEMA`.
+
+Source: `optimizer/system_olss/specs.py`.
+
+### `system_olss.validate_shooting_system_spec`
+
+Validate and normalize a static OLSS system_spec() mapping.
+
+Family: `olss`. Root shortcut: `opt.validate_shooting_system_spec`.
+
+```python
+validate_shooting_system_spec(value: 'Mapping[str, Any]') -> 'dict[str, Any]'
+```
+
+Source: `optimizer/system_olss/specs.py`.
+
+### `system_olss.get_shooting_system_spec`
+
+Return and validate the static OLSS system_spec() declaration.
+
+Family: `olss`. Root shortcut: `opt.get_shooting_system_spec`.
+
+```python
+get_shooting_system_spec(system: 'Any') -> 'dict[str, Any]'
+```
+
+Source: `optimizer/system_olss/contract.py`.
+
+### `system_olss.validate_shooting_spec`
+
+Call shooting_spec() and check it against the declared variable size.
+
+Family: `olss`.
+
+```python
+validate_shooting_spec(system: 'Any') -> 'ShootingSpec'
+```
+
+Source: `optimizer/system_olss/contract.py`.
+
+### `system_olss.require_shooting_system`
+
+Validate the required OLSS contract before a solver starts.
+
+Family: `olss`. Root shortcut: `opt.require_shooting_system`.
+
+```python
+require_shooting_system(system: 'Any') -> 'OpenLoopShootingSystem'
+```
+
+Source: `optimizer/system_olss/contract.py`.
+
+### `system_olss.ShootingSystemProbe`
+
+Presence of required and optional OLSS hooks, with required_ok.
+
+Family: `olss`. Root shortcut: `opt.ShootingSystemProbe`.
+
+```python
+ShootingSystemProbe(has_system_spec: 'bool', has_shooting_spec: 'bool', has_residuals: 'bool', has_jacobian: 'bool', has_evaluate: 'bool', has_verify: 'bool', has_with_secondary: 'bool', has_residuals_and_jacobian: 'bool', has_shooting_bounds: 'bool', has_cost_gradient: 'bool', has_recover_controls: 'bool', has_forward_prop: 'bool', has_simulate: 'bool', has_plot_data: 'bool', has_sparse_jacobian: 'bool', has_jacobian_operator: 'bool', has_roots_equivalent: 'bool', has_cache_reset: 'bool', has_cache_status: 'bool') -> None
+```
+
+Source: `optimizer/system_olss/contract.py`.
+
+### `system_olss.probe_shooting_system`
+
+Inspect OLSS hook presence without calling numerical methods.
+
+Family: `olss`. Root shortcut: `opt.probe_shooting_system`.
+
+```python
+probe_shooting_system(system: 'Any') -> 'ShootingSystemProbe'
+```
+
+Source: `optimizer/system_olss/contract.py`.
+
+### `system_olss.describe_shooting_system`
+
+Describe an OLSS system's declarations and hook presence without evaluating it.
+
+Family: `olss`. Root shortcut: `opt.describe_shooting_system`.
+
+```python
+describe_shooting_system(system: 'Any') -> 'dict[str, Any]'
+```
+
+Source: `optimizer/system_olss/contract.py`.
+
+### `system_olss.shooting_contract_info`
+
+Return the generic OLSS contract: required and optional calls.
+
+Family: `olss`. Root shortcut: `opt.shooting_contract_info`.
+
+```python
+shooting_contract_info() -> 'dict[str, Any]'
+```
+
+Source: `optimizer/system_olss/contract.py`.
+
+### `system_olss.ShootingOptions`
+
+Type of the per-call OLSS numerical options mapping.
+
+Family: `olss`.
+
+```python
+ShootingOptions(*args, **kwargs)
+```
+
+Source: `optimizer/system_olss/contract.py`.
+
+### `system_olss.ShootingMetrics`
+
+Type of an OLSS metrics mapping from metric name to value.
+
+Family: `olss`.
+
+```python
+ShootingMetrics(*args, **kwargs)
+```
+
+Source: `optimizer/system_olss/contract.py`.
+
+### `system_olss.validate_variables_for_shooting_system`
+
+Check that ShootingVariables match the system's shooting_spec().
+
+Family: `olss`.
+
+```python
+validate_variables_for_shooting_system(system: 'Any', variables: 'ShootingVariables') -> 'ShootingVariables'
+```
+
+Source: `optimizer/system_olss/validation.py`.
+
+### `system_olss.residuals_system`
+
+Call residuals and validate a finite vector of the declared size.
+
+Family: `olss`.
+
+```python
+residuals_system(system: 'Any', variables: 'ShootingVariables', *, options: 'Mapping[str, Any] | None' = None) -> 'np.ndarray'
+```
+
+Source: `optimizer/system_olss/validation.py`.
+
+### `system_olss.jacobian_system`
+
+Call jacobian and validate a finite dense matrix of the declared shape.
+
+Family: `olss`.
+
+```python
+jacobian_system(system: 'Any', variables: 'ShootingVariables', *, options: 'Mapping[str, Any] | None' = None) -> 'np.ndarray'
+```
+
+Source: `optimizer/system_olss/validation.py`.
+
+### `system_olss.residuals_and_jacobian_system`
+
+Call the optional combined hook, or residuals and jacobian separately, and validate both.
+
+Family: `olss`.
+
+```python
+residuals_and_jacobian_system(system: 'Any', variables: 'ShootingVariables', *, options: 'Mapping[str, Any] | None' = None) -> 'tuple[np.ndarray, np.ndarray]'
+```
+
+Source: `optimizer/system_olss/validation.py`.
+
+### `system_olss.evaluate_shooting_system`
+
+Call evaluate and check the metrics against the declaration.
+
+Family: `olss`.
+
+```python
+evaluate_shooting_system(system: 'Any', variables: 'ShootingVariables', *, options: 'Mapping[str, Any] | None' = None) -> 'dict[str, Any]'
+```
+
+Source: `optimizer/system_olss/validation.py`.
+
+### `system_olss.verify_shooting_system`
+
+Call verify and normalize it into a ShootingVerification with its independence evidence.
+
+Family: `olss`.
+
+```python
+verify_shooting_system(system: 'Any', variables: 'ShootingVariables', *, options: 'Mapping[str, Any] | None' = None, independent: 'bool' = False, independence_source: 'str' = 'unspecified') -> 'ShootingVerification'
+```
+
+Source: `optimizer/system_olss/validation.py`.
+
+### `system_olss.roots_equivalent_system`
+
+Call the optional system-owned root-equivalence predicate; None means use the numerical default.
+
+Family: `olss`.
+
+```python
+roots_equivalent_system(system: 'Any', left: 'ShootingVariables', right: 'ShootingVariables', *, tolerance: 'float') -> 'bool | None'
+```
+
+Source: `optimizer/system_olss/validation.py`.
+
+### `system_olss.cost_gradient_system`
+
+Call and validate the optional cost_gradient hook used by direct shooting.
+
+Family: `olss`.
+
+```python
+cost_gradient_system(system: 'Any', variables: 'ShootingVariables', *, options: 'Mapping[str, Any] | None' = None) -> 'np.ndarray'
+```
+
+Source: `optimizer/system_olss/validation.py`.
+
+### `system_olss.shooting_bounds_system`
+
+Read and validate optional elementwise shooting-variable bounds.
+
+Family: `olss`.
+
+```python
+shooting_bounds_system(system: 'Any') -> 'tuple[np.ndarray, np.ndarray] | None'
+```
+
+Source: `optimizer/system_olss/validation.py`.
 
 ## shooting
 
@@ -3768,6 +5907,8 @@ Root solving, verification, multistart, continuation, and direct shooting for OL
 ### `shooting.solve_shooting`
 
 Solve one OLSS residual equation and independently verify the candidate.
+
+Family: `olss`. Root shortcut: `opt.solve_shooting`.
 
 ```python
 solve_shooting(system: 'Any', initial: 'ShootingVariables', *, method: 'str' = 'lm', tolerance: 'float' = 1e-10, verification_tolerance: 'float | None' = None, maxiter: 'int' = 40, damping: 'float' = 1e-10, max_step_norm: 'float | None' = None, line_search: 'bool' = True, shrink: 'float' = 0.5, max_backtracks: 'int' = 12, options: 'Mapping[str, Any] | None' = None, verification_options: 'Mapping[str, Any] | None' = None, evaluator: 'ShootingEvaluator | None' = None, previous_result: 'ShootingResult | None' = None, on_iteration: 'Callable[[Mapping[str, Any]], None] | None' = None, on_event: 'Callable[[Mapping[str, Any]], None] | None' = None) -> 'ShootingResult'
@@ -3813,6 +5954,8 @@ Source: `optimizer/shooting/solvers.py`.
 
 Solve independent seeds, deduplicate qualified roots, and rank a declared selection metric.
 
+Family: `olss`. Root shortcut: `opt.solve_shooting_multistart`.
+
 ```python
 solve_shooting_multistart(system: 'Any', starts: 'Iterable[ShootingVariables]', *, parallel: 'ParallelConfig | None' = None, system_factory: 'Callable[[], Any] | None' = None, dedup_tolerance: 'float' = 1e-07, solver_options: 'Mapping[str, Any] | None' = None) -> 'MultiStartResult'
 ```
@@ -3851,6 +5994,8 @@ Source: `optimizer/shooting/campaigns.py`.
 
 Follow a one-dimensional OLSS root branch with pseudo-arclength continuation.
 
+Family: `olss`. Root shortcut: `opt.continue_shooting`.
+
 ```python
 continue_shooting(system: 'Any', previous: 'ShootingVariables', current: 'ShootingVariables', *, steps: 'int', step_size: 'float', tolerance: 'float' = 1e-10, verification_tolerance: 'float | None' = None, max_corrector_iterations: 'int' = 15, options: 'Mapping[str, Any] | None' = None, verification_options: 'Mapping[str, Any] | None' = None, min_step: 'float | None' = None, max_step: 'float | None' = None, shrink: 'float' = 0.5, grow: 'float' = 1.5, fast_corrector_iterations: 'int' = 4, target_block: 'str | None' = None, target_value: 'float | None' = None, target_tolerance: 'float' = 1e-10) -> 'ShootingContinuationResult'
 ```
@@ -3887,6 +6032,8 @@ Source: `optimizer/shooting/continuation.py`.
 ### `shooting.solve_direct_shooting`
 
 Optimize a declared selection cost along the feasible OLSS residual set.
+
+Family: `olss`. Root shortcut: `opt.solve_direct_shooting`.
 
 ```python
 solve_direct_shooting(system: 'Any', initial: 'ShootingVariables', *, tolerance: 'float' = 1e-10, verification_tolerance: 'float | None' = None, maxiter: 'int' = 30, step_size: 'float' = 0.25, damping: 'float' = 1e-10, correction_maxiter: 'int' = 12, options: 'Mapping[str, Any] | None' = None, verification_options: 'Mapping[str, Any] | None' = None) -> 'ShootingResult'
@@ -3931,6 +6078,8 @@ Source: `optimizer/shooting/solvers.py`.
 
 Compare the declared OLSS Jacobian with explicit central finite differences.
 
+Family: `olss`. Root shortcut: `opt.verify_shooting_jacobian`.
+
 ```python
 verify_shooting_jacobian(system: 'Any', variables: 'ShootingVariables', *, eps: 'float' = 1e-06, atol: 'float' = 1e-07, rtol: 'float' = 1e-05, options: 'Mapping[str, Any] | None' = None) -> 'dict[str, Any]'
 ```
@@ -3971,6 +6120,8 @@ Source: `optimizer/shooting/derivatives.py`.
 
 Natural continuation over one secondary parameter with adaptive steps and exact target landing.
 
+Family: `olss`. Root shortcut: `opt.continue_parameter`.
+
 ```python
 continue_parameter(system: 'Any', initial: 'ShootingVariables', *, parameter: 'str', start: 'float', target: 'float', step_size: 'float', min_step: 'float | None' = None, max_step: 'float | None' = None, shrink: 'float' = 0.5, grow: 'float' = 1.5, max_steps: 'int' = 100, solver_options: 'Mapping[str, Any] | None' = None) -> 'ParameterContinuationResult'
 ```
@@ -3980,6 +6131,8 @@ Source: `optimizer/shooting/continuation.py`.
 ### `shooting.random_shooting_seeds`
 
 Generate scale-aware random shooting seeds.
+
+Family: `olss`. Root shortcut: `opt.random_shooting_seeds`.
 
 ```python
 random_shooting_seeds(spec: 'ShootingSpec', count: 'int', *, seed: 'int | None' = None, center: 'ShootingVariables | None' = None, radius: 'float' = 1.0, bounds: 'tuple[np.ndarray, np.ndarray] | None' = None) -> 'list[ShootingVariables]'
@@ -3991,6 +6144,8 @@ Source: `optimizer/shooting/campaigns.py`.
 
 Generate a scale-aware perturbation cloud around an anchor.
 
+Family: `olss`. Root shortcut: `opt.perturb_shooting_seeds`.
+
 ```python
 perturb_shooting_seeds(anchor: 'ShootingVariables', count: 'int', *, relative_radius: 'float' = 0.1, seed: 'int | None' = None, bounds: 'tuple[np.ndarray, np.ndarray] | None' = None) -> 'list[ShootingVariables]'
 ```
@@ -4000,6 +6155,8 @@ Source: `optimizer/shooting/campaigns.py`.
 ### `shooting.refine_shooting_seeds`
 
 Solve, select elites, perturb, and refine a shooting seed campaign.
+
+Family: `olss`. Root shortcut: `opt.refine_shooting_seeds`.
 
 ```python
 refine_shooting_seeds(system: 'Any', starts: 'Iterable[ShootingVariables]', *, elite_count: 'int' = 3, perturbations_per_elite: 'int' = 4, relative_radius: 'float' = 0.05, seed: 'int | None' = None, solver_options: 'Mapping[str, Any] | None' = None, parallel: 'ParallelConfig | None' = None, system_factory: 'Callable[[], Any] | None' = None) -> 'MultiStartResult'
@@ -4011,6 +6168,8 @@ Source: `optimizer/shooting/campaigns.py`.
 
 Replay OLSS-recovered controls in OLGS and compare declared metrics.
 
+Family: `olgs`, `olss`. Root shortcut: `opt.compare_shooting_replay`.
+
 ```python
 compare_shooting_replay(shooting_system: 'Any', variables: 'ShootingVariables', gradient_system: 'Any', *, times: 'np.ndarray', metric_map: 'Mapping[str, str] | None' = None, shooting_options: 'Mapping[str, Any] | None' = None, interpolation: 'str' = 'system_owned', units: 'Mapping[str, str] | None' = None) -> 'dict[str, Any]'
 ```
@@ -4021,6 +6180,8 @@ Source: `optimizer/shooting/replay.py`.
 
 Central-difference reference Jacobian of the OLSS residual vector; does not replace the declared Jacobian.
 
+Family: `olss`. Root shortcut: `opt.finite_difference_shooting_jacobian`.
+
 ```python
 finite_difference_shooting_jacobian(system: 'Any', variables: 'ShootingVariables', *, eps: 'float' = 1e-06, options: 'Mapping[str, Any] | None' = None) -> 'np.ndarray'
 ```
@@ -4030,6 +6191,8 @@ Source: `optimizer/shooting/derivatives.py`.
 ### `shooting.ShootingEvaluator`
 
 Validated, cached, and counted OLSS evaluation shared by the shooting tools.
+
+Family: `olss`. Root shortcut: `opt.ShootingEvaluator`.
 
 ```python
 ShootingEvaluator(system: 'Any', *, use_cache: 'bool' = True, cache_size: 'int | None' = 32) -> 'None'
@@ -4045,6 +6208,8 @@ Standalone, read-only tracker reader package; it is not yet a portal UI or comma
 
 Read validated tracker events without importing optimizer numerics.
 
+Family: `olgs`.
+
 ```python
 read_timeline(run_dir: 'str | Path') -> 'TimelineReadResult'
 ```
@@ -4054,6 +6219,8 @@ Source: `optimizer_log/reader.py`.
 ### `optimizer_log.follow_timeline`
 
 Incrementally follow appended complete JSONL events.
+
+Family: `olgs`.
 
 ```python
 follow_timeline(run_dir: 'str | Path', *, offset: 'int' = 0, previous_sequence: 'int | None' = None) -> 'TimelineReadResult'
@@ -4065,11 +6232,180 @@ Source: `optimizer_log/reader.py`.
 
 Inspect writer ownership/liveness without taking ownership.
 
+Family: `olgs`.
+
 ```python
 inspect_writer(run_dir: 'str | Path') -> 'dict[str, Any]'
 ```
 
 Source: `optimizer_log/reader.py`.
+
+### `optimizer_log.TimelineReadResult`
+
+Complete timeline records and, if present, one ignored damaged tail line.
+
+Family: `olgs`.
+
+```python
+TimelineReadResult(records: 'tuple[dict[str, Any], ...]', recovered_tail: 'dict[str, Any] | None' = None, next_offset: 'int' = 0, last_sequence: 'int | None' = None, unsupported_events: 'tuple[dict[str, Any], ...]' = (), stalled: 'bool' = False, reason: 'str | None' = None, corrupt_at_offset: 'int | None' = None) -> None
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `optimizer_log.read_receipt`
+
+Read the stored run receipt exactly as written.
+
+Family: `olgs`.
+
+```python
+read_receipt(run_dir: 'str | Path') -> 'dict[str, Any]'
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `optimizer_log.read_live`
+
+Read the current replaceable observer snapshot, if the run has started.
+
+Family: `olgs`.
+
+```python
+read_live(run_dir: 'str | Path') -> 'dict[str, Any] | None'
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `optimizer_log.read_terminal`
+
+Read the direct terminal-result index, if the run has ended.
+
+Family: `olgs`.
+
+```python
+read_terminal(run_dir: 'str | Path') -> 'dict[str, Any] | None'
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `optimizer_log.read_writer`
+
+Read explicit writer ownership and heartbeat state, if present.
+
+Family: `olgs`.
+
+```python
+read_writer(run_dir: 'str | Path') -> 'dict[str, Any] | None'
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `optimizer_log.metric_coverage`
+
+Compare declared metrics with observed and explicitly omitted metrics.
+
+Family: `olgs`.
+
+```python
+metric_coverage(receipt: 'Mapping[str, Any]', records: 'tuple[dict[str, Any], ...] | list[dict[str, Any]]') -> 'dict[str, tuple[str, ...]]'
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `optimizer_log.project_timeline`
+
+Create a generic read-only projection for API or interface consumers.
+
+Family: `olgs`.
+
+```python
+project_timeline(records: 'tuple[dict[str, Any], ...] | list[dict[str, Any]]', *, kind: 'str | None' = None, fields: 'Mapping[str, str] | None' = None) -> 'tuple[dict[str, Any], ...]'
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `optimizer_log.validate_event`
+
+Validate one causal event envelope without importing optimizer code.
+
+Family: `olgs`.
+
+```python
+validate_event(payload: 'Mapping[str, Any]', *, expected_run_id: 'str | None' = None, previous_sequence: 'int | None' = None) -> 'bool'
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `optimizer_log.validate_receipt`
+
+Validate the generic receipt fields required by read-only consumers.
+
+Family: `olgs`.
+
+```python
+validate_receipt(payload: 'Mapping[str, Any]') -> 'None'
+```
+
+Source: `optimizer_log/reader.py`.
+
+### `optimizer_log.validate_timeline`
+
+Validate the one-start, one-terminal lifecycle of a complete prefix.
+
+Family: `olgs`.
+
+```python
+validate_timeline(records: 'tuple[dict[str, Any], ...] | list[dict[str, Any]]') -> 'None'
+```
+
+Source: `optimizer_log/reader.py`.
+
+## Stop reasons
+
+Generated from `opt.core.STOP_REASONS`, the one registry of every stop reason the
+library assigns. A labelled reason such as `stage_gate_failed:warmup` uses the entry
+before the colon. Continuable means the final state is a valid start for another run.
+
+| Reason | Outcome | Families | Continuable | Meaning | Assigned by |
+|---|---|---|---|---|---|
+| `maxiter` | stopped | olgs, olss | yes | The iteration budget was used up. | engine, root solvers, repair |
+| `nonfinite_trial` | failed | olgs, olss | yes | Consecutive trials failed to evaluate: failed_trial_retries in the OLGS engine, every line-search trial of one iteration in OLSS. | engine, root solvers |
+| `initial_evaluation_failed` | failed | olgs, olss | no | The starting point could not be evaluated; a coordinator records this for a seed or stage. | CMA-ES, multistart, natural continuation |
+| `line_search_failed` | failed | olgs, olss | yes | No backtracking step reduced the residual norm. | residual repair, root solvers |
+| `completed` | stopped | olgs, olss | yes | Every requested stage or continuation step finished. | continuation |
+| `interrupted` | interrupted | olgs | yes | The run was interrupted; the last valid state is kept. | engine, CMA-ES |
+| `target` | stopped | olgs | yes | The watched metric reached target_value. | stopping rules |
+| `stall` | stopped | olgs | yes | No improvement for stall_patience iterations. | stopping rules |
+| `nonfinite` | failed | olgs | no | The current metrics contain a non-finite value. | stopping rules |
+| `gradient_converged` | converged | olgs | yes | The gradient norm is at or below gradient_tolerance. | engine |
+| `stationary_nonminimum` | stopped | olgs | yes | The gradient tolerance is met but sampled curvature is negative: a saddle or a maximum. | engine |
+| `gradient_failed` | failed | olgs | no | The system gradient failed at the current controls. | engine |
+| `smooth_gradient_failed` | failed | olgs | no | The smooth-gradient call of a proximal run failed. | engine |
+| `proposal_failed` | failed | olgs | yes | The step function raised or proposed invalid controls. | engine |
+| `stopped` | stopped | olgs | yes | Fallback label for a stop without a named reason. | engine |
+| `projected_kkt_converged` | converged | olgs | yes | Projected gradient met its feasibility and projected-stationarity tolerances. | projected_gradient |
+| `restoration_failed` | failed | olgs | yes | Projected gradient could not restore feasibility. | projected_gradient |
+| `proximal_mapping_converged` | converged | olgs | yes | The proximal-gradient mapping norm is below tolerance. | proximal_gradient |
+| `no_usable_candidates` | failed | olgs | no | CMA-ES produced no finite candidate. | cma_es |
+| `converged` | converged | olgs | yes | The residual norm is at or below the repair tolerance. | residual repair |
+| `stage_gate_failed` | failed | olgs | yes | A continuation stage did not pass its gate; the stage label follows the colon. | continuation |
+| `root_tolerance` | converged | olss | yes | The residual norm reached the working tolerance. | solve_shooting |
+| `singular_step` | failed | olss | yes | The step could not be computed from the Jacobian. | solve_shooting |
+| `least_squares_stationary` | stopped | olss | yes | The residual cannot be reduced further: a least-squares stationary point, not a root. | solve_shooting |
+| `bound_stalled` | stopped | olss | yes | Declared bounds blocked every step. | solve_shooting |
+| `jacobian_failed` | failed | olss | no | The Jacobian failed at an accepted point. | solve_shooting, direct shooting |
+| `evaluation_failed` | failed | olss | no | Declared metrics failed at the converged point. | solve_shooting |
+| `verification_failed` | failed | olss | yes | Independent verification failed, raised, missed its tolerance, or failed a named check. | solve_shooting, continuation |
+| `verification_not_independent` | failed | olss | yes | Verification reused the working options, so it cannot qualify the root. | solve_shooting |
+| `initial_feasibility_failed` | failed | olss | no | Direct shooting could not correct its start onto the feasible set. | direct shooting |
+| `cost_stationary` | converged | olss | yes | The projected cost gradient is below tolerance on the feasible set. | direct shooting |
+| `cost_line_search_failed` | stopped | olss | yes | No corrected step reduced the cost. | direct shooting |
+| `cost_gradient_failed` | failed | olss | no | The cost gradient failed at the current point. | direct shooting |
+| `seed_verification_failed` | failed | olss | no | A pseudo-arclength seed failed verification. | pseudo-arclength continuation |
+| `target_landing_failed` | failed | olss | yes | The corrector could not land exactly on the target value. | pseudo-arclength continuation |
+| `minimum_step_reached` | stopped | olss | yes | The continuation step shrank below its minimum after failed attempts. | continuation |
+| `target_reached` | stopped | olss | yes | The continuation reached its target value exactly. | continuation |
+| `max_steps` | stopped | olss | yes | The continuation step budget was used up before the target. | natural continuation |
 
 ---
 

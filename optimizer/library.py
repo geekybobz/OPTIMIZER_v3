@@ -37,11 +37,14 @@ Reviewer invariants
 
 from __future__ import annotations
 
+import inspect
 from dataclasses import asdict, dataclass, is_dataclass, replace
 from typing import Any, Callable, Iterable, Mapping
 from uuid import uuid4
 
+from optimizer import catalog
 from optimizer.controls import ControlSpec, Controls
+from optimizer.families import system_family
 from optimizer.continuation import ContinuationResult, ContinuationStage, StageGate, continuation as _continuation
 from optimizer.core.engine import StepFunction, run_chunk
 from optimizer.core.evaluate import SystemEvaluator
@@ -119,6 +122,15 @@ def _system_params(system: Any) -> dict[str, Any]:
     if hasattr(params, "__dict__"):
         return dict(vars(params))
     return {}
+
+
+def _is_olss(system: Any) -> bool:
+    """Whether a system declares the OLSS family; objects without system_spec() are not."""
+
+    try:
+        return system_family(system) == "olss"
+    except TypeError:
+        return False
 
 
 @dataclass(frozen=True)
@@ -482,25 +494,19 @@ class OptimizerLibrary:
 
     def evaluate(self, system: Any, controls: Any, *, use_cache: bool = True) -> Any:
         """Evaluate a system through the validated public boundary."""
-        hook = getattr(system, "system_spec", None)
-        if callable(hook):
-            raw = hook()
-            if isinstance(raw, Mapping) and raw.get("family") == "olss":
-                from optimizer.shooting import ShootingEvaluator
+        if _is_olss(system):
+            from optimizer.shooting import ShootingEvaluator
 
-                return ShootingEvaluator(system, use_cache=use_cache).evaluate(controls)
+            return ShootingEvaluator(system, use_cache=use_cache).evaluate(controls)
         return self._evaluator(system, use_cache=use_cache).evaluate(controls)
 
     def gradient(self, system: Any, controls: Controls, *, use_cache: bool = True) -> Controls:
         """Return the analytical system gradient through the public boundary."""
-        hook = getattr(system, "system_spec", None)
-        if callable(hook):
-            raw = hook()
-            if isinstance(raw, Mapping) and raw.get("family") == "olss":
-                raise TypeError(
-                    "OLSS systems expose residuals and jacobian, not an objective gradient; "
-                    "use opt.shooting.ShootingEvaluator or opt.shooting.solve_shooting."
-                )
+        if _is_olss(system):
+            raise TypeError(
+                "OLSS systems expose residuals and jacobian, not an objective gradient; "
+                "use opt.shooting.ShootingEvaluator or opt.shooting.solve_shooting."
+            )
         return self._evaluator(system, use_cache=use_cache).gradient(controls)
 
     def value_and_gradient(
@@ -594,11 +600,8 @@ class OptimizerLibrary:
         from optimizer.system_olgs import describe_system
         from optimizer.system_olss import describe_shooting_system
 
-        hook = getattr(system, "system_spec", None)
-        if callable(hook):
-            raw = hook()
-            if isinstance(raw, Mapping) and raw.get("family") == "olss":
-                return describe_shooting_system(system)
+        if _is_olss(system):
+            return describe_shooting_system(system)
 
         return describe_system(system)
 
@@ -678,14 +681,11 @@ class OptimizerLibrary:
         stages: Iterable[ContinuationStage | dict[str, Any]],
         **kwargs: Any,
     ) -> ContinuationResult:
-        hook = getattr(system, "system_spec", None)
-        if callable(hook):
-            raw = hook()
-            if isinstance(raw, Mapping) and raw.get("family") == "olss":
-                raise TypeError(
-                    "opt.continuation is the OLGS staged-control workflow; "
-                    "use opt.shooting.continue_parameter or opt.shooting.continue_shooting for OLSS."
-                )
+        if _is_olss(system):
+            raise TypeError(
+                "opt.continuation is the OLGS staged-control workflow; "
+                "use opt.shooting.continue_parameter or opt.shooting.continue_shooting for OLSS."
+            )
         return _continuation(system, controls, stages=tuple(stages), **kwargs)
 
     # ------------------------------------------------------------------
@@ -862,182 +862,22 @@ class OptimizerLibrary:
     # ------------------------------------------------------------------
 
     def methods(self) -> dict[str, MethodInfo]:
-        """Return public method status for notebooks and review checks."""
+        """Return the status of every public root function, built from the catalog declarations."""
 
-        return {
-            "run_chunk": MethodInfo("run_chunk", "implemented", "optimizer/core/engine.py", "Phase 5"),
-            "evaluate": MethodInfo("evaluate", "implemented", "optimizer/core/evaluate.py", "Phase 5"),
-            "gradient": MethodInfo("gradient", "implemented", "optimizer/core/evaluate.py", "Phase 5"),
-            "value_and_gradient": MethodInfo(
-                "value_and_gradient", "implemented", "optimizer/core/evaluate.py", "Numerical capabilities"
-            ),
-            "plot_data": MethodInfo(
-                "plot_data", "implemented", "optimizer/core/evaluate.py", "System data products"
-            ),
-            "trace": MethodInfo("trace", "implemented", "optimizer/logs/trace.py", "Phase 4"),
-            "warmstart": MethodInfo("warmstart", "implemented", "optimizer/state.py", "Phase 3"),
-            "parallel_map": MethodInfo("parallel_map", "implemented", "optimizer/utils/parallel.py", "Phase 5"),
-            "context": MethodInfo("context", "implemented", "optimizer/library.py", "Phase 6"),
-            "bind": MethodInfo("bind", "implemented", "optimizer/library.py", "Phase 6"),
-            "system_info": MethodInfo(
-                "system_info",
-                "implemented",
-                "optimizer/library.py",
-                "Phase 13",
-            ),
-            "context_info": MethodInfo(
-                "context_info",
-                "implemented",
-                "optimizer/introspection.py",
-                "Phase 13",
-            ),
-            "adam": MethodInfo("adam", "implemented", "optimizer/optimizers/adam.py", "Phase 7"),
-            "momentum": MethodInfo("momentum", "implemented", "optimizer/optimizers/momentum.py", "Phase 7"),
-            "line_search": MethodInfo(
-                "line_search",
-                "implemented",
-                "optimizer/optimizers/line_search.py",
-                "Phase 7",
-            ),
-            "adagrad": MethodInfo("adagrad", "implemented", "optimizer/optimizers/adaptive.py", "Phase 7"),
-            "rmsprop": MethodInfo("rmsprop", "implemented", "optimizer/optimizers/adaptive.py", "Phase 7"),
-            "lbfgs": MethodInfo("lbfgs", "implemented", "optimizer/optimizers/lbfgs.py", "Phase 7"),
-            "nonlinear_cg": MethodInfo(
-                "nonlinear_cg",
-                "implemented",
-                "optimizer/optimizers/nonlinear_cg.py",
-                "Phase 7",
-            ),
-            "ncg": MethodInfo("ncg", "implemented", "optimizer/optimizers/nonlinear_cg.py", "Phase 7"),
-            "cma_es": MethodInfo("cma_es", "implemented", "optimizer/optimizers/cma_es.py", "Phase 7"),
-            "projected_gradient": MethodInfo(
-                "projected_gradient", "implemented", "optimizer/optimizers/projected.py", "Numerical capabilities"
-            ),
-            "newton_cg": MethodInfo(
-                "newton_cg", "implemented", "optimizer/optimizers/newton_cg.py", "Numerical capabilities"
-            ),
-            "trust_region": MethodInfo(
-                "trust_region", "implemented", "optimizer/optimizers/trust_region.py", "Numerical capabilities"
-            ),
-            "proximal_gradient": MethodInfo(
-                "proximal_gradient", "implemented", "optimizer/optimizers/proximal.py", "Numerical capabilities"
-            ),
-            "continuation": MethodInfo(
-                "continuation", "implemented", "optimizer/continuation.py", "Numerical capabilities"
-            ),
-            "solve_shooting": MethodInfo(
-                "solve_shooting", "implemented", "optimizer/shooting/solvers.py", "OLSS"
-            ),
-            "solve_shooting_multistart": MethodInfo(
-                "solve_shooting_multistart", "implemented", "optimizer/shooting/campaigns.py", "OLSS"
-            ),
-            "continue_shooting": MethodInfo(
-                "continue_shooting", "implemented", "optimizer/shooting/continuation.py", "OLSS"
-            ),
-            "solve_direct_shooting": MethodInfo(
-                "solve_direct_shooting", "implemented", "optimizer/shooting/solvers.py", "OLSS"
-            ),
-            "fourier_guess": MethodInfo(
-                "fourier_guess",
-                "implemented",
-                "optimizer/guesses/harmonic.py",
-                "Phase 9",
-            ),
-            "constant_guess": MethodInfo(
-                "constant_guess",
-                "implemented",
-                "optimizer/guesses/simple.py",
-                "Phase 9",
-            ),
-            "ramp_guess": MethodInfo("ramp_guess", "implemented", "optimizer/guesses/simple.py", "Phase 9"),
-            "sine_guess": MethodInfo("sine_guess", "implemented", "optimizer/guesses/harmonic.py", "Phase 9"),
-            "cosine_guess": MethodInfo(
-                "cosine_guess",
-                "implemented",
-                "optimizer/guesses/harmonic.py",
-                "Phase 9",
-            ),
-            "gaussian_guess": MethodInfo(
-                "gaussian_guess",
-                "implemented",
-                "optimizer/guesses/harmonic.py",
-                "Phase 9",
-            ),
-            "sinc_guess": MethodInfo("sinc_guess", "implemented", "optimizer/guesses/harmonic.py", "Phase 9"),
-            "random_guess": MethodInfo("random_guess", "implemented", "optimizer/guesses/random.py", "Phase 9"),
-            "random_smooth_guess": MethodInfo(
-                "random_smooth_guess",
-                "implemented",
-                "optimizer/guesses/random.py",
-                "Phase 9",
-            ),
-            "random_fourier_guess": MethodInfo(
-                "random_fourier_guess",
-                "implemented",
-                "optimizer/guesses/random.py",
-                "Phase 9",
-            ),
-            "scale_guess": MethodInfo(
-                "scale_guess",
-                "implemented",
-                "optimizer/guesses/composite.py",
-                "Phase 9",
-            ),
-            "mix_guess": MethodInfo(
-                "mix_guess",
-                "implemented",
-                "optimizer/guesses/composite.py",
-                "Phase 9",
-            ),
-            "perturb_guess": MethodInfo(
-                "perturb_guess",
-                "implemented",
-                "optimizer/guesses/composite.py",
-                "Phase 9",
-            ),
-            "repair_newton": MethodInfo(
-                "repair_newton",
-                "implemented",
-                "optimizer/utils/repairs.py",
-                "Phase 11",
-            ),
-            "geometry_probe": MethodInfo(
-                "geometry_probe",
-                "implemented",
-                "optimizer/utils/diagnostics.py",
-                "Phase 11",
-            ),
-            "diagnostic_report": MethodInfo(
-                "diagnostic_report",
-                "implemented",
-                "optimizer/utils/diagnostics.py",
-                "Phase 11",
-            ),
-            "verify_gradient": MethodInfo(
-                "verify_gradient",
-                "implemented",
-                "optimizer/utils/derivatives.py",
-                "Phase 11",
-            ),
-            "verify_jacobian": MethodInfo(
-                "verify_jacobian",
-                "implemented",
-                "optimizer/utils/derivatives.py",
-                "Phase 11",
-            ),
-            "project_gradient": MethodInfo(
-                "project_gradient",
-                "implemented",
-                "optimizer/utils/geometry.py",
-                "Phase 11",
-            ),
-            "metric_guard": MethodInfo(
-                "metric_guard",
-                "implemented",
-                "optimizer/core/guards.py",
-                "Phase 11",
-            ),
-        }
+        import optimizer
+
+        payload: dict[str, MethodInfo] = {}
+        for name in catalog.exports("base"):
+            if not inspect.isfunction(getattr(optimizer, name, None)):
+                continue
+            declaration = catalog.info(name)
+            payload[name] = MethodInfo(
+                name,
+                str(declaration["status"]),
+                str(declaration.get("module", "")),
+                str(declaration.get("phase", "")),
+            )
+        return payload
 
 
 DEFAULT_LIBRARY = OptimizerLibrary()
