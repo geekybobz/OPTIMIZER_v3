@@ -37,6 +37,11 @@ bytecode out of the checkout.
 
 ## Worked example
 
+[Parallel job tests](test_jobs.py) use neutral OLGS/OLSS systems to check actual
+worker processes, frozen inputs, bounded resources, cancellation and history
+commit ordering. [The jobs reference](../optimizer/jobs/JOBS.md) owns their runtime
+contracts; these tests do not replace scientific convergence benchmarks.
+
 [fixtures/quadratic_system.py](fixtures/quadratic_system.py) is a complete,
 minimal OLGS system used across the suite. Read it next to the
 [OLGS Contract](../optimizer/system_olgs/CONTRACT.md).

@@ -36,7 +36,7 @@ from __future__ import annotations
 
 from typing import Any as _Any, Callable as _Callable, Iterable as _Iterable
 
-from optimizer import campaigns, catalog, core, guesses, optimizers, schedules, shooting, utils, visualization
+from optimizer import campaigns, catalog, core, guesses, jobs, optimizers, schedules, shooting, utils, visualization
 from optimizer.catalog import base
 from optimizer.controls import ControlSpec, Controls
 from optimizer.continuation import ContinuationResult, ContinuationStage, StageGate, StageResult
@@ -569,6 +569,7 @@ _NAVIGATION = (
     "catalog",
     "core",
     "guesses",
+    "jobs",
     "info",
     "list",
     "optimizers",

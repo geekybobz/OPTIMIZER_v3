@@ -88,6 +88,10 @@ class OperationService:
         from optimizer.persistence.controller import _Persistence
         self._persistence = _Persistence(self)
         self._history = None
+        from optimizer.jobs.manager import _Jobs
+        self._jobs = _Jobs()
+        self._job_actions = []
+        self._defer_jobs = False
 
     def list(self) -> list[dict[str, Any]]:
         return [self._registry.describe(name) for name in self._registry.items] + self._persistence.descriptors() + (self._history.descriptors() if self._history else [])
@@ -156,6 +160,8 @@ class OperationService:
 
     def _execute_tool(self, request: OperationRequest) -> tuple[Any, tuple[ObjectRef, ...], dict[str, Any], str]:
         item, adapter = self._registry.resolve(request.operation)
+        if item.group == "jobs" and item.kind == "job_operation":
+            return self._jobs.dispatch(dataclasses.replace(request,operation=item.id),self)
         if adapter.classification not in {"tool", "constructor"}:
             raise _ServiceError("adapter_unavailable", f"{item.id}: {adapter.reason}")
         activate = adapter.effect == "solve" if request.activate is None else request.activate
@@ -399,6 +405,25 @@ class OperationService:
         return response_value, (ref,), metadata, item.id
 
     def execute(self, request: OperationRequest | Mapping[str, Any]) -> OperationResponse:
+        """Commit runtime side effects only after numerical/history publication."""
+        with self._writer:
+            if self._defer_jobs:
+                return self._execute_request(request)
+            self._job_actions = []
+            try:
+                response = self._execute_request(request)
+                if response.ok:
+                    self._jobs.commit(self._job_actions)
+                return response
+            finally:
+                self._job_actions = []
+
+    def close(self):
+        """Reap client-lifetime workers and close storage for native callers."""
+        self._jobs.close()
+        self._persistence.close()
+
+    def _execute_request(self, request: OperationRequest | Mapping[str, Any]) -> OperationResponse:
         request_id, operation = uuid4().hex, None
         with self._writer:
             before = self.session.snapshot()

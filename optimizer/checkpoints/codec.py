@@ -9,6 +9,7 @@ import zipfile
 import numpy as np
 from optimizer.controls import Controls, ControlSpec
 from optimizer.utils.control_tools import ControlGrid, ControlTransformResult
+from optimizer.jobs.contracts import JobHandle, JobsConfig
 from optimizer.result import Evaluation, OptimizerResult
 from optimizer.state import RunState, WarmStartState
 from optimizer.system_olss.variables import ShootingVariables, ShootingSpec, ShootingBlock
@@ -16,7 +17,7 @@ from optimizer.system_olss import results as shooting_results
 from optimizer.schedules import step_size as schedules
 from optimizer.operations.contracts import ObjectRef, _ServiceError
 
-_TYPES = {c.__name__: c for c in (ControlSpec, ControlGrid, ControlTransformResult, Evaluation, OptimizerResult, RunState, WarmStartState,
+_TYPES = {c.__name__: c for c in (ControlSpec, ControlGrid, ControlTransformResult, JobHandle, JobsConfig, Evaluation, OptimizerResult, RunState, WarmStartState,
                                 ShootingVariables, ShootingSpec, ShootingBlock, ObjectRef)}
 _TYPES.update({name: c for name, c in vars(shooting_results).items()
                if isinstance(c, type) and dataclasses.is_dataclass(c) and c.__module__ == shooting_results.__name__})

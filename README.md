@@ -130,6 +130,7 @@ from the [Testing Hub](tests/TESTING_HUB.md).
 - Related: [Utils Hub](optimizer/utils/UTILS_HUB.md)
 - Deeper: [Campaigns](optimizer/campaigns/CAMPAIGNS.md)
 - Deeper: [Command history](optimizer/history/HISTORY.md)
+- Deeper: [Parallel optimization jobs](optimizer/jobs/JOBS.md)
 - Related: [Schedules Hub](optimizer/schedules/SCHEDULES_HUB.md)
 - Related: [Testing Hub](tests/TESTING_HUB.md)
 

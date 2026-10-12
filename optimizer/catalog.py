@@ -420,6 +420,7 @@ def _make_item(
 # Family of every declaration in a group unless the declaration names its own.
 _BOTH = ("olgs", "olss")
 _GROUP_FAMILIES: dict[str, tuple[str, ...]] = {
+    "jobs": _BOTH,
     "operations": _BOTH,
     "optimizers": ("olgs",),
     "guesses": ("olgs",),
@@ -436,6 +437,7 @@ _GROUP_FAMILIES: dict[str, tuple[str, ...]] = {
 
 
 _GROUP_MODULES = {
+    "jobs": "optimizer.jobs",
     "operations": "optimizer.operations",
     "optimizers": "optimizer.optimizers",
     "guesses": "optimizer.guesses",
@@ -2195,7 +2197,27 @@ def _build_groups() -> dict[str, CatalogGroup]:
             _make_item("Session", "operations", "runtime", "Independent named contexts and bounded owned object versions.", module="optimizer/session.py", root=True),
         ),
     )
+    jobs_group = CatalogGroup(name="jobs", summary="Bounded client-lifetime process jobs and explicit candidate retrieval.", items=(
+        _make_item("JobHandle","jobs","data_object","Retained runtime job identity and frozen problem provenance.",
+                   module="optimizer/jobs/contracts.py",returns={"type":"JobHandle"}),
+        _make_item("JobsConfig","jobs","data_object","Conservative CPU, memory, queue and scratch reservations.",
+                   module="optimizer/jobs/contracts.py",returns={"type":"JobsConfig"}),
+        *(_make_item(name,"jobs","job_operation",summary,module="optimizer/jobs/api.py",
+                     returns={"type":returned},watch_out=("Jobs end with the client; results never autoactivate.",))
+          for name,summary,returned in (
+            ("configure","Set scheduler resource reservations before retaining jobs.","dict"),
+            ("submit","Freeze a source-backed system and initial state, then queue a solver.","JobHandle"),
+            ("status","Inspect jobs and resource reservations.","dict"),
+            ("wait","Wait at most thirty seconds for a terminal job status.","dict"),
+            ("result","Retain a native physical candidate from a completed job.","OptimizerResult or ShootingResult"),
+            ("cancel","Request safe project-call boundary cancellation.","dict"),
+            ("compare","Rank compatible completed candidates using an explicit metric.","dict"),
+            ("release","Release a terminal job's frozen inputs and runtime result.","dict"),
+            ("shutdown","Cancel and reap the service's owned workers.","dict"),
+          )),
+    ))
     return {
+        "jobs": jobs_group,
         "operations": operations_group,
         "optimizers": optimizers_group,
         "guesses": guesses_group,

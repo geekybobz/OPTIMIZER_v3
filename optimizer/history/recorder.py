@@ -105,6 +105,7 @@ class _Recorder:
             with root.session._lock:
                 before=root.session.snapshot() if before is None else before
                 staged=copy.copy(root);staged.session=_clone(root.session)
+                staged._job_actions=[];staged._defer_jobs=True
             from optimizer.persistence.controller import _Persistence
             staged._persistence=_Persistence(staged);staged._history=self
             self.active=staged;self.command_id=uuid4().hex
@@ -145,6 +146,9 @@ class _Recorder:
                         _adopt(root.session,staged.session)
                         root._persistence.store=destination.real if destination is not None else None
                         if original is not None and root._persistence.store is not original:original.close()
+                        if any(e['operation']=='session.exit' for e in self.events):
+                            staged._job_actions.append(('shutdown',None))
+                        root._jobs.commit(staged._job_actions)
                 self._remember(outcome)
                 return result
             except BaseException as exc:
@@ -315,6 +319,8 @@ class _Recorder:
                             issues.append({'code':'literal_object_identity','required':True})
                         if not isinstance(node,ast.Call):continue
                         operation=_operation(node.func)
+                        if operation.startswith('jobs.'):
+                            issues.append({'code':'asynchronous_replay_requires_checkpoint','operation':operation,'required':True})
                         keywords={k.arg:k.value for k in node.keywords}
                         if 'cma_es' in operation or operation.startswith('guesses.random') or operation.startswith('random'):
                             seed=keywords.get('seed')

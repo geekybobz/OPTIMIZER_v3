@@ -19,6 +19,7 @@ surfaces and defaults.
 
 | Group | Entries | Purpose |
 |---|---:|---|
+| [`jobs`](#jobs) | 11 | Bounded client-lifetime process jobs and explicit candidate retrieval. |
 | [`operations`](#operations) | 5 | Foreground session and native operation dispatch for future terminal/MCP adapters. |
 | [`optimizers`](#optimizers) | 13 | Methods that move Controls to improve system metrics. |
 | [`guesses`](#guesses) | 13 | Initial Controls generators and restart helpers. |
@@ -31,6 +32,244 @@ surfaces and defaults.
 | [`system_olgs`](#system-olgs) | 52 | Mandatory static system semantics and capability-gated numerical hooks owned by each problem. |
 | [`system_olss`](#system-olss) | 36 | Construction types, validation, and discovery for project-owned OLSS contracts. |
 | [`shooting`](#shooting) | 12 | Root solving, verification, multistart, continuation, and direct shooting for OLSS systems. |
+
+## jobs
+
+Bounded client-lifetime process jobs and explicit candidate retrieval.
+
+### `jobs.JobHandle`
+
+Retained runtime job identity and frozen problem provenance.
+
+Family: `olgs`, `olss`.
+
+```python
+JobHandle(job_id: 'str', runtime_id: 'str', operation: 'str', context: 'str', configuration: 'int', fingerprint: 'str', label: 'str | None' = None) -> None
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | JobHandle |
+
+Source: `optimizer/jobs/contracts.py`.
+
+### `jobs.JobsConfig`
+
+Conservative CPU, memory, queue and scratch reservations.
+
+Family: `olgs`, `olss`.
+
+```python
+JobsConfig(max_workers: 'int' = 2, threads_per_worker: 'int' = 1, memory_bytes: 'int' = 1073741824, coordinator_bytes: 'int' = 268435456, max_queue: 'int' = 16, max_jobs: 'int' = 64, input_bytes: 'int' = 8388608, scratch_bytes: 'int' = 134217728, shutdown_seconds: 'float' = 2.0) -> None
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | JobsConfig |
+
+Source: `optimizer/jobs/contracts.py`.
+
+### `jobs.configure`
+
+Set scheduler resource reservations before retaining jobs.
+
+Family: `olgs`, `olss`.
+
+```python
+configure(*, service=None, **limits)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | dict |
+
+#### Watch out
+
+- Jobs end with the client; results never autoactivate.
+
+Source: `optimizer/jobs/api.py`.
+
+### `jobs.submit`
+
+Freeze a source-backed system and initial state, then queue a solver.
+
+Family: `olgs`, `olss`.
+
+```python
+submit(operation, *, controls=None, variables=None, options=None, label=None, worker_bytes=268435456, result_bytes=4194304, context=None, service=None)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | JobHandle |
+
+#### Watch out
+
+- Jobs end with the client; results never autoactivate.
+
+Source: `optimizer/jobs/api.py`.
+
+### `jobs.status`
+
+Inspect jobs and resource reservations.
+
+Family: `olgs`, `olss`.
+
+```python
+status(job=None, *, service=None)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | dict |
+
+#### Watch out
+
+- Jobs end with the client; results never autoactivate.
+
+Source: `optimizer/jobs/api.py`.
+
+### `jobs.wait`
+
+Wait at most thirty seconds for a terminal job status.
+
+Family: `olgs`, `olss`.
+
+```python
+wait(job, *, timeout=10.0, service=None)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | dict |
+
+#### Watch out
+
+- Jobs end with the client; results never autoactivate.
+
+Source: `optimizer/jobs/api.py`.
+
+### `jobs.result`
+
+Retain a native physical candidate from a completed job.
+
+Family: `olgs`, `olss`.
+
+```python
+result(job, *, service=None)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | OptimizerResult or ShootingResult |
+
+#### Watch out
+
+- Jobs end with the client; results never autoactivate.
+
+Source: `optimizer/jobs/api.py`.
+
+### `jobs.cancel`
+
+Request safe project-call boundary cancellation.
+
+Family: `olgs`, `olss`.
+
+```python
+cancel(job, *, service=None)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | dict |
+
+#### Watch out
+
+- Jobs end with the client; results never autoactivate.
+
+Source: `optimizer/jobs/api.py`.
+
+### `jobs.compare`
+
+Rank compatible completed candidates using an explicit metric.
+
+Family: `olgs`, `olss`.
+
+```python
+compare(jobs, *, metric='J', direction='minimize', service=None)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | dict |
+
+#### Watch out
+
+- Jobs end with the client; results never autoactivate.
+
+Source: `optimizer/jobs/api.py`.
+
+### `jobs.release`
+
+Release a terminal job's frozen inputs and runtime result.
+
+Family: `olgs`, `olss`.
+
+```python
+release(job, *, service=None)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | dict |
+
+#### Watch out
+
+- Jobs end with the client; results never autoactivate.
+
+Source: `optimizer/jobs/api.py`.
+
+### `jobs.shutdown`
+
+Cancel and reap the service's owned workers.
+
+Family: `olgs`, `olss`.
+
+```python
+shutdown(*, service=None)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | dict |
+
+#### Watch out
+
+- Jobs end with the client; results never autoactivate.
+
+Source: `optimizer/jobs/api.py`.
 
 ## operations
 

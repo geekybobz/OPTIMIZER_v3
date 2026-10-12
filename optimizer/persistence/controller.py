@@ -209,7 +209,11 @@ class _Persistence:
                 response=OperationResponse(request.request_id,request.operation,'ok',result,refs,before,
                     self.staged.snapshot(),metadata={'summary':_summary(result)})
             else:
-                response=OperationService(self.staged).execute(request)
+                child=OperationService(self.staged)
+                child._jobs=self.service._jobs
+                child._job_actions=self.service._job_actions
+                child._defer_jobs=True
+                response=child.execute(request)
                 if not response.ok: return response
             with session._lock:
                 session._check_revision(before['revision'])
@@ -317,6 +321,10 @@ class _Persistence:
             store.close(); self.store=None; raise
 
     def close(self):
+        if self.service._defer_jobs:
+            self.service._job_actions.append(('shutdown',None))
+        else:
+            self.service._jobs.close()
         if self.store:
             self.store.close(); self.store=None
             session=self.service.session

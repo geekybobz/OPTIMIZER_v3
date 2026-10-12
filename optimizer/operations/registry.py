@@ -69,6 +69,8 @@ def _policy(item: catalog.CatalogItem) -> _Adapter:
     obj = item.public_object()
     group, name = item.group, item.name
     family = item.family
+    if group == "jobs" and item.kind == "job_operation":
+        return _Adapter("tool", "inspect")
     if item.kind in {"constant", "registry", "object", "type_alias"}:
         return _Adapter("inspectable_value", reason="Discovery only; this entry is not executable.")
     if group == "optimizers":
