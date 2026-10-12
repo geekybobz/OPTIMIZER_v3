@@ -28,6 +28,13 @@ The declaration states `family: "olgs"`, which `basic_system_spec` adds; a
 hand-written declaration without a family is still read as OLGS, and any other
 family is rejected. `opt.system_family(system)` applies this rule everywhere.
 
+Numerical control compatibility includes ordered keys, dimension, dtype and `dt`;
+equal array shape alone does not make two grids interchangeable. Inputs and
+returned gradient/prox/bound/HVP controls must retain that layout and finite
+values. Descriptive names and arbitrary metadata do not determine compatibility.
+The [system transaction boundary](../TRANSACTIONS.md) applies the same checks to
+live and serialized controls; raw arrays explicitly use the target layout.
+
 ## Optional Capability Bundles
 
 | Capability | Hooks | Library consumer |

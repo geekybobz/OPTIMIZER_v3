@@ -150,6 +150,8 @@ from optimizer.shooting import (
     refine_shooting_seeds,
     verify_shooting_jacobian,
 )
+from optimizer import operations
+from optimizer.operations import ObjectRef, OperationRequest, OperationResponse, OperationService, Session
 
 
 __version__ = "4.0.4"

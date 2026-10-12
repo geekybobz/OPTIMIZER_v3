@@ -44,6 +44,13 @@ Returns the same ordered layout declared by `system_spec()["variables"]`.
 Every candidate, bound, Jacobian column, seed, and continuation tangent uses
 this order.
 
+Compatibility includes block names/order, shapes, units, scales and roles, total
+size and dtype. `validate_shooting_spec` checks the static declaration against the
+returned layout in those fields. Equal total size does not allow different block
+interpretations. Descriptive meaning text and arbitrary metadata may differ.
+The [system transaction boundary](../TRANSACTIONS.md) applies the same identity
+checks to live and serialized variables before numerical execution.
+
 ### `residuals(z, options=...)`
 
 Returns the complete physical residual vector. Residual components may represent

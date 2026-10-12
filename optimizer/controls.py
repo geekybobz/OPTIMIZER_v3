@@ -122,6 +122,18 @@ class ControlSpec:
         }
 
 
+def _validate_control_spec_compatibility(expected: ControlSpec, actual: ControlSpec) -> None:
+    """Compare numerical layout identity, excluding descriptive metadata."""
+
+    if (
+        actual.keys != expected.keys
+        or actual.control_dim != expected.control_dim
+        or actual.dtype != expected.dtype
+        or actual.dt != expected.dt
+    ):
+        raise ValueError("Controls layout (keys, dimension, dtype, dt) does not match the system.")
+
+
 class Controls:
     """Named control values backed by a dense NumPy matrix."""
 

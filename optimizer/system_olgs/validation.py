@@ -6,7 +6,7 @@ from typing import Any, Mapping
 
 import numpy as np
 
-from optimizer.controls import ControlSpec, Controls
+from optimizer.controls import ControlSpec, Controls, _validate_control_spec_compatibility
 from optimizer.system_olgs.contract import ControlBounds, Metrics, OLGSystem, ValueGradient
 from optimizer.system_olgs.specs import validate_declared_metrics
 
@@ -26,12 +26,11 @@ def validate_controls_for_system(system: OLGSystem, controls: Controls) -> Contr
     spec = validate_control_spec(system)
     if not isinstance(controls, Controls):
         raise TypeError("controls must be a Controls object.")
-    if controls.spec.keys != spec.keys or controls.spec.control_dim != spec.control_dim:
-        raise ValueError(
-            "controls do not match system control_spec: "
-            f"system keys={spec.keys}, dim={spec.control_dim}; "
-            f"controls keys={controls.spec.keys}, dim={controls.spec.control_dim}."
-        )
+    _validate_control_spec_compatibility(spec, controls.spec)
+    if controls.as_matrix(copy=False).shape != spec.shape or not np.all(
+        np.isfinite(controls.as_matrix(copy=False))
+    ):
+        raise ValueError("Controls must have the declared shape and finite values.")
     return spec
 
 
@@ -90,8 +89,7 @@ def gradient_system(system: OLGSystem, controls: Controls) -> Controls:
     gradient = system.gradient(controls)
     if not isinstance(gradient, Controls):
         raise TypeError("system.gradient(...) must return Controls.")
-    if gradient.spec.keys != spec.keys or gradient.spec.control_dim != spec.control_dim:
-        raise ValueError("system.gradient(...) returned controls with the wrong layout.")
+    _validate_control_spec_compatibility(spec, gradient.spec)
     if not np.all(np.isfinite(gradient.as_matrix(copy=False))):
         raise ValueError("system.gradient(...) returned non-finite values.")
     return gradient
@@ -119,8 +117,7 @@ def value_and_gradient_system(
     normalized = validate_metrics(metrics, system_spec=system_spec)
     if not isinstance(gradient, Controls):
         raise TypeError("system.value_and_gradient(...) gradient must be Controls.")
-    if gradient.spec.keys != spec.keys or gradient.spec.control_dim != spec.control_dim:
-        raise ValueError("system.value_and_gradient(...) returned gradient with the wrong layout.")
+    _validate_control_spec_compatibility(spec, gradient.spec)
     if not np.all(np.isfinite(gradient.as_matrix(copy=False))):
         raise ValueError("system.value_and_gradient(...) returned non-finite gradient values.")
     return ValueGradient(metrics=normalized, gradient=gradient)
@@ -136,8 +133,7 @@ def optional_smooth_gradient(system: Any, controls: Controls) -> Controls:
     gradient = hook(controls)
     if not isinstance(gradient, Controls):
         raise TypeError("system.smooth_gradient(...) must return Controls.")
-    if gradient.spec.keys != spec.keys or gradient.spec.control_dim != spec.control_dim:
-        raise ValueError("system.smooth_gradient(...) returned controls with the wrong layout.")
+    _validate_control_spec_compatibility(spec, gradient.spec)
     if not np.all(np.isfinite(gradient.as_matrix(copy=False))):
         raise ValueError("system.smooth_gradient(...) returned non-finite values.")
     return gradient
@@ -156,8 +152,7 @@ def optional_prox(system: Any, controls: Controls, step_size: float) -> Controls
     result = hook(controls, alpha)
     if not isinstance(result, Controls):
         raise TypeError("system.prox(...) must return Controls.")
-    if result.spec.keys != spec.keys or result.spec.control_dim != spec.control_dim:
-        raise ValueError("system.prox(...) returned controls with the wrong layout.")
+    _validate_control_spec_compatibility(spec, result.spec)
     if not np.all(np.isfinite(result.as_matrix(copy=False))):
         raise ValueError("system.prox(...) returned non-finite values.")
     return result
@@ -180,8 +175,7 @@ def optional_control_bounds(system: Any) -> ControlBounds:
     else:
         raise TypeError("system.control_bounds() must return ControlBounds or (lower, upper).")
     for label, value in (("lower", lower), ("upper", upper)):
-        if value.spec.keys != spec.keys or value.spec.control_dim != spec.control_dim:
-            raise ValueError(f"system.control_bounds() {label} controls have the wrong layout.")
+        _validate_control_spec_compatibility(spec, value.spec)
     if np.any(lower.as_matrix(copy=False) > upper.as_matrix(copy=False)):
         raise ValueError("system.control_bounds() has lower values above upper values.")
     return ControlBounds(lower=lower, upper=upper)
@@ -275,8 +269,7 @@ def optional_hvp(system: Any, controls: Controls, vector: Controls | np.ndarray)
         hvp = result
     else:
         hvp = Controls.from_flat(spec, np.asarray(result, dtype=spec.dtype).reshape(-1), name="hvp")
-    if hvp.spec.keys != spec.keys or hvp.spec.control_dim != spec.control_dim:
-        raise ValueError("system.hvp(...) returned controls with the wrong layout.")
+    _validate_control_spec_compatibility(spec, hvp.spec)
     if not np.all(np.isfinite(hvp.as_matrix(copy=False))):
         raise ValueError("system.hvp(...) returned non-finite values.")
     return hvp

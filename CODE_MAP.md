@@ -30,6 +30,7 @@ project system
 | OLGS boundary | `optimizer/system_olgs/` | Gradient-system declarations, validation, and optional capabilities | `test_system_contract.py` |
 | OLSS boundary | `optimizer/system_olss/` | Shooting declarations, variables, validation, and evidence types | `test_olss.py` |
 | Transactions | `optimizer/transactions.py` | Family-aware request-response execution: payload decoding, validated calls, and serialization | `test_transactions.py`, `test_olgs_olss_integrations.py` |
+| Foreground service | `optimizer/operations/`, `optimizer/session.py` | Catalog dispatch, contexts, owned candidates, atomic activation and retention limits | `test_operation_service.py` |
 | Shared gradient engine | `optimizer/core/` | Evaluation, proposal validation, bounds, acceptance, stopping, trace, and checkpoints | `test_engine.py` |
 | Gradient methods | `optimizer/optimizers/` | Method-specific updates and private state | `test_optimizers.py`, `test_advanced_optimizers.py` |
 | Shooting methods | `optimizer/shooting/` | Root solving, direct shooting, continuation, multistart, seeds, and replay | `test_olss.py`, `test_olss_scenarios.py` |
@@ -66,8 +67,10 @@ SystemRequest
     -> JSON-safe structured representation
 ```
 
-The transaction layer invokes system operations. Optimizer and shooting-run
-orchestration remain direct Python APIs until the terminal interface is designed.
+The transaction layer invokes system operations. The
+[foreground operation service](optimizer/operations/SERVICE.md) dispatches supported
+numerical tools through the same native APIs and adds owned session state.
+Terminal parsing and the MCP transport remain separate adapters.
 
 ## Change-impact guide
 

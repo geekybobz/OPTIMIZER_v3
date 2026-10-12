@@ -12,7 +12,7 @@ from optimizer.system_olss.contract import (
     validate_shooting_spec,
 )
 from optimizer.system_olss.results import ShootingVerification, VerificationCheck
-from optimizer.system_olss.variables import ShootingVariables
+from optimizer.system_olss.variables import ShootingVariables, _validate_shooting_spec_compatibility
 
 
 def validate_variables_for_shooting_system(
@@ -21,8 +21,9 @@ def validate_variables_for_shooting_system(
     if not isinstance(variables, ShootingVariables):
         raise TypeError("OLSS numerical calls require ShootingVariables.")
     expected = validate_shooting_spec(system)
-    if variables.spec != expected:
-        raise ValueError("ShootingVariables layout does not match system.shooting_spec().")
+    _validate_shooting_spec_compatibility(expected, variables.spec)
+    if variables.values.shape != (expected.size,) or not np.all(np.isfinite(variables.values)):
+        raise ValueError("ShootingVariables must have the declared shape and finite values.")
     return variables
 
 

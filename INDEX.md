@@ -28,6 +28,7 @@ reviewed: 2026-10-12
 - [OLSS Data Model](optimizer/system_olss/DATA_MODEL.md) — variable, specification, and result structures.
 - [OLSS Verification](optimizer/system_olss/VERIFICATION.md) — independent qualification evidence.
 - [System Transactions](optimizer/TRANSACTIONS.md) — shared request-response envelope.
+- [Foreground Operation Service](optimizer/operations/SERVICE.md) — selected contexts, native dispatch, candidates and bounded results.
 
 ## Numerical execution
 

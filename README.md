@@ -23,8 +23,9 @@ Projects implement one of two contracts:
 Project code normally calls the contracts directly, and the numerical tools
 call systems through their validated evaluators. The
 [transaction envelope](optimizer/TRANSACTIONS.md) exposes the same system
-operations in a validated request-response form for generic consumers such as
-the planned terminal and MCP adapters.
+operations in a validated request-response form. The
+[foreground operation service](optimizer/operations/SERVICE.md) adds selected
+systems, owned results and candidate activation for future terminal/MCP adapters.
 
 ## Main routes
 
@@ -107,6 +108,8 @@ Numerical scenario evidence is owned by the contained test campaigns linked
 from the [Testing Hub](tests/TESTING_HUB.md).
 
 ## Connections
+
+- Deeper: [Foreground operation service](optimizer/operations/SERVICE.md)
 
 - Related: [Base API Hub](optimizer/BASE_HUB.md)
 - Related: [OLGS System Hub](optimizer/system_olgs/SYSTEM_OLGS_HUB.md)

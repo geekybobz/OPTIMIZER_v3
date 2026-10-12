@@ -123,8 +123,18 @@ def validate_shooting_spec(system: Any) -> ShootingSpec:
     if not isinstance(value, ShootingSpec):
         raise TypeError("OLSS shooting_spec() must return ShootingSpec.")
     declared = get_shooting_system_spec(system)["variables"]
-    if int(declared["size"]) != value.size:
-        raise ValueError("OLSS system_spec variables.size does not match shooting_spec().")
+    expected = value.to_dict()
+    if "dtype" not in declared or declared.get("size") != expected["size"] or np.dtype(declared["dtype"]) != np.dtype(value.dtype):
+        raise ValueError("OLSS system_spec variable size/dtype does not match shooting_spec().")
+    blocks = declared.get("blocks")
+    if not isinstance(blocks, (list, tuple)) or len(blocks) != len(value.blocks):
+        raise ValueError("OLSS system_spec variable blocks do not match shooting_spec().")
+    fields = ("name", "shape", "size", "unit", "scale", "role")
+    for actual, required in zip(blocks, expected["blocks"]):
+        if not isinstance(actual, Mapping) or any(
+            field not in actual or actual[field] != required[field] for field in fields
+        ):
+            raise ValueError("OLSS system_spec variable block layout does not match shooting_spec().")
     return value
 
 

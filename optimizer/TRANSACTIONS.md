@@ -41,11 +41,17 @@ SystemRequest(
 
 | Field | Meaning |
 |---|---|
-| `request_id` | Correlation identifier; generated when omitted |
+| `request_id` | Non-empty string correlation identifier; generated when omitted |
 | `family` | Optional assertion: `olgs` or `olss` |
-| `operation` | Required system operation |
-| `payload` | Operation inputs such as controls, variables, or secondary updates |
-| `options` | Per-call numerical options; accepted only by OLSS numerical calls |
+| `operation` | Required non-empty string system operation |
+| `payload` | Mapping with string keys for the operation's declared inputs |
+| `options` | Mapping with string keys; accepted only by OLSS numerical calls |
+
+Unknown envelope fields and malformed field types return `invalid_request`.
+Unknown or missing operation payload fields return `invalid_payload`. OLSS
+evaluation-option names and secondary-update names remain system-owned.
+Constructing an invalid `SystemRequest` directly raises a normal Python exception;
+passing a malformed mapping to `transact` returns a failed response.
 
 ### Payload forms
 
@@ -54,16 +60,39 @@ SystemRequest(
 | `controls`, `vector` (OLGS) | `Controls`; the `controls_to_dict()` mapping with `matrix`; a channel mapping; `{"flat": [...]}`; a nested matrix list; a flat list |
 | `variables` (OLSS) | `ShootingVariables`; its `to_dict()` mapping with `values`; a block mapping; a flat list |
 
-Every form is rebuilt with the system's `control_spec()` or `shooting_spec()`. A
-declared layout in the payload that disagrees with the system is rejected.
+Raw arrays and channel/block mappings use the target system's layout explicitly.
+Serialized mappings may omit `spec` to use that layout; when `spec` is present it
+must be complete and compatible. Both live objects and serialized objects use
+the same numerical identity:
+
+- Controls: ordered channel keys, control dimension, dtype and `dt`. Redundant
+  serialized `shape` and `n_controls`, when present, must also agree.
+- Shooting variables: ordered block names, shapes, sizes, units, scales and roles,
+  plus total size and dtype. The system's static variable declaration must agree
+  with `shooting_spec()` in these fields, even when total sizes happen to match.
+- Descriptive names, block meaning text, and arbitrary metadata are not numerical
+  identity. Richer grid representations need the later explicit transfer tools.
+
+A declared control spec requires `keys`, `control_dim`, `dtype` and `dt`;
+a shooting spec requires `blocks`, `size` and `dtype`. Each shooting block requires
+`name`, `shape`, `size`, `unit`, `scale` and `role`. Units and `dt` can be null
+where the target spec is also null. A grid or dtype mismatch is rejected; this
+boundary does not resample or convert a declared object silently.
+
+Complex controls accept `{real, imag}` scalar or array data under a complex
+control layout. Real/imaginary shapes must agree without broadcasting. Complex
+input under a real layout fails rather than discarding its imaginary part.
+All numerical inputs must be finite, including values decoded from strings.
+Decoding owns the numerical buffers before calling project code; an operation
+cannot mutate the caller's submitted controls or arrays through that buffer.
 
 ## Response
 
 | Field | Meaning |
 |---|---|
-| `request_id` | Matches the request |
-| `family` | Family detected from `system_spec()` |
-| `operation` | Attempted operation |
+| `request_id` | Matches a usable request ID; otherwise generated for the failed request |
+| `family` | Detected family; null when request or family discovery failed |
+| `operation` | Attempted string operation; null when it could not be identified |
 | `ok` | Whether the validated call completed |
 | `result` | Returned value on success |
 | `error` | Structured `type` and `message` on failure |
@@ -101,6 +130,36 @@ shapes, finiteness, declared metrics, and layouts. Verification through this
 layer reports `independence_source="transaction_request"`; whether a
 verification is independent of a working solve is decided by the solvers.
 
+## Capability map
+
+OLGS requires `system_spec`, `control_spec`, `evaluate`, `gradient` and
+`with_secondary`. OLSS requires `system_spec`, `shooting_spec`, `residuals`,
+`jacobian`, `evaluate`, `verify` and `with_secondary`. Presence is discoverable
+through `probe_system` / `probe_shooting_system`; `require_system` /
+`require_shooting_system` check the complete contract when loading a system.
+Individual transactions check the hooks their operation needs.
+
+| Optional capability | Existing route | Transaction/service coverage |
+|---|---|---|
+| OLGS combined value/gradient | `value_and_gradient_system` | `value_and_gradient` transaction |
+| OLGS hard rows and Jacobian | `optional_residuals`, `optional_jacobian` | `residuals`, `jacobian` transactions |
+| Bounds | OLGS `optional_control_bounds`; OLSS `shooting_bounds_system` | `control_bounds`, `shooting_bounds` transactions |
+| OLGS curvature | `optional_hessian`, `optional_hvp` | `hessian`, `hvp` transactions |
+| OLGS composite objective | `optional_smooth_gradient`, `optional_prox` | `smooth_gradient`, `prox` transactions |
+| OLSS combined residual/Jacobian | `residuals_and_jacobian_system` | Combined hook or separate required calls |
+| OLSS objective gradient | `cost_gradient_system` | `cost_gradient` transaction |
+| OLGS feasibility-preserving transfer | `optional_control_transfer` | Existing helper; service adapter still needed |
+| OLSS control recovery | `recover_controls` used by `compare_shooting_replay` | Existing replay tool; service adapter still needed |
+| Propagation and simulation | Project `forward_prop`, OLGS `back_prop`, `simulate` | Optional hooks; service adapters still needed |
+| Plot data | OLGS `optional_plot_data`, project `plot_data` | Existing data tools; service adapters still needed |
+| Cache inspection/reset | Project `cache_status`, `cache_reset` | Probe discovery; service adapters still needed |
+| Sparse/operator Jacobians and root equivalence | OLSS probe and documented hooks | Optional capabilities; not a promise of solver/backend support |
+
+An absent hook is different from a hook whose service adapter is not yet present.
+Optional hooks never become mandatory just because the CLI exposes them. Numerical
+methods, sessions, persistence and job control belong to the later operation
+service, not this system transaction layer.
+
 ## Serialization
 
 Responses, results, and reports share one conversion, `opt.to_plain`, so every
@@ -124,6 +183,11 @@ code.
 
 ## Failure rules
 
+- Request parsing and family detection are inside the response boundary.
+  Malformed envelopes return `invalid_request`; invalid family declarations or a
+  missing/non-mapping/raising/invalid `system_spec` return `invalid_system`.
+  The static declaration is validated before executing the operation and reused
+  by transaction evaluation; this does not add numerical calls.
 - A system must provide `system_spec()`.
 - The declared family must be `olgs` or `olss`. A missing family means OLGS,
   by the library-wide rule of `opt.system_family`; specifications built with

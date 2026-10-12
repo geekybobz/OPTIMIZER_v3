@@ -25,6 +25,7 @@ from optimizer.families import FAMILY_NAMES
 
 
 NAMESPACES = {
+    "operations": "optimizer.operations",
     "optimizers": "optimizer.optimizers",
     "guesses": "optimizer.guesses",
     "utils": "optimizer.utils",

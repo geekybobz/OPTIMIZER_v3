@@ -126,6 +126,19 @@ class ShootingSpec:
         }
 
 
+def _validate_shooting_spec_compatibility(expected: ShootingSpec, actual: ShootingSpec) -> None:
+    """Compare variable meaning and coordinates, excluding labels and metadata."""
+
+    def identity(spec: ShootingSpec) -> tuple:
+        return (
+            spec.dtype,
+            tuple((b.name, b.shape, b.unit, b.scale, b.role) for b in spec.blocks),
+        )
+
+    if identity(actual) != identity(expected):
+        raise ValueError("ShootingVariables layout does not match system.shooting_spec().")
+
+
 @dataclass(frozen=True)
 class ShootingVariables:
     """Finite real values attached to a :class:`ShootingSpec`."""

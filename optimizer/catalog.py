@@ -420,6 +420,7 @@ def _make_item(
 # Family of every declaration in a group unless the declaration names its own.
 _BOTH = ("olgs", "olss")
 _GROUP_FAMILIES: dict[str, tuple[str, ...]] = {
+    "operations": _BOTH,
     "optimizers": ("olgs",),
     "guesses": ("olgs",),
     "utils": ("olgs",),
@@ -437,6 +438,7 @@ _GROUP_FAMILIES: dict[str, tuple[str, ...]] = {
 
 
 _GROUP_MODULES = {
+    "operations": "optimizer.operations",
     "optimizers": "optimizer.optimizers",
     "guesses": "optimizer.guesses",
     "utils": "optimizer.utils",
@@ -2234,7 +2236,19 @@ def _build_groups() -> dict[str, CatalogGroup]:
         ),
     )
 
+    operations_group = CatalogGroup(
+        name="operations",
+        summary="Foreground session and native operation dispatch for future terminal/MCP adapters.",
+        items=(
+            _make_item("ObjectRef", "operations", "data_object", "Reference to a retained object version or declared data field.", module="optimizer/operations/contracts.py", root=True),
+            _make_item("OperationRequest", "operations", "data_object", "Native arguments with separate context, binding and activation options.", module="optimizer/operations/contracts.py", root=True),
+            _make_item("OperationResponse", "operations", "result_object", "Typed result and compact transport metadata with structured failures.", module="optimizer/operations/contracts.py", root=True),
+            _make_item("OperationService", "operations", "service", "Validated native dispatch and atomic candidate publication; no automatic history.", module="optimizer/operations/service.py", root=True),
+            _make_item("Session", "operations", "runtime", "Independent named contexts and bounded owned object versions.", module="optimizer/session.py", root=True),
+        ),
+    )
     return {
+        "operations": operations_group,
         "optimizers": optimizers_group,
         "guesses": guesses_group,
         "utils": utils_group,
@@ -2426,6 +2440,9 @@ def _attach_info(obj: Any, item: CatalogItem) -> None:
     # Constants and typing aliases are skipped: a typing alias forwards
     # setattr to its origin class, such as collections.abc.Mapping.
     if not (inspect.isfunction(obj) or inspect.isclass(obj)) or getattr(obj, "_is_protocol", False):
+        return
+    if item.id == "operations.OperationService":
+        # Its instance info(operation) is the service discovery contract.
         return
 
     def item_info(*, h: bool = False) -> dict[str, Any] | str:

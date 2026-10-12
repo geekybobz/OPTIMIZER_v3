@@ -19,6 +19,7 @@ surfaces and defaults.
 
 | Group | Entries | Purpose |
 |---|---:|---|
+| [`operations`](#operations) | 5 | Foreground session and native operation dispatch for future terminal/MCP adapters. |
 | [`optimizers`](#optimizers) | 13 | Methods that move Controls to improve system metrics. |
 | [`guesses`](#guesses) | 13 | Initial Controls generators and restart helpers. |
 | [`utils`](#utils) | 17 | Diagnostics, derivative checks, residual geometry, repair, guards, and spectrum tools. |
@@ -32,6 +33,70 @@ surfaces and defaults.
 | [`system_olss`](#system-olss) | 36 | Construction types, validation, and discovery for project-owned OLSS contracts. |
 | [`shooting`](#shooting) | 12 | Root solving, verification, multistart, continuation, and direct shooting for OLSS systems. |
 | [`optimizer_log`](#optimizer-log) | 13 | Standalone, read-only tracker reader package; it is not yet a portal UI or command-line application. |
+
+## operations
+
+Foreground session and native operation dispatch for future terminal/MCP adapters.
+
+### `operations.ObjectRef`
+
+Reference to a retained object version or declared data field.
+
+Family: `olgs`, `olss`. Root shortcut: `opt.ObjectRef`.
+
+```python
+ObjectRef(object_id: 'str', path: 'tuple[str | int, ...]' = ()) -> None
+```
+
+Source: `optimizer/operations/contracts.py`.
+
+### `operations.OperationRequest`
+
+Native arguments with separate context, binding and activation options.
+
+Family: `olgs`, `olss`. Root shortcut: `opt.OperationRequest`.
+
+```python
+OperationRequest(operation: 'str', arguments: 'Mapping[str, Any]' = <factory>, context: 'str | None' = None, bind: 'str | None' = None, activate: 'bool | None' = None, request_id: 'str' = <factory>) -> None
+```
+
+Source: `optimizer/operations/contracts.py`.
+
+### `operations.OperationResponse`
+
+Typed result and compact transport metadata with structured failures.
+
+Family: `olgs`, `olss`. Root shortcut: `opt.OperationResponse`.
+
+```python
+OperationResponse(request_id: 'str', operation: 'str | None', status: 'str', result: 'Any' = None, object_refs: 'tuple[ObjectRef, ...]' = (), state_before: 'Mapping[str, Any]' = <factory>, state_after: 'Mapping[str, Any]' = <factory>, error: 'Mapping[str, Any] | None' = None, metadata: 'Mapping[str, Any]' = <factory>) -> None
+```
+
+Source: `optimizer/operations/contracts.py`.
+
+### `operations.OperationService`
+
+Validated native dispatch and atomic candidate publication; no automatic history.
+
+Family: `olgs`, `olss`. Root shortcut: `opt.OperationService`.
+
+```python
+OperationService(session: 'Session | None' = None) -> 'None'
+```
+
+Source: `optimizer/operations/service.py`.
+
+### `operations.Session`
+
+Independent named contexts and bounded owned object versions.
+
+Family: `olgs`, `olss`. Root shortcut: `opt.Session`.
+
+```python
+Session(*, max_bytes: 'int' = 67108864, max_objects: 'int' = 256) -> 'None'
+```
+
+Source: `optimizer/session.py`.
 
 ## optimizers
 
@@ -2757,7 +2822,7 @@ Stable success/error response envelope for one system transaction.
 Family: `olgs`, `olss`.
 
 ```python
-SystemResponse(request_id: 'str', family: 'str', operation: 'str', ok: 'bool', result: 'Any' = None, error: 'Mapping[str, Any] | None' = None) -> None
+SystemResponse(request_id: 'str', family: 'str | None', operation: 'str | None', ok: 'bool', result: 'Any' = None, error: 'Mapping[str, Any] | None' = None) -> None
 ```
 
 #### Returns

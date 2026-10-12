@@ -24,8 +24,15 @@ def system_family(system: Any) -> str:
     hook = getattr(system, "system_spec", None)
     if not callable(hook):
         raise TypeError("A system must provide system_spec() to declare its family.")
-    spec = hook()
-    family = spec.get("family") if isinstance(spec, Mapping) else None
+    return _family_from_spec(hook())
+
+
+def _family_from_spec(spec: Any) -> str:
+    """Apply the family rule to an already-read static declaration."""
+
+    if not isinstance(spec, Mapping):
+        raise TypeError("system.system_spec() must return a mapping.")
+    family = spec.get("family")
     if family is None or family == "olgs":
         return "olgs"
     if family == "olss":
