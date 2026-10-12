@@ -133,6 +133,7 @@ Front Door or `INDEX.md` remains the semantic route map.
 | [optimizer/persistence/PERSISTENCE.md](optimizer/persistence/PERSISTENCE.md) | deep | Independent experiments, typed checkpoints, exact continuation, rollback and bounded disk storage. | Read before saving, reopening, restoring or pruning an interactive experiment. |
 | [test_contained/olgs_convergence/REPORT.md](test_contained/olgs_convergence/REPORT.md) | deep | OLGS validation design, scenario matrix, method coverage, and the 2026-10-12 outcome. | Read when checking OLGS method structure or rerunning the matrix. |
 | [test_contained/olss_scenarios/REPORT.md](test_contained/olss_scenarios/REPORT.md) | deep | OLSS issue record: resolution status, original findings, and campaign evidence. | Read when checking an OLSS issue or rerunning the scenario campaign. |
+| [test_contained/pi_pulse_samples/REPORT.md](test_contained/pi_pulse_samples/REPORT.md) | deep | Known-answer pi-pulse tests for gradient and shooting, soft and hard, through the Python API, the operation service and the terminal. | Read when checking the interfaces on small problems with analytical answers, or rerunning the sample suite. |
 | [test_contained/review_2026_10_12/REPORT.md](test_contained/review_2026_10_12/REPORT.md) | deep | 2026-10-12 review: two rounds of fixes with tests, issue statuses, the shared-core inspection, and shared-core phase 1. | Read when checking the 2026-10-12 fixes and their evidence, or before designing or implementing the shared core. |
 
 ---

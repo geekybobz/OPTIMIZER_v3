@@ -1,0 +1,12 @@
+# PP6 traps, current behavior.
+# Zero start: Adam stops with gradient_converged at J = 1, a saddle; curvature is negative.
+opt.session.load(name="g_zero", factory="./pi_pulse_olgs.py", factory_name="soft");
+z = opt.guesses.constant_guess(value=0.0);
+opt.session.use(value=z);
+r = opt.optimizers.adam(maxiter=10, step_size=0.05);
+c = opt.utils.curvature_probe();
+# Weak hard start: projected gradient lands on theta = 3 pi, E = 9 pi^2.
+opt.session.load(name="g_weak", factory="./pi_pulse_olgs.py", factory_name="hard");
+w = opt.guesses.constant_guess(value=0.5);
+opt.session.use(value=w);
+rw = opt.optimizers.projected_gradient(maxiter=100, step_size=25.0);

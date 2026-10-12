@@ -1,0 +1,8 @@
+# PP3 shooting, hard. Expected best root z = +-pi with E = pi^2.
+opt.session.load(name="s_hard", factory="./pi_pulse_olss.py", factory_name="hard");
+seeds = opt.shooting.random_shooting_seeds(count=16, seed=1, radius=10.0);
+opt.session.use(value=seeds[0]);
+root = opt.shooting.solve_shooting();
+geo = opt.utils.shooting_geometry_probe();
+ms = opt.shooting.solve_shooting_multistart(starts=seeds);
+ms.ranked[0].metrics;

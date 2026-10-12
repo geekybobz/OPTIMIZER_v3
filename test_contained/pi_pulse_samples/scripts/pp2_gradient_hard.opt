@@ -1,0 +1,7 @@
+# PP2 gradient, hard. Expected E = pi^2 = 9.8696044011 with Re <0|psi(T)> = 0.
+opt.session.load(name="g_hard", factory="./pi_pulse_olgs.py", factory_name="hard");
+u0 = opt.guesses.gaussian_guess(amplitude=7.0);
+opt.session.use(value=u0);
+g = opt.utils.geometry_probe();
+r = opt.optimizers.projected_gradient(maxiter=30, step_size=25.0);
+opt.evaluate();

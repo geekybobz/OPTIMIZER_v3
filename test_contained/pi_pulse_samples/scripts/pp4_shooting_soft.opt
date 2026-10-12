@@ -1,0 +1,7 @@
+# PP4 shooting, soft. Expected best root J = 0.0948955827.
+# Seed 3 converges to another qualified root with a much higher cost.
+opt.session.load(name="s_soft", factory="./pi_pulse_olss.py", factory_name="soft");
+seeds = opt.shooting.random_shooting_seeds(count=16, seed=1, radius=10.0);
+ms = opt.shooting.solve_shooting_multistart(starts=seeds);
+ms.ranked[0].metrics;
+low = opt.shooting.solve_shooting(initial=seeds[3]);

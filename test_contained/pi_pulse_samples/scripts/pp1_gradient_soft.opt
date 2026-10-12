@@ -1,0 +1,11 @@
+# PP1 gradient, soft. Expected J = 0.0948955827 after the line search.
+# Run from test_contained/pi_pulse_samples so the factory path resolves.
+opt.session.load(name="g_soft", factory="./pi_pulse_olgs.py", factory_name="soft");
+u0 = opt.guesses.constant_guess(value=0.5);
+opt.session.use(value=u0);
+r1 = opt.optimizers.adam(maxiter=100, step_size=0.05);
+d = opt.utils.diagnose_run(result=r1);
+c = opt.utils.curvature_probe();
+r2 = opt.optimizers.line_search(maxiter=60, step_size=50.0);
+trial = opt.optimizers.adam(maxiter=5, step_size=0.05, activate=False);
+opt.evaluate();

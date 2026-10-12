@@ -54,6 +54,11 @@ The 2026-10-12 review records five verified OLSS fixes, the open issues, and
 the shared-core inspection in the
 [2026-10-12 Review](../test_contained/review_2026_10_12/REPORT.md).
 
+Known-answer pi-pulse tests run one workflow through the Python API, the
+operation service and the terminal for gradient and shooting, soft and hard.
+Their expected values, results and findings are in the
+[Pi-Pulse Sample Tests](../test_contained/pi_pulse_samples/REPORT.md).
+
 ## Contained systems
 
 These numerical definitions remain available. Retired tracker-specific trial and
@@ -72,6 +77,7 @@ ignores.
 - Related: [the V4 entry](../README.md)
 - Related: [OLGS Contract](../optimizer/system_olgs/CONTRACT.md), [Utils Documentation Hub](../optimizer/utils/UTILS_HUB.md)
 - Deeper: [2026-10-12 Review](../test_contained/review_2026_10_12/REPORT.md)
+- Deeper: [Pi-Pulse Sample Tests](../test_contained/pi_pulse_samples/REPORT.md)
 
 ---
 
