@@ -164,14 +164,16 @@ Structured error codes include `invalid_request`, `invalid_arguments`,
 
 - [service.py](service.py): validation, native invocation and publication.
 - [contracts.py](contracts.py): typed requests, responses and references.
+- [frontend.py](frontend.py): recorded typed transport requests and bounded inspection.
 - [session.py](../session.py): contexts, reconstruction recipes and retained versions.
 - [service tests](../../tests/test_operation_service.py): native parity, continuation,
   candidates, layouts, ownership, quotas, revisions and Python history boundary.
 
 The [structured terminal](../cli/TERMINAL.md) now calls this service. Named on-disk experiments/checkpoints are implemented through the
-[persistence service](../persistence/PERSISTENCE.md). Frontend [history](../history/HISTORY.md) is implemented. The MCP transport, new
-control conversion helpers and managed parallel/pause/cancel workflows retain
-separate delivery gates.
+[persistence service](../persistence/PERSISTENCE.md). Frontend [history](../history/HISTORY.md)
+records CLI statements and typed [MCP requests](../mcp/MCP.md). Existing
+[control conversion tools](../utils/UTIL_CONTROL_TRANSFORMS.md) and [managed jobs](../jobs/JOBS.md)
+compose through this same service.
 
 ## Connections
 

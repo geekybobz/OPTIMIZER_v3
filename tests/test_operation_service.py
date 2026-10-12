@@ -70,6 +70,7 @@ class OperationServiceTests(unittest.TestCase):
         entries = self.service.list()
         expected = {self.service.info(i.id)["id"] for g in opt.catalog.groups() for i in opt.catalog.group(g).items}
         expected.update(self.service._persistence.methods)
+        expected.update(self.service._session_methods())
         self.assertEqual({i["id"] for i in entries}, expected)
         self.assertEqual(self.service.info("ncg")["id"], "optimizers.nonlinear_cg")
         self.assertEqual(self.service.info("optimizers.ncg")["id"], "optimizers.nonlinear_cg")

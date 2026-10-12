@@ -39,8 +39,9 @@ with `opt.project.init(name="experiment");` or `opt.project.open(path=...);`.
 typed checkpoints, restore/undo/redo, exact-continuation requirements and cleanup.
 Exit/EOF preserves an open experiment's committed data and releases its lease.
 [Command history](../history/HISTORY.md) records frontend statements and outcomes.
-Ordinary Python receives no automatic history writer. Managed background/parallel
-jobs and the MCP transport are deferred.
+Ordinary Python receives no automatic history writer. [Managed jobs](../jobs/JOBS.md)
+support bounded parallel runs, persistent owners and live pause/resume. The
+[MCP interface](../mcp/MCP.md) shares that owner and history through typed requests.
 
 ## Calls and retained objects
 

@@ -226,7 +226,7 @@ class _Terminal:
                     *[f"opt.{name}{inspect.signature(method)}" for name,method in self.service._persistence.methods.items()], "opt.session.exit()"],
                 "lifetime": "RAM unless project.init/open selects a durable experiment; project.status reports storage.",
                 "history": [entry['id'] for entry in self.history.descriptors()],
-                "deferred": ["MCP transport"]}
+                "deferred": []}
 
     def _usage(self, operation: str) -> str | None:
         """A readable call form without the context-supplied system or annotations."""

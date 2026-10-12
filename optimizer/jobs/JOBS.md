@@ -214,8 +214,8 @@ history owners serialize foreground transactions.
 [test_jobs.py](../../tests/test_jobs.py) checks real process isolation, native
 solver parity, seeded stochastic runs, queue and memory admission, cancellation,
 worker failures, verification-aware comparison, durable commit ordering,
-checkpoint reopening and the terminal entry point. Scientific article benchmarks
-and MCP transport remain separate work.
+checkpoint reopening and the terminal entry point. The [MCP interface](../mcp/MCP.md)
+shares these jobs through native requests. Scientific article benchmarks remain separate work.
 [test_durable_jobs.py](../../tests/test_durable_jobs.py) checks live numerical
 parity, detach/reconnect, coordinator loss, explicit physical restart,
 authentication, single-writer exclusion, publication failure, retention and

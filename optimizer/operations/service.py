@@ -94,9 +94,12 @@ class OperationService:
         self._defer_jobs = False
 
     def list(self) -> list[dict[str, Any]]:
-        return [self._registry.describe(name) for name in self._registry.items] + self._persistence.descriptors() + (self._history.descriptors() if self._history else [])
+        return [self._registry.describe(name) for name in self._registry.items] + self._persistence.descriptors() + (self._history.descriptors() if self._history else []) + [self.info(name) for name in self._session_methods()]
 
     def info(self, operation: str) -> dict[str, Any]:
+        if operation in self._session_methods():
+            return dict(id=operation,name=operation.split('.')[-1],classification='lifecycle',effect='session',
+                        signature=str(inspect.signature(self._session_methods()[operation])),reason='Shared session lifecycle adapter.')
         if self._history and operation in self._history.methods:
             return next(entry for entry in self._history.descriptors() if entry['id'] == operation)
         if operation in self._persistence.methods:
@@ -126,14 +129,16 @@ class OperationService:
             return tuple(self._resolve(v) for v in value)
         return _owned(value)
 
-    def _session_call(self, request: OperationRequest) -> tuple[Any, tuple[ObjectRef, ...]]:
-        methods = {"session.load": self.session.load, "session.attach": self.session.attach,
+    def _session_methods(self):
+        return {"session.load": self.session.load, "session.attach": self.session.attach,
                    "session.select": self.session.select, "session.use": self.session.use,
                    "session.update": self.session.update, "session.release": self.session.release,
                    "session.bind": self.session.bind_reference,
                    "session.retain": self.register_reference,
                    "session.get": self.session.get, "session.state": self.session.snapshot}
-        method = methods.get(request.operation)
+
+    def _session_call(self, request: OperationRequest) -> tuple[Any, tuple[ObjectRef, ...]]:
+        method = self._session_methods().get(request.operation)
         if method is None:
             raise _ServiceError("unknown_operation", f"Unknown session operation {request.operation!r}.")
         if request.activate is not None:

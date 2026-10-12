@@ -27,7 +27,8 @@ operations in a validated request-response form. The
 [foreground operation service](optimizer/operations/SERVICE.md) adds selected
 systems, owned results and candidate activation. The
 [structured terminal](optimizer/cli/TERMINAL.md) exposes it through interactive
-semicolon commands and scripts; a future MCP adapter uses the same service.
+semicolon commands and scripts; the [MCP interface](optimizer/mcp/MCP.md) sends
+typed requests to the same service and experiment owner.
 
 ## Main routes
 
@@ -42,6 +43,7 @@ semicolon commands and scripts; a future MCP adapter uses the same service.
   or [Shooting Hub](optimizer/shooting/SHOOTING_HUB.md).
 - To inspect a short run, start with the [Utils Hub](optimizer/utils/UTILS_HUB.md).
 - To run interactive commands or scripts, use the [Structured Terminal](optimizer/cli/TERMINAL.md).
+- To connect an MCP client, use the [MCP Interface](optimizer/mcp/MCP.md).
 - To save, reopen, fork or roll back an experiment, use [Persistent Experiments](optimizer/persistence/PERSISTENCE.md).
 
 ## Normal workflow

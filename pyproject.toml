@@ -17,6 +17,7 @@ authors = [
 ]
 
 [project.optional-dependencies]
+mcp = ["mcp>=1.28,<2"]
 scientific = [
     "scipy>=1.10",
     "matplotlib>=3.7",
@@ -28,6 +29,7 @@ dev = [
 [project.scripts]
 optimizer = "optimizer.cli.main:main"
 optimizer-system = "optimizer.system_olgs.scaffold:main"
+optimizer-mcp = "optimizer.mcp.server:main"
 
 [tool.setuptools.packages.find]
 include = ["optimizer", "optimizer.*"]

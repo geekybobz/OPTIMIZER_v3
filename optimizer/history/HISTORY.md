@@ -11,7 +11,7 @@ Named terminal experiments retain one append-only `history.jsonl`. It contains
 submitted statements and outcomes: successful calls, errors, assignments,
 inspections, undo, redo, restore and abandoned branches. Ordinary Python numerical
 calls and `OperationService` calls create no automatic history or logging files.
-Future MCP can use this same recorder; the MCP transport is not implemented.
+The [MCP interface](../mcp/MCP.md) uses this same recorder for typed requests.
 
 ## Calls
 
@@ -50,6 +50,13 @@ An explicitly started [persistent coordinator](../jobs/JOBS.md) keeps its writer
 lease across client exit. Client EOF records detachment; system job transitions
 carry `origin="coordinator"` and use the same history/checkpoint commit path.
 Ordinary foreground lifetime retains the existing close behavior.
+
+MCP submissions have `origin="mcp"`, empty raw text and a structured request
+expression. Operation arguments/references and outcomes use the same transaction
+contract. Native typed quota increases can fund their own history reservation.
+Protocol/schema rejection before experiment dispatch creates no transaction.
+Command-text replay refuses histories containing MCP requests; checkpoint replay
+keeps its existing compatibility checks and excludes live job ownership.
 
 Existing index-owned stores require `project.open(path=..., migrate=True)` to
 append an explicit baseline. Existing immutable IDs are preserved; old commands

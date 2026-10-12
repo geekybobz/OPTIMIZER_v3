@@ -100,7 +100,7 @@ class _Recorder:
         self.targets.append((store,journal))
         return _StagedStore(store)
 
-    def run(self,raw,expression,callback,*,before=None,origin='command'):
+    def run(self,raw,expression,callback,*,before=None,origin='command',request=None):
         root=self.service
         if self.active is not None:raise _ServiceError('reentrant_command','A frontend statement is already running.')
         with root._writer:
@@ -111,7 +111,7 @@ class _Recorder:
             from optimizer.persistence.controller import _Persistence
             staged._persistence=_Persistence(staged);staged._history=self
             self.active=staged;self.command_id=uuid4().hex
-            self.capacity_override=self._capacity_override(raw,root._persistence.store)
+            self.capacity_override=self._capacity_override(raw,root._persistence.store,request) if origin!='mcp' or request is not None else None
             self.command=dict(raw=raw,expression=expression,state_before=self._state(before),environment=_environment(),origin=origin)
             self.targets=[];self.events=[]
             original=root._persistence.store
@@ -169,9 +169,14 @@ class _Recorder:
                 self.command=None
 
     @staticmethod
-    def _capacity_override(raw,store):
+    def _capacity_override(raw,store,request=None):
         """Only an explicit literal quota increase can fund its own recording."""
         if store is None or store.read_only:return None
+        if request is not None:
+            if request.operation!='storage.configure' or set(request.arguments)!={'max_bytes'} or any(
+                    value is not None for value in (request.bind,request.context,request.activate)): return None
+            value=request.arguments['max_bytes']
+            return value if type(value) is int and value>store.index['policy']['max_bytes'] else None
         import ast
         from optimizer.cli.language import _parse,_operation
         try:
@@ -262,6 +267,8 @@ class _Recorder:
             elif row['kind']=='submitted':intentions[row['command_id']]=row
             elif row['kind']=='outcome':
                 intent=intentions.pop(row['command_id']);data=row['data']
+                if mode=='commands' and intent['data'].get('origin')=='mcp':
+                    issues.append({'code':'typed_history_requires_checkpoint','required':True})
                 if data['status']=='ok':
                     index=data.get('index') or index
                     raw=intent['data']['raw'];operations=data.get('operations',[])
@@ -381,6 +388,7 @@ class _Recorder:
         destination=_Store.create(project,destination_root,**real.index['policy'],origin={'project_id':real.project['id'],'history_hash':core['history_hash'],'target':core['target']})
         try:
             index=copy.deepcopy(core['index']);index['project_id']=destination.project['id'];index['generation']=1
+            index.pop('jobs',None)
             needed={f'checkpoints/manifests/{oid}.json' for oid,e in index['objects'].items() if e['available']}
             blobs={b for e in index['objects'].values() if e['available'] for b in e['blobs']}|real._recipe_blobs(index)
             needed|={f'checkpoints/blobs/{b}.npz' for b in blobs}

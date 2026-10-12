@@ -33,6 +33,7 @@ bytecode out of the checkout.
 | System contract, templates, and visualization | `test_system_contract.py`, `test_templates.py`, `test_system_spec_visualization.py` |
 | Command history and campaigns | `test_history.py`, `test_campaigns.py` |
 | Service, terminal and persistence | `test_operation_service.py`, `test_cli_language.py`, `test_cli.py`, `test_persistence.py` |
+| Typed MCP and shared experiment ownership | `test_mcp.py` (official SDK protocol tests require the `mcp` extra) |
 | Documentation | `test_document_links.py`: every relative link in the Markdown resolves |
 
 ## Details

@@ -192,14 +192,18 @@ def serve(path,mode):
                 connection.settimeout(3)
                 try:
                     incoming=_recv(connection)
-                    if set(incoming)-{'token','identity','request_id','method','source','cwd','origin'}:
+                    if set(incoming)-{'token','identity','request_id','method','source','cwd','origin','action','payload'}:
                         raise _ServiceError('invalid_arguments','Unknown coordinator request fields.')
                     if not secrets.compare_digest(str(incoming.get('token','')),identity['token']) or incoming.get('identity')!=identity['identity']:
                         raise _ServiceError('coordinator_auth','Coordinator authentication failed.')
                     rid=incoming.get('request_id')
                     if not isinstance(rid,str) or len(rid)!=32: raise _ServiceError('invalid_arguments','Request needs a UUID identity.')
+                    from optimizer.checkpoints.codec import _hash
+                    fingerprint=_hash(_json(incoming))
                     if rid in cache:
-                        _send(connection,cache[rid]); continue
+                        if cache[rid]['fingerprint']!=fingerprint:
+                            raise _ServiceError('request_conflict','Request identity was already used for different arguments.')
+                        _send(connection,cache[rid]['reply']); continue
                     method=incoming.get('method')
                     manager.client_detach=False; terminal.closed=False
                     if method=='ping': reply={'identity':identity['identity'],'lifetime':'coordinator'}
@@ -216,6 +220,17 @@ def serve(path,mode):
                         source=incoming.get('source')
                         if not isinstance(source,str) or len(source.encode())>_MAX_BYTES: raise _ServiceError('input_limit','Cancelled input exceeds its budget.')
                         reply={'status':terminal.history.run(source,None,lambda staged:130,origin='input_cancelled')}
+                    elif method=='native':
+                        from optimizer.operations.frontend import dispatch, capacity_request
+                        action=incoming.get('action'); payload=incoming.get('payload')
+                        if publication_error and capacity_request(action,payload,store) is None:
+                            raise _ServiceError('coordinator_publication_failed','Repair pending history/storage explicitly before further native requests.')
+                        original=Path.cwd(); target=Path(incoming.get('cwd',str(original))).resolve(strict=True)
+                        try:
+                            os.chdir(target)
+                            reply=dispatch(terminal.history,action,payload,origin='mcp')
+                        finally: os.chdir(original)
+                        flush(terminal)
                     elif method=='submit':
                         source=incoming.get('source')
                         if not isinstance(source,str) or len(source.encode())>_MAX_BYTES:
@@ -233,9 +248,9 @@ def serve(path,mode):
                         reply={'status':status,'responses':responses,'closed':terminal.closed or manager.client_detach or manager.shutdown_requested,
                                'timings':terminal.timings}
                     else: raise _ServiceError('invalid_arguments','Unknown coordinator request.')
-                    size=len(_json(reply)); cache[rid]=reply; cache_bytes+=size
+                    size=len(_json(reply)); cache[rid]={'fingerprint':fingerprint,'reply':reply}; cache_bytes+=size
                     while len(cache)>128 or cache_bytes>16*1024*1024:
-                        _,old=cache.popitem(last=False); cache_bytes-=len(_json(old))
+                        _,old=cache.popitem(last=False); cache_bytes-=len(_json(old['reply']))
                     _send(connection,reply)
                 except (OSError,ValueError,TypeError,KeyError,_ServiceError) as exc:
                     try: _send(connection,{'error':{'code':getattr(exc,'code','coordinator_request_failed'),'message':str(exc)}})
