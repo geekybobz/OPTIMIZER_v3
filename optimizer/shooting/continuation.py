@@ -6,6 +6,8 @@ from typing import Any, Mapping
 
 import numpy as np
 
+from optimizer.core.progress import _report
+
 from optimizer.shooting.evaluator import (
     ShootingEvaluator,
     resolve_verification_request,
@@ -262,6 +264,7 @@ def continue_shooting(
         points.append(candidate_point)
         prev, curr = curr, candidate
         completed += 1
+        _report(kind="item", method="continue_shooting", index=completed, total=int(steps), unit="step")
         if iterations <= int(fast_corrector_iterations):
             active_step = min(maximum_step, active_step * float(grow))
         if stop_reason == "target_reached":
@@ -342,6 +345,8 @@ def continue_parameter(
                 "error": result.error,
             }
         )
+        _report(kind="item", method="continue_parameter", index=len(step_history), total=int(max_steps),
+                unit="step", metric=str(parameter), value=float(next_parameter))
         if result.qualified:
             points.append(ParameterContinuationPoint(next_parameter, result, attempted))
             current_parameter = next_parameter

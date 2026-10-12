@@ -16,10 +16,16 @@ contracts and numerical implementations.
 
 ```bash
 optimizer
-optimizer --command 'opt.help();'
+optimizer --command ':help adam'
 optimizer --script workflow.opt --json
 python -B -m optimizer.cli
 ```
+
+At the prompt, `:help` lists the commands, `:help <name>` shows one command and
+`:exit` leaves; Ctrl-D also leaves. A colon command is a whole line and needs
+no `;`. It runs as its `opt.*` equivalent (`opt.help();`, `opt.help("adam");`,
+`opt.session.exit();`), which history records. Bare `exit`, `quit` and `help`
+get a hint pointing to the colon commands and are not submitted.
 
 `optimizer` is the console entry point after installation from this source.
 `python -m optimizer.cli` works from the V4 checkout using the configured
@@ -129,12 +135,27 @@ symlinks. Candidates are top-level `system` functions or `System` classes;
 custom factory names require explicit paths. Candidates are never imported or
 automatically selected. Multiple candidates require an explicit path.
 
-Human output shows compact results, assigned names/references, metrics,
-iteration count, stop reason and changed heads. Shooting `qualified`, `verified`
-and `solver_converged` remain separate facts. `--json` emits one service response
-envelope per operation, with compact metadata and no full numerical array/result
-expansion. A numerical iteration budget ending at `maxiter` is a valid result,
-not a global optimality certificate.
+On a terminal, results print as panels drawn with `rich`. Gradient
+results show iterations, stop reason and metrics with `J` first. Shooting
+results keep `qualified`, `verified` and `solver_converged` as separate facts.
+Multistart shows its counts and the five best `ranked[i]` roots. Session and
+project operations print one confirmation line. Errors print the code, the
+message and a hint. A panel's footer names any context whose head changed and
+the call's duration.
+
+Piped or redirected output prints one compact text line per operation. `--json`
+emits one service response envelope per operation, with compact metadata and no
+full numerical array/result expansion. If `rich` is missing the terminal prints
+the compact text, and `NO_COLOR` turns colour off. A numerical iteration budget
+ending at `maxiter` is a valid result, not a global optimality certificate.
+
+While a call runs longer than half a second, a live line on standard error shows
+progress: a bar with the iteration count, the latest objective value and the
+remaining time when the budget is known; a spinner otherwise. Multistart counts
+seeds and continuation counts steps. A timer keeps the elapsed time moving during
+a long single evaluation, and the line clears before the result prints. It
+appears only when standard error is a terminal and `--json` is off. It is
+display-only: nothing is recorded or written.
 
 Exit codes are `0` success, `2` input/dispatch failure, and `130` interruption.
 Interactive Ctrl-C clears incomplete input. During native execution, a valid
@@ -145,7 +166,8 @@ remains. This does not provide cooperative pause/resume or background execution.
 
 [main.py](main.py) owns launch/prompt; [input.py](input.py) frames submissions;
 [language.py](language.py) validates the AST and binds service requests;
-[display.py](display.py) summarizes data; [discovery.py](discovery.py) scans paths.
+[display.py](display.py) summarizes data and draws panels; [progress.py](progress.py)
+draws the live line; [discovery.py](discovery.py) scans paths.
 The recorder in [history/](../history/HISTORY.md) owns permanent statement history.
 The coordinator's optional explicit observer remains an informational embedding
 hook and cannot replace the recorder's commit protocol.
@@ -153,7 +175,9 @@ hook and cannot replace the recorder's commit protocol.
 The [language tests](../../tests/test_cli_language.py) cover native parity,
 aliases, continuation, candidates, validation/quotas and isolated OLGS/OLSS
 contexts. [Process tests](../../tests/test_cli.py) exercise module/script/pipe
-modes, compact JSON, exit codes, EOF and real TTY Ctrl-C. They use neutral
+modes, compact JSON, exit codes, EOF and real TTY Ctrl-C. The
+[terminal UX tests](../../tests/test_cli_ux.py) cover colon commands, panels,
+display fallbacks, the progress reporter and the live line. They use neutral
 fixtures; theory-first article benchmarks and MCP remain separately reviewed.
 
 ## Connections

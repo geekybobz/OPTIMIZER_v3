@@ -313,7 +313,7 @@ def run_chunk(system: Any, controls: Controls | None=None, *, step: StepFunction
     if initial_evaluation is None:
         raise ValueError(f'initial controls failed evaluation: {initial_error}')
     run_state = _build_state(controls=active_controls, metrics=initial_evaluation.metrics, optimizer_name=optimizer_name, step_size=_start_step_size(step_size, state, warmstart), optimizer_state=_start_optimizer_state(state, warmstart, optimizer_name=optimizer_name), system_params=params, previous_state=state, warmstart=warmstart)
-    progress = _Progress(run_state.metrics, objective_metric)
+    progress = _Progress(run_state.metrics, objective_metric, method=optimizer_name, budget=maxiter)
     start_metrics = dict(run_state.metrics)
     start_iteration = int(run_state.iteration)
     tracker = StopTracker(stop_config, initial_metrics=run_state.metrics)

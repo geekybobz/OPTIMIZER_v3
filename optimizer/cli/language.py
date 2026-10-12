@@ -8,6 +8,8 @@ from __future__ import annotations
 import ast
 import inspect
 import math
+import re
+import time
 from dataclasses import replace
 from typing import Callable
 from uuid import uuid4
@@ -15,10 +17,15 @@ from uuid import uuid4
 from optimizer.cli.discovery import _discover
 from optimizer.cli.display import _describe
 from optimizer.cli.input import _frame
+from optimizer.core.progress import _reporting
 from optimizer.operations import ObjectRef, OperationRequest, OperationResponse, OperationService
 from optimizer.operations.contracts import _ServiceError
 
 _MAX_NODES, _MAX_DEPTH, _MAX_CALLS = 8192, 32, 128
+_COLON_COMMANDS = (":help", ":help <name>", ":exit")
+_BARE_WORD = re.compile(r"\s*(exit|quit|help)\s*(\(\s*\))?\s*;?\s*\Z")
+_HELP_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_.]*\Z")
+_TIMINGS_KEPT = 256
 _MUTATING_SESSION = {"session.load", "session.attach", "session.select", "session.update", "session.release"}
 _SESSION_METHODS = {"session.load": "load", "session.attach": "attach", "session.select": "select",
                     "session.use": "use", "session.update": "update", "session.release": "release",
@@ -154,10 +161,14 @@ class _Terminal:
 
     def __init__(self, service: OperationService | None = None, *,
                  emit: Callable[[OperationResponse], None] | None = None,
-                 observer: Callable[[dict], None] | None = None) -> None:
+                 observer: Callable[[dict], None] | None = None,
+                 progress: Callable[[str], object] | None = None) -> None:
         self.service = service if service is not None else OperationService()
         self.emit = emit or (lambda response: None)
         self.observer = observer
+        # Display-only: a per-call live-line factory and wall-clock times by request ID.
+        self.progress = progress
+        self.timings: dict[str, float] = {}
         self.closed = False
         self._raw = ""
         self._interrupted = False
@@ -179,7 +190,15 @@ class _Terminal:
 
     def _send(self, request: OperationRequest) -> ObjectRef | object:
         self._request = request
-        response = self.service.execute(request)
+        start = time.perf_counter()
+        if self.progress is None:
+            response = self.service.execute(request)
+        else:
+            with self.progress(request.operation) as line, _reporting(line.update):
+                response = self.service.execute(request)
+        self.timings[response.request_id] = time.perf_counter() - start
+        while len(self.timings) > _TIMINGS_KEPT:
+            self.timings.pop(next(iter(self.timings)))
         if response.ok:
             response = replace(response, metadata={**response.metadata,
                 "summary": _describe(response.result), **({"binding": request.bind} if request.bind else {})})
@@ -192,8 +211,14 @@ class _Terminal:
 
     def _help(self, operation: str | None = None) -> dict:
         if operation is not None:
-            return self._info(operation)
+            info = dict(self._info(operation))
+            usage = self._usage(operation)
+            return {**info, "usage": usage} if usage else info
+        groups = sorted({entry["id"].split(".", 1)[0] for entry in self.service.list()
+                         if "." in entry["id"] and entry["classification"] in {"tool", "constructor"}})
         return {"syntax": "name = opt.namespace.operation(...); name.public_field;",
+                "frontend": list(_COLON_COMMANDS),
+                "groups": groups,
                 "commands": ["opt.help(operation=None)", "opt.list(group=None, classification=None)",
                     "opt.info(operation)", "opt.inspect(value)", "opt.session.discover(root='.', depth=3)",
                     *[f"opt.{name}{inspect.signature(getattr(self.service.session, method))}"
@@ -202,6 +227,48 @@ class _Terminal:
                 "lifetime": "RAM unless project.init/open selects a durable experiment; project.status reports storage.",
                 "history": [entry['id'] for entry in self.history.descriptors()],
                 "deferred": ["managed parallel jobs/control transforms (Task 6)", "MCP transport"]}
+
+    def _usage(self, operation: str) -> str | None:
+        """A readable call form without the context-supplied system or annotations."""
+        name = str(operation).removeprefix("opt.")
+        try:
+            if name in _SESSION_METHODS:
+                target = getattr(self.service.session, _SESSION_METHODS[name])
+            elif name in self._conveniences():
+                target = self._conveniences()[name]
+            elif self.service._history and name in self.service._history.methods:
+                target = self.service._history.methods[name]
+            elif name in self.service._persistence.methods:
+                target = self.service._persistence.methods[name]
+            else:
+                item, _ = self.service._registry.resolve(name)
+                supplied = dict(self.service.info(item.id).get("context_inputs") or {})
+                target, name = item.public_object(), (item.name if item.root else item.id)
+            signature = inspect.signature(target)
+        except Exception:  # noqa: BLE001 - help falls back to the declared signature.
+            return None
+        if "supplied" not in locals():
+            supplied = {}
+        parts, keyword_only = [], False
+        for parameter in signature.parameters.values():
+            if parameter.name in {"system", "self"} or supplied.get(parameter.name) == "system":
+                continue
+            if parameter.name in supplied and parameter.kind is not parameter.KEYWORD_ONLY:
+                # The selected context fills this input; passing it is optional.
+                parts.append(f"{parameter.name}=<active>")
+                continue
+            if parameter.kind is parameter.VAR_POSITIONAL:
+                parts.append("*" + parameter.name)
+                keyword_only = True
+            elif parameter.kind is parameter.VAR_KEYWORD:
+                parts.append("**" + parameter.name)
+            else:
+                if parameter.kind is parameter.KEYWORD_ONLY and not keyword_only:
+                    parts.append("*")
+                    keyword_only = True
+                default = "" if parameter.default is parameter.empty else f"={parameter.default!r}"
+                parts.append(parameter.name + default)
+        return f"opt.{name}({', '.join(parts)})"
 
     def _info(self, operation: str) -> dict:
         if not isinstance(operation, str):
@@ -381,6 +448,37 @@ class _Terminal:
                        "type": type(exc).__name__, "message": str(exc)})
             self._output(response, self._request)
             return 2
+
+    def frontend(self, text: str) -> int | None:
+        """Handle a whole-line colon command or a bare exit/quit/help word.
+
+        Returns None when `text` is ordinary statement input. Colon commands run
+        as their equivalent opt.* statement, so history records that statement.
+        Bare words are answered with a hint and are not submitted.
+        """
+        stripped = text.strip()
+        if stripped.startswith(":"):
+            name, _, argument = stripped.partition(" ")
+            argument = argument.strip()
+            if name == ":help" and not argument:
+                return self.submit("opt.help();")
+            if name == ":help" and _HELP_NAME.match(argument):
+                return self.submit(f'opt.help("{argument}");')
+            if name == ":exit" and not argument:
+                return self.submit("opt.session.exit();")
+            return self._frontend_error(f"Unknown command {stripped!r}. Commands: {', '.join(_COLON_COMMANDS)}.")
+        bare = _BARE_WORD.match(text)
+        if bare:
+            if bare.group(1) == "help":
+                return self._frontend_error("Use :help for the commands, or :help <name> for one command.")
+            return self._frontend_error("Use :exit to leave (Ctrl-D also works).")
+        return None
+
+    def _frontend_error(self, message: str) -> int:
+        snapshot = self.service.session.snapshot()
+        self.emit(OperationResponse(uuid4().hex, None, "error", state_before=snapshot, state_after=snapshot,
+                                    error={"code": "unknown_command", "type": "FrontendCommand", "message": message}))
+        return 2
 
     def submit(self, source: str) -> int:
         """Validate the batch, then record and atomically execute each statement."""

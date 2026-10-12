@@ -57,6 +57,15 @@ aggregates and does not fabricate gradient or step series.
 
 Source: [engine.py](engine.py).
 
+## Progress events
+
+Each iteration also sends a small event to an optional display reporter: the
+method, iteration count, budget, objective metric, value and acceptance. A
+frontend installs the reporter for one call (`optimizer.core.progress._reporting`).
+Without one, nothing happens. Events are not stored, written or recorded in
+history, and a failing reporter never changes or stops the run. Shooting solvers,
+multistart and continuation send the same kind of events.
+
 ## Connections
 
 - Parent: [Core hub](CORE_HUB.md)

@@ -128,7 +128,8 @@ class CliProcessTests(unittest.TestCase):
             process.send_signal(signal.SIGINT)
             wait_for(b"Input cleared.")
             os.write(master, b"x=2;\nx;\nopt.session.exit();\n")
-            wait_for(b'"session": "closed"')
+            # A terminal shows the rich compact line instead of raw JSON.
+            wait_for(b"session closed")
             self.assertEqual(process.wait(timeout=10), 0)
         finally:
             if process.poll() is None:

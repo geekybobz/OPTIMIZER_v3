@@ -6,6 +6,8 @@ from typing import Any, Callable, Mapping
 
 import numpy as np
 
+from optimizer.core.progress import _report
+
 from optimizer.shooting.evaluator import (
     ShootingEvaluator,
     resolve_verification_request,
@@ -138,8 +140,12 @@ def solve_shooting(
         message = {"event": event, **dict(payload)}
         if on_event is not None:
             on_event(message)
-        if event == "iteration" and on_iteration is not None:
-            on_iteration(dict(payload))
+        if event == "iteration":
+            _report(kind="iteration", method="solve_shooting",
+                    iteration=int(payload["iteration"]) - iteration_offset + 1, total=int(maxiter) + 1,
+                    metric="residual", value=float(payload["residual_norm"]))
+            if on_iteration is not None:
+                on_iteration(dict(payload))
 
     emit(
         "start",
@@ -412,6 +418,8 @@ def solve_direct_shooting(
             "tangent_gradient_norm": tangent_norm,
         }
         direct_history.append(row)
+        _report(kind="iteration", method="solve_direct_shooting", iteration=iteration + 1,
+                total=int(maxiter), metric="cost", value=float(current_cost))
         if tangent_norm <= tolerance:
             stop_reason = "cost_stationary"
             break

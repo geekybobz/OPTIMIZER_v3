@@ -10,5 +10,6 @@ dependencies:
   - numpy
   - scipy
   - matplotlib
+  - rich>=13
   - ipykernel
   - pytest

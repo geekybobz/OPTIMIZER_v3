@@ -167,7 +167,7 @@ def cma_es(system: Any, controls: Controls | None=None, *, variant: str='diagona
             state.optimizer_state = dict(previous_state.optimizer_state)
     elif warm is not None and warm.optimizer_state is not None:
         state.optimizer_state = dict(warm.optimizer_state)
-    progress = _Progress(state.metrics, str(objective['metric_id']))
+    progress = _Progress(state.metrics, str(objective['metric_id']), method='cma_es', budget=maxiter)
     rng = np.random.default_rng(seed)
     dimension = controls.spec.size
     population = config.effective_population_size(dimension)

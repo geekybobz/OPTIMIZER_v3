@@ -7,6 +7,8 @@ from typing import Any, Callable, Iterable, Mapping
 
 import numpy as np
 
+from optimizer.core.progress import _report
+
 from optimizer.shooting.solvers import _solve_or_record
 from optimizer.system_olss import MultiStartResult, ShootingResult, ShootingSpec, ShootingVariables
 from optimizer.system_olss import get_shooting_system_spec, roots_equivalent_system
@@ -74,10 +76,11 @@ def solve_shooting_multistart(
     options = dict(solver_options or {})
 
     if cfg.backend == "serial":
-        results = [
-            _solve_or_record(system if system_factory is None else system_factory(), seed, options)
-            for seed in seeds
-        ]
+        results = []
+        for seed in seeds:
+            results.append(_solve_or_record(system if system_factory is None else system_factory(), seed, options))
+            _report(kind="item", method="solve_shooting_multistart", index=len(results), total=len(seeds),
+                    unit="seed", qualified=sum(1 for result in results if result.qualified))
     else:
         jobs = [_MultistartJob(system_factory, seed, options) for seed in seeds]
         results = parallel_map(_run_multistart_job, jobs, config=cfg)

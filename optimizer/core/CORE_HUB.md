@@ -132,7 +132,7 @@ optimizer/core/
   guards.py       MetricGuard and metric_guard
   stopping.py     StoppingConfig, StopTracker, StopDecision
   stop_reasons.py StopReason and STOP_REASONS, the registry shared by OLGS and OLSS
-  progress.py     private constant-size numerical aggregate accumulator
+  progress.py     private numerical aggregates and the optional display-only progress reporter
   curvature.py    matrix-free curvature evidence and classification
   _cache.py       bounded least-recently-used store behind both evaluators
 ```

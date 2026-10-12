@@ -6,9 +6,10 @@ import argparse
 import sys
 from pathlib import Path
 
-from optimizer.cli.display import _render
+from optimizer.cli.display import _Display
 from optimizer.cli.input import _MAX_BYTES, _frame
 from optimizer.cli.language import _Terminal
+from optimizer.cli.progress import _live_line_factory
 from optimizer.operations.contracts import _ServiceError
 
 
@@ -47,7 +48,9 @@ def main(argv: list[str] | None = None) -> int:
     mode.add_argument("--script", help="Run a UTF-8 .opt command file (not general Python).")
     parser.add_argument("--json", action="store_true", help="Emit one compact response JSON object per operation.")
     options = parser.parse_args(argv)
-    terminal = _Terminal(emit=lambda response: print(_render(response, json_output=options.json), flush=True))
+    display = _Display(json_output=options.json)
+    terminal = _Terminal(emit=display.emit, progress=None if options.json else _live_line_factory())
+    display.timings = terminal.timings
     try:
         return _run(terminal,options)
     finally:
@@ -56,7 +59,8 @@ def main(argv: list[str] | None = None) -> int:
 
 def _run(terminal,options):
     if options.command is not None:
-        return terminal.submit(options.command)
+        handled = terminal.frontend(options.command)
+        return terminal.submit(options.command) if handled is None else handled
     if options.script is not None:
         try:
             source = _read_script(options.script)
@@ -70,7 +74,8 @@ def _run(terminal,options):
     interactive = sys.stdin.isatty()
     restore = _completion(terminal) if interactive else lambda: None
     if interactive and not options.json:
-        print("OPTIMIZER — structured session; project.init/open enables persistence. End commands with ';'. opt.help(); for commands.")
+        print("OPTIMIZER — structured session; project.init/open enables persistence. "
+              "End commands with ';'.  :help for commands, :exit to leave.")
     buffer, status = "", 0
     try:
         while not terminal.closed:
@@ -86,6 +91,13 @@ def _run(terminal,options):
                     return 130
                 print("\nInput cleared.", file=sys.stderr)
                 continue
+            if not buffer:
+                handled = terminal.frontend(line)
+                if handled is not None:
+                    status = handled
+                    if status and not interactive:
+                        return status
+                    continue
             buffer += line + "\n"
             try:
                 complete = _frame(buffer, incomplete_ok=True) is not None
