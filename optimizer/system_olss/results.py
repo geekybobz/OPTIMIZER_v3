@@ -9,6 +9,8 @@ import numpy as np
 
 from optimizer.system_olss.variables import ShootingVariables
 from optimizer.serialization import to_plain
+from optimizer.core.record import RunRecord
+from optimizer.state import RunState
 
 
 @dataclass(frozen=True)
@@ -133,6 +135,8 @@ class ShootingResult:
     error: str | None = None
     verification_tolerance: float | None = None
     verification_tolerance_source: str | None = None
+    run_record: RunRecord | None = None
+    state: RunState | None = None
 
     @property
     def residual_norm(self) -> float:
@@ -145,6 +149,7 @@ class ShootingResult:
     def to_dict(self) -> dict[str, Any]:
         return {
             "variables": self.variables.to_dict(),
+            "run_record": None if self.run_record is None else self.run_record.to_dict(),
             "residuals": to_plain(self.residuals),
             "residual_norm": to_plain(self.residual_norm),
             "residual_max_abs": to_plain(self.residual_max_abs),

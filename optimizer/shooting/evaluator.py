@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any, Mapping
 
 import numpy as np
 
-from optimizer.core._cache import DEFAULT_CACHE_SIZE, BoundedCache
-from optimizer.serialization import to_plain
+from optimizer.core._cache import DEFAULT_CACHE_SIZE
+from optimizer.core.runtime import EvaluatorBase, candidate_key
 from optimizer.system_olss import (
     ShootingEvaluation,
     ShootingVariables,
@@ -77,28 +76,9 @@ def resolve_verification_tolerance(
     return value, source
 
 
-def _options_key(options: Mapping[str, Any] | None) -> str:
-    """Stable cache key for per-call options; falls back to repr for unconvertible values."""
+_candidate_key = candidate_key
 
-    payload = dict(options or {})
-    try:
-        return json.dumps(to_plain(payload), sort_keys=True, separators=(",", ":"))
-    except TypeError:
-        return repr(sorted((str(key), repr(value)) for key, value in payload.items()))
-
-
-def _candidate_key(variables: ShootingVariables, options: Mapping[str, Any] | None) -> tuple[Any, ...]:
-    values = np.ascontiguousarray(variables.flatten(copy=False))
-    return (
-        variables.spec.names,
-        variables.spec.size,
-        variables.spec.dtype,
-        values.tobytes(),
-        _options_key(options),
-    )
-
-
-class ShootingEvaluator:
+class ShootingEvaluator(EvaluatorBase):
     """Own OLSS validation, caches, and numerical-call counters."""
 
     def __init__(
@@ -110,11 +90,11 @@ class ShootingEvaluator:
     ) -> None:
         self.system = require_shooting_system(system)
         self.system_spec = get_shooting_system_spec(system)
-        self.use_cache = bool(use_cache)
-        self._residuals = BoundedCache(cache_size)
-        self._jacobians = BoundedCache(cache_size)
-        self._metrics = BoundedCache(cache_size)
-        self._verification = BoundedCache(cache_size)
+        self._initialize_runtime(use_cache=use_cache, cache_size=cache_size)
+        self._residuals = self._new_cache()
+        self._jacobians = self._new_cache()
+        self._metrics = self._new_cache()
+        self._verification = self._new_cache()
         self._counts = {
             "residual": 0,
             "residual_attempt": 0,
@@ -133,10 +113,7 @@ class ShootingEvaluator:
         }
 
     def clear_cache(self) -> None:
-        self._residuals.clear()
-        self._jacobians.clear()
-        self._metrics.clear()
-        self._verification.clear()
+        super().clear_cache()
 
     def counters(self, *, compact: bool = False) -> dict[str, int]:
         if not compact:
@@ -156,9 +133,7 @@ class ShootingEvaluator:
         key = _candidate_key(variables, options)
         if self.use_cache and key in self._residuals:
             return self._residuals[key].copy()
-        self._counts["residual_attempt"] += 1
-        value = residuals_system(self.system, variables, options=options)
-        self._counts["residual"] += 1
+        value = self._counted("residual", residuals_system, self.system, variables, options=options)
         if self.use_cache:
             self._residuals[key] = value.copy()
         return value
@@ -169,9 +144,7 @@ class ShootingEvaluator:
         key = _candidate_key(variables, options)
         if self.use_cache and key in self._jacobians:
             return self._jacobians[key].copy()
-        self._counts["jacobian_attempt"] += 1
-        value = jacobian_system(self.system, variables, options=options)
-        self._counts["jacobian"] += 1
+        value = self._counted("jacobian", jacobian_system, self.system, variables, options=options)
         if self.use_cache:
             self._jacobians[key] = value.copy()
         return value
@@ -262,9 +235,7 @@ class ShootingEvaluator:
     def cost_gradient(
         self, variables: ShootingVariables, *, options: Mapping[str, Any] | None = None
     ) -> np.ndarray:
-        self._counts["cost_gradient_attempt"] += 1
-        value = cost_gradient_system(self.system, variables, options=options)
-        self._counts["cost_gradient"] += 1
+        value = self._counted("cost_gradient", cost_gradient_system, self.system, variables, options=options)
         return value
 
     def bounds(self) -> tuple[np.ndarray, np.ndarray] | None:
@@ -273,3 +244,9 @@ class ShootingEvaluator:
         if value is not None:
             self._counts["bounds"] += 1
         return value
+
+    def try_residuals(self, variables, *, options=None):
+        return self.attempt(self.residuals, variables, options=options, reason="evaluation_failed")
+
+    def try_residuals_and_jacobian(self, variables, *, options=None):
+        return self.attempt(self.residuals_and_jacobian, variables, options=options, reason="jacobian_failed")

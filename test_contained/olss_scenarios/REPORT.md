@@ -17,7 +17,7 @@ retained `rob_unversal_article` solutions.
 
 | ID | Status | Current result |
 |---|---|---|
-| OLSS-001 | Partly resolved | Root deduplication uses `ShootingBlock.scale`; full solver-coordinate scaling remains later numerical work. |
+| OLSS-001 | Resolved 2026-10-13 | Root steps, damping, tangent directions, step caps and continuation consume dimensionless coordinates; see [shared core](../../docs/SHARED_NUMERICAL_CORE.md). |
 | OLSS-002 | Deferred | Dense Jacobians remain the intended small/medium-system default; sparse/operator solvers remain later work. |
 | OLSS-003 | Resolved | `continue_parameter` supplies adaptive natural continuation and exact target landing. |
 | OLSS-004 | Deferred | Production SQP/null-space direct shooting remains later numerical work. |
@@ -49,7 +49,7 @@ Additional review findings recorded after the original file:
 | OLSS-025 | Resolved 2026-10-12 | Evaluation failures after the start become stop reasons; failed seeds and stages are recorded instead of aborting campaigns ([2026-10-12 review](../review_2026_10_12/REPORT.md), fix 1). |
 | OLSS-026 | Resolved 2026-10-12 | Systems declare a verification tolerance; results record the tolerance and its source; natural continuation records every attempt ([2026-10-12 review](../review_2026_10_12/REPORT.md), fix 2). |
 | OLSS-027 | Resolved 2026-10-12 | All OLSS result objects serialize as strict JSON ([2026-10-12 review](../review_2026_10_12/REPORT.md), fix 3). |
-| OLSS-028 | Design | The root-solver update rule is fixed (`newton`, `lm`, `damped`); OLSS root methods become step functions in shared-core phase 4 ([2026-10-12 review](../review_2026_10_12/REPORT.md), issue S-1). |
+| OLSS-028 | Resolved 2026-10-13 | Root solving accepts custom StepContext/StepProposal updates through `step=`, retaining validation, acceptance and independent verification. |
 
 The high- and medium-priority contract, integration, diagnostic, and workflow gaps
 are therefore closed. The remaining items are explicitly the later numerical or

@@ -43,6 +43,7 @@ Reviewer invariants
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import cached_property
 from typing import Any, Mapping, Sequence
 
 import numpy as np
@@ -61,6 +62,8 @@ class ControlSpec:
     dtype: Any = float
     dt: float | None = None
     meta: Mapping[str, Any] = field(default_factory=dict)
+
+    scales: Mapping[str, float] | Sequence[float] | None = None
 
     def __post_init__(self) -> None:
         # Normalize layout metadata once.  The rest of the library can rely on
@@ -84,6 +87,15 @@ class ControlSpec:
         else:
             dt = None
 
+        raw_scales = self.scales
+        if isinstance(raw_scales, Mapping):
+            if set(raw_scales) != set(keys):
+                raise ValueError("ControlSpec scales must match channel keys.")
+            raw_scales = [raw_scales[key] for key in keys]
+        scale_values = np.ones(len(keys)) if raw_scales is None else np.asarray(raw_scales, dtype=float)
+        if scale_values.shape != (len(keys),) or not np.all(np.isfinite(scale_values)) or np.any(scale_values <= 0):
+            raise ValueError("ControlSpec scales must be finite positive per-channel values.")
+        object.__setattr__(self, "scales", tuple(float(value) for value in scale_values))
         object.__setattr__(self, "keys", keys)
         object.__setattr__(self, "control_dim", control_dim)
         object.__setattr__(self, "dtype", np.dtype(self.dtype))
@@ -102,6 +114,12 @@ class ControlSpec:
     def size(self) -> int:
         return self.n_controls * self.control_dim
 
+    @cached_property
+    def flat_scales(self) -> np.ndarray:
+        values = np.repeat(self.scales, self.control_dim)
+        values.setflags(write=False)
+        return values
+
     def channel_index(self, key: str) -> int:
         try:
             return self.keys.index(str(key))
@@ -119,6 +137,7 @@ class ControlSpec:
             "dtype": str(self.dtype),
             "dt": self.dt,
             "meta": dict(self.meta),
+            "scales": list(self.scales),
         }
 
 
@@ -130,8 +149,9 @@ def _validate_control_spec_compatibility(expected: ControlSpec, actual: ControlS
         or actual.control_dim != expected.control_dim
         or actual.dtype != expected.dtype
         or actual.dt != expected.dt
+        or actual.scales != expected.scales
     ):
-        raise ValueError("Controls layout (keys, dimension, dtype, dt) does not match the system.")
+        raise ValueError("Controls layout (keys, dimension, dtype, dt, scales) does not match the system.")
 
 
 class Controls:
@@ -229,6 +249,23 @@ class Controls:
         name: str | None = None,
         meta: Mapping[str, Any] | None = None,
     ) -> "Controls":
+        if "matrix" in values and set(values) <= {"name", "spec", "matrix", "meta"}:
+            declared = values.get("spec")
+            if declared is not None:
+                actual = ControlSpec(declared["keys"], declared["control_dim"],
+                                     dtype=declared.get("dtype", "float64"), dt=declared.get("dt"),
+                                     scales=declared.get("scales"))
+                _validate_control_spec_compatibility(spec, actual)
+            matrix = values["matrix"]
+            if spec.dtype.kind == "c":
+                encoded = np.asarray(matrix, dtype=object)
+                decoded = np.empty(encoded.shape, dtype=spec.dtype)
+                for index in np.ndindex(encoded.shape):
+                    item = encoded[index]
+                    decoded[index] = complex(item["real"], item["imag"]) if isinstance(item, Mapping) and set(item) == {"real", "imag"} else item
+                matrix = decoded
+            return cls.from_matrix(spec, matrix, copy=copy,
+                                   name=values.get("name", name), meta=values.get("meta", meta))
         missing = set(spec.keys) - set(values)
         extra = set(values) - set(spec.keys)
         if missing or extra:
@@ -262,6 +299,17 @@ class Controls:
     @property
     def shape(self) -> tuple[int, int]:
         return self.spec.shape
+
+    @property
+    def scales(self) -> np.ndarray:
+        return self.spec.flat_scales
+
+    def with_flat(self, values: Any, *, name: str | None = None) -> "Controls":
+        return Controls.from_flat(self.spec, values, name=self.name if name is None else name, meta=self.meta)
+
+    def to_dict(self) -> dict[str, Any]:
+        from optimizer.serialization import to_plain
+        return to_plain({"name": self.name, "spec": self.spec.to_dict(), "matrix": self.u.tolist(), "meta": dict(self.meta)})
 
     def channel(self, key: str, *, copy: bool = False) -> np.ndarray:
         """Return one named channel as a 1D array.

@@ -43,7 +43,8 @@ from typing import Any
 import numpy as np
 
 from optimizer.controls import Controls
-from optimizer.core._cache import DEFAULT_CACHE_SIZE, BoundedCache
+from optimizer.core._cache import DEFAULT_CACHE_SIZE
+from optimizer.core.runtime import EvaluatorBase, candidate_key
 from optimizer.result import Evaluation
 from optimizer.system_olgs import (
     ControlBounds,
@@ -66,7 +67,7 @@ from optimizer.system_olgs import (
 )
 
 
-ControlCacheKey = tuple[tuple[str, ...], int, str, tuple[int, int], bytes]
+ControlCacheKey = tuple[str, bytes, str]
 
 
 @dataclass(frozen=True)
@@ -102,17 +103,10 @@ class ValueGradientOutcome:
 def controls_cache_key(controls: Controls) -> ControlCacheKey:
     """Return a deterministic key for the exact numeric control content."""
 
-    matrix = np.ascontiguousarray(controls.as_matrix(copy=False))
-    return (
-        tuple(controls.spec.keys),
-        int(controls.spec.control_dim),
-        str(controls.spec.dtype),
-        controls.spec.shape,
-        matrix.tobytes(),
-    )
+    return candidate_key(controls)
 
 
-class SystemEvaluator:
+class SystemEvaluator(EvaluatorBase):
     """Validation and cache wrapper around an optimizer-facing system."""
 
     # ------------------------------------------------------------------
@@ -134,9 +128,9 @@ class SystemEvaluator:
             declared_controls["control_dim"]
         ) != control_spec.control_dim:
             raise ValueError("system_spec controls do not match system.control_spec().")
-        self.use_cache = bool(use_cache)
-        self._evaluations = BoundedCache(cache_size)
-        self._value_gradients = BoundedCache(cache_size)
+        self._initialize_runtime(use_cache=use_cache, cache_size=cache_size)
+        self._evaluations = self._new_cache()
+        self._value_gradients = self._new_cache()
         self.evaluation_count = 0
         self.gradient_count = 0
         self.evaluation_attempt_count = 0
@@ -161,8 +155,7 @@ class SystemEvaluator:
     def clear_cache(self) -> None:
         """Drop cached evaluations without changing system or counters."""
 
-        self._evaluations.clear()
-        self._value_gradients.clear()
+        super().clear_cache()
 
     @property
     def capabilities(self) -> dict[str, bool]:
@@ -227,9 +220,7 @@ class SystemEvaluator:
     def gradient(self, controls: Controls) -> Controls:
         """Return a validated analytical gradient from the system."""
 
-        self.gradient_attempt_count += 1
-        gradient = gradient_system(self.system, controls)
-        self.gradient_count += 1
+        gradient = self._counted("gradient", gradient_system, self.system, controls)
         return gradient
 
     def value_and_gradient(self, controls: Controls) -> tuple[Evaluation, Controls]:
@@ -258,47 +249,33 @@ class SystemEvaluator:
         return evaluation, gradient
 
     def residuals(self, controls: Controls, *, name: str = "hard") -> np.ndarray:
-        self.residual_attempt_count += 1
-        value = optional_residuals(self.system, controls, name=name)
-        self.residual_count += 1
+        value = self._counted("residual", optional_residuals, self.system, controls, name=name)
         return value
 
     def jacobian(self, controls: Controls, *, name: str = "hard") -> np.ndarray:
-        self.jacobian_attempt_count += 1
-        value = optional_jacobian(self.system, controls, name=name)
-        self.jacobian_count += 1
+        value = self._counted("jacobian", optional_jacobian, self.system, controls, name=name)
         return value
 
     def hvp(self, controls: Controls, vector: Controls | np.ndarray) -> Controls:
-        self.hvp_attempt_count += 1
-        value = optional_hvp(self.system, controls, vector)
-        self.hvp_count += 1
+        value = self._counted("hvp", optional_hvp, self.system, controls, vector)
         return value
 
     def smooth_gradient(self, controls: Controls) -> Controls:
-        self.smooth_gradient_attempt_count += 1
-        value = optional_smooth_gradient(self.system, controls)
-        self.smooth_gradient_count += 1
+        value = self._counted("smooth_gradient", optional_smooth_gradient, self.system, controls)
         return value
 
     def prox(self, controls: Controls, step_size: float) -> Controls:
-        self.prox_attempt_count += 1
-        value = optional_prox(self.system, controls, step_size)
-        self.prox_count += 1
+        value = self._counted("prox", optional_prox, self.system, controls, step_size)
         return value
 
     def control_bounds(self) -> ControlBounds:
-        self.bounds_attempt_count += 1
-        value = optional_control_bounds(self.system)
-        self.bounds_count += 1
+        value = self._counted("bounds", optional_control_bounds, self.system)
         return value
 
     def plot_data(self, controls: Controls, *, kind: str, **options: Any) -> Any:
         """Return one explicit, validated system-owned visualization data product."""
 
-        self.plot_data_attempt_count += 1
-        value = optional_plot_data(self.system, controls, kind=kind, **options)
-        self.plot_data_count += 1
+        value = self._counted("plot_data", optional_plot_data, self.system, controls, kind=kind, **options)
         return value
 
     # ------------------------------------------------------------------
@@ -306,72 +283,18 @@ class SystemEvaluator:
     # ------------------------------------------------------------------
 
     def try_evaluate(self, controls: Controls) -> EvaluationOutcome:
-        """Evaluate controls and capture validation/evaluation failures."""
-
-        try:
-            return EvaluationOutcome(
-                evaluation=self.evaluate(controls),
-                ok=True,
-                reason="ok",
-                error=None,
-            )
-        except Exception as exc:  # noqa: BLE001 - engine needs a stop reason, not a traceback.
-            return EvaluationOutcome(
-                evaluation=None,
-                ok=False,
-                reason="evaluation_failed",
-                error=f"{type(exc).__name__}: {exc}",
-            )
+        outcome = self.attempt(self.evaluate, controls, reason="evaluation_failed")
+        return EvaluationOutcome(outcome.value, outcome.ok, outcome.reason, outcome.error)
 
     def try_gradient(self, controls: Controls) -> GradientOutcome:
-        """Compute gradient and capture validation/gradient failures."""
-
-        try:
-            return GradientOutcome(
-                gradient=self.gradient(controls),
-                ok=True,
-                reason="ok",
-                error=None,
-            )
-        except Exception as exc:  # noqa: BLE001 - engine records the failure and stops cleanly.
-            return GradientOutcome(
-                gradient=None,
-                ok=False,
-                reason="gradient_failed",
-                error=f"{type(exc).__name__}: {exc}",
-            )
+        outcome = self.attempt(self.gradient, controls, reason="gradient_failed")
+        return GradientOutcome(outcome.value, outcome.ok, outcome.reason, outcome.error)
 
     def try_value_and_gradient(self, controls: Controls) -> ValueGradientOutcome:
-        """Compute a combined value/gradient pair and capture failures."""
-
-        try:
-            evaluation, gradient = self.value_and_gradient(controls)
-            return ValueGradientOutcome(
-                value_gradient=ValueGradient(metrics=evaluation.metrics, gradient=gradient),
-                ok=True,
-                reason="ok",
-            )
-        except Exception as exc:  # noqa: BLE001
-            return ValueGradientOutcome(
-                value_gradient=None,
-                ok=False,
-                reason="value_gradient_failed",
-                error=f"{type(exc).__name__}: {exc}",
-            )
+        outcome = self.attempt(self.value_and_gradient, controls, reason="value_gradient_failed")
+        pair = None if not outcome.ok else ValueGradient(metrics=outcome.value[0].metrics, gradient=outcome.value[1])
+        return ValueGradientOutcome(pair, outcome.ok, outcome.reason, outcome.error)
 
     def try_smooth_gradient(self, controls: Controls) -> GradientOutcome:
-        """Compute a composite objective's smooth gradient and capture failures."""
-
-        try:
-            return GradientOutcome(
-                gradient=self.smooth_gradient(controls),
-                ok=True,
-                reason="ok",
-            )
-        except Exception as exc:  # noqa: BLE001
-            return GradientOutcome(
-                gradient=None,
-                ok=False,
-                reason="smooth_gradient_failed",
-                error=f"{type(exc).__name__}: {exc}",
-            )
+        outcome = self.attempt(self.smooth_gradient, controls, reason="smooth_gradient_failed")
+        return GradientOutcome(outcome.value, outcome.ok, outcome.reason, outcome.error)

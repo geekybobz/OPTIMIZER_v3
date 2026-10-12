@@ -336,8 +336,9 @@ def s_rectangular_and_scaling():
     r = solve(line, [0.0, 0.0])
     a, b = r.variables.flatten()
     record("G6", "Underdetermined root with badly scaled variables", "generic", "solve_shooting (min-norm step)",
-           "gap", f"root a={a:.3e}, b={b:.3e} (scaled {a / 1e6:.3f}, {b / 1e-3:.3f})",
-           "scaled minimum-norm root (1e6, 1e-3)", "solver steps ignore declared scales")
+           "pass" if r.qualified and np.allclose([a / 1e6, b / 1e-3], [1, 1], atol=1e-8) else "fail",
+           f"root a={a:.3e}, b={b:.3e} (scaled {a / 1e6:.3f}, {b / 1e-3:.3f})",
+           "scaled minimum-norm root (1e6, 1e-3)", "solver steps use declared variable scales")
 
 
 def s_bounds_and_derivatives():
@@ -389,7 +390,7 @@ def s_api():
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--json", type=Path)
-    parser.add_argument("--workers", type=int, default=8)
+    parser.add_argument("--workers", type=int, default=4)
     args = parser.parse_args()
     t0 = time.perf_counter()
     for fn in (s_cart, s_pendulum, s_bratu, s_unstable, s_rectangular_and_scaling, s_bounds_and_derivatives, s_api, s_qubit_gauge):

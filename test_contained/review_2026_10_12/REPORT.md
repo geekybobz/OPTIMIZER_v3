@@ -8,6 +8,11 @@ reviewed: 2026-10-12
 ---
 # Review 2026-10-12: fixes and shared-core inspection
 
+Follow-up, 2026-10-13: the numerical consolidation is implemented in the current
+checkout; see [shared numerical core](../../docs/SHARED_NUMERICAL_CORE.md) for
+the implementation, scaling rules and remaining solver upgrades. The inspection
+below describes the historical checkpoint.
+
 This review tested the library the way a user would. Two new problems were
 written from the scaffolds and solved with library tools only: a qubit state
 transfer (OLGS) and a Duffing minimum-energy transfer by indirect shooting

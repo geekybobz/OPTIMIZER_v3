@@ -28,7 +28,7 @@ its complete commit, and pass that exact value to the installer:
 ```bash
 git clone https://github.com/geekybobz/OPTIMIZER_v3.git OPTIMIZER
 cd OPTIMIZER
-git checkout v4.0.5
+git checkout v4.0.6
 git rev-parse HEAD
 ./install.sh --approved-ref FULL_40_CHARACTER_COMMIT_FROM_THE_PREVIOUS_COMMAND
 ```

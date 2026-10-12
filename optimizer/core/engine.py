@@ -38,6 +38,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any, Callable, Iterable, Mapping
 from uuid import uuid4
 import numpy as np
+from optimizer.core.iteration import drive
 from optimizer.core.progress import _Progress
 from optimizer.controls import Controls
 from optimizer.core.evaluate import EvaluationOutcome, GradientOutcome, SystemEvaluator
@@ -52,11 +53,17 @@ class StepContext:
     system: OptimizerSystem
     evaluator: SystemEvaluator
     state: RunState
-    evaluation: Evaluation
-    gradient: Controls
+    evaluation: Evaluation | None
+    gradient: Controls | None
     objective_direction: str
     iteration: int
     stage: str | None = None
+    residuals: np.ndarray | None = None
+    jacobian: np.ndarray | None = None
+
+    @property
+    def variables(self):
+        return self.state.controls
 
     def try_descent_gradient(self, controls: Controls) -> GradientOutcome:
         """Return a trial gradient in this method's descent convention.
@@ -74,7 +81,7 @@ class StepContext:
 @dataclass(frozen=True)
 class StepProposal:
     """Trial update proposed by one optimizer iteration."""
-    controls: Controls
+    controls: Any
     step_size: float | None = None
     optimizer_state: Mapping[str, Any] | None = None
     optimizer_state_on_accept: Mapping[str, Any] | None = None
@@ -252,8 +259,29 @@ def _callable_name(value: Any) -> str | None:
         return None
     return str(getattr(value, '__qualname__', getattr(value, '__name__', type(value).__name__)))
 
-def run_chunk(system: Any, controls: Controls | None=None, *, step: StepFunction, optimizer_name: str, maxiter: int, state: RunState | None=None, warmstart: WarmStartState | None=None, step_size: float | None=None, stopping: StoppingConfig | None=None, target_value: float | None=None, target_metric: str | None=None, target_mode: str | None=None, stall_patience: int | None=None, stall_tolerance: float=0.0, stall_metric: str | None=None, stall_mode: str | None=None, gradient_tolerance: float | None=None, stationary_curvature_tolerance: float=1e-10, accept: AcceptFunction | None=None, accept_metric: str | None=None, accept_mode: str | None=None, accept_tolerance: float=0.0, system_params: Mapping[str, Any] | None=None, stage: str | None=None, use_cache: bool=True, enforce_bounds: bool=True, failed_trial_retries: int=3, failed_trial_shrink: float=0.5, gradient_source: str='gradient', prefer_value_and_gradient: bool=True) -> OptimizerResult:
+def run_chunk(system: Any, controls: Controls | None=None, *, step: StepFunction, optimizer_name: str, maxiter: int, state: RunState | None=None, warmstart: WarmStartState | None=None, step_size: float | None=None, stopping: StoppingConfig | None=None, target_value: float | None=None, target_metric: str | None=None, target_mode: str | None=None, stall_patience: int | None=None, stall_tolerance: float=0.0, stall_metric: str | None=None, stall_mode: str | None=None, gradient_tolerance: float | None=None, stationary_curvature_tolerance: float=1e-10, accept: AcceptFunction | None=None, accept_metric: str | None=None, accept_mode: str | None=None, accept_tolerance: float=0.0, system_params: Mapping[str, Any] | None=None, stage: str | None=None, use_cache: bool=True, enforce_bounds: bool=True, failed_trial_retries: int=3, failed_trial_shrink: float=0.5, gradient_source: str='gradient', prefer_value_and_gradient: bool=True, coordinate_mode: str='auto') -> OptimizerResult:
     """Run one optimizer chunk using a method-specific proposal function."""
+    from optimizer.families import system_family
+    if system_family(system) == "olss":
+        from optimizer.shooting.solvers import solve_shooting
+        if state is not None or warmstart is not None or stopping is not None or accept is not None:
+            raise ValueError("Custom OLSS chunks use solve_shooting options and previous_result for restart.")
+        from optimizer.shooting.evaluator import ShootingEvaluator
+        result = solve_shooting(system, controls, step=step, method="newton", maxiter=maxiter,
+                                evaluator=ShootingEvaluator(system, use_cache=use_cache),
+                                tolerance=1e-10 if target_value is None else target_value)
+        result.method = str(optimizer_name)
+        if result.state is not None:
+            result.state.optimizer_name = str(optimizer_name)
+        return result
+    if coordinate_mode not in {"auto", "physical"}:
+        raise ValueError("coordinate_mode must be 'auto' or 'physical'.")
+    if coordinate_mode == "auto" and any(value != 1.0 for value in system.control_spec().scales):
+        from optimizer.core.coordinates import run_scaled
+        options = dict(locals())
+        for name in ("system", "controls", "system_family", "run_scaled"):
+            options.pop(name, None)
+        return run_scaled(run_chunk, system, controls, options)
     if not callable(step):
         raise TypeError('step must be callable.')
     if gradient_source not in {'gradient', 'smooth_gradient'}:
@@ -321,6 +349,7 @@ def run_chunk(system: Any, controls: Controls | None=None, *, step: StepFunction
     if initial_stop.stop:
         run_state.stop_reason = initial_stop.reason
         result = OptimizerResult.from_state(run_state, stop_reason=initial_stop.reason or 'stopped', optimizer=optimizer_name, objective_metric=objective_metric, diagnostics=progress.finish(evaluator.counters()))
+        result.run_record = progress.record
         return result
     current_eval = initial_evaluation
     stop_reason = 'maxiter'
@@ -331,11 +360,12 @@ def run_chunk(system: Any, controls: Controls | None=None, *, step: StepFunction
     def close_interrupted_run() -> None:
         """Close passive evidence using the last valid state, without new numerics."""
         run_state.stop_reason = 'interrupted'
-    while True:
+    def advance(iteration):
+        nonlocal prefetched_gradient, current_eval, stop_reason, accepted_any, consecutive_failed_trials
         budget_decision = tracker.check_before_iteration(run_state.iteration)
         if budget_decision.stop:
             stop_reason = budget_decision.reason or 'maxiter'
-            break
+            return stop_reason
         from optimizer.jobs.boundary import _checkpoint
         _checkpoint('olgs', run_state, run_state.global_iteration)
         try:
@@ -356,12 +386,14 @@ def run_chunk(system: Any, controls: Controls | None=None, *, step: StepFunction
             run_state.global_iteration += 1
             stop_reason = 'smooth_gradient_failed' if gradient_source == 'smooth_gradient' else 'gradient_failed'
             progress.observe(run_state.metrics, accepted=False, failure=stop_reason)
-            break
-        gradient_norm = gradient_outcome.gradient.norm()
+            return stop_reason
+        flat_gradient = gradient_outcome.gradient.flatten(copy=False)
+        unit_scales = all(value == 1.0 for value in run_state.controls.spec.scales)
+        gradient_norm = float(np.linalg.norm(flat_gradient if unit_scales else flat_gradient * run_state.controls.scales))
         if gradient_tolerance is not None and gradient_norm <= float(gradient_tolerance):
             stop_reason, curvature = _stationary_reason(evaluator, run_state.controls, curvature_tolerance=stationary_curvature_tolerance)
             run_state.optimizer_state.update({'gradient_norm': gradient_norm, 'stationary_evidence': curvature})
-            break
+            return stop_reason
         context = StepContext(system=evaluator.system, evaluator=evaluator, state=run_state, evaluation=current_eval, gradient=gradient_outcome.gradient, objective_direction=objective_direction, iteration=run_state.iteration, stage=stage)
         try:
             raw_proposal = step(context)
@@ -377,7 +409,7 @@ def run_chunk(system: Any, controls: Controls | None=None, *, step: StepFunction
             run_state.global_iteration += 1
             stop_reason = 'proposal_failed'
             progress.observe(run_state.metrics, accepted=False, failure=stop_reason)
-            break
+            return stop_reason
         trial_gradient: Controls | None = None
         try:
             if prefetch_trial_gradient:
@@ -408,8 +440,8 @@ def run_chunk(system: Any, controls: Controls | None=None, *, step: StepFunction
             progress.observe(run_state.metrics, accepted=False, failure=iteration_reason)
             if terminal_failure:
                 stop_reason = 'nonfinite_trial'
-                break
-            continue
+                return stop_reason
+            return None
         consecutive_failed_trials = 0
         try:
             accept_function = accept
@@ -420,6 +452,8 @@ def run_chunk(system: Any, controls: Controls | None=None, *, step: StepFunction
         except KeyboardInterrupt:
             close_interrupted_run()
             raise
+        difference = proposal.controls.flatten(copy=False) - run_state.controls.flatten(copy=False)
+        applied_step_norm = float(np.linalg.norm(difference if unit_scales else difference / proposal.controls.scales))
         branch_state_update = _proposal_state_update(proposal, accepted=accept_decision.accepted)
         if accept_decision.optimizer_state_update:
             branch_state_update.update(dict(accept_decision.optimizer_state_update))
@@ -439,14 +473,19 @@ def run_chunk(system: Any, controls: Controls | None=None, *, step: StepFunction
             run_state.global_iteration += 1
             if branch_step_size is not None:
                 run_state.step_size = branch_step_size
-        progress.observe(run_state.metrics, accepted=accept_decision.accepted, failure=accept_decision.reason)
+        progress.observe(run_state.metrics, accepted=accept_decision.accepted, failure=accept_decision.reason,
+                         derivative_norm=gradient_norm,
+                         step_norm=applied_step_norm)
         metric_decision: StopDecision = tracker.check_metrics(run_state.metrics)
         if metric_decision.stop:
             stop_reason = metric_decision.reason or 'stopped'
-            break
+            return stop_reason
         if proposal.stop_reason is not None:
             stop_reason = str(proposal.stop_reason)
-            break
+            return stop_reason
+
+    stop_reason = drive(advance, maxiter=stop_config.maxiter)
     run_state.stop_reason = stop_reason
     result = OptimizerResult.from_state(run_state, stop_reason=stop_reason, optimizer=optimizer_name, objective_metric=objective_metric, diagnostics=progress.finish(evaluator.counters()))
+    result.run_record = progress.record
     return result

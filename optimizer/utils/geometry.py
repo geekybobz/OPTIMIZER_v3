@@ -36,18 +36,9 @@ from typing import Any
 import numpy as np
 
 from optimizer.controls import Controls
+from optimizer.core.numerics import tangent_projection, jacobian_decomposition
 from optimizer.system_olgs import optional_residuals, validate_controls_for_system
 from optimizer.utils.derivatives import get_jacobian
-
-
-def _rank_from_singular_values(singular_values: np.ndarray, rcond: float | None) -> int:
-    """Return numerical rank using NumPy-style relative cutoff."""
-
-    if singular_values.size == 0:
-        return 0
-    cutoff = (np.finfo(float).eps * max(singular_values.size, 1)) if rcond is None else float(rcond)
-    threshold = float(np.max(singular_values)) * cutoff
-    return int(np.sum(singular_values > threshold))
 
 
 def jacobian_geometry(
@@ -60,14 +51,7 @@ def jacobian_geometry(
     matrix = np.asarray(jacobian, dtype=float)
     if matrix.ndim != 2:
         raise ValueError("jacobian must be a 2D matrix.")
-    singular_values = np.linalg.svd(matrix, compute_uv=False)
-    rank = _rank_from_singular_values(singular_values, rcond)
-    nonzero = singular_values[singular_values > 0.0]
-    condition = float(np.inf)
-    if nonzero.size >= 2:
-        condition = float(nonzero[0] / nonzero[-1])
-    elif nonzero.size == 1:
-        condition = 1.0
+    singular_values, _right, rank, _threshold, condition = jacobian_decomposition(matrix, rcond=rcond)
     return {
         "jacobian_shape": list(matrix.shape),
         "jacobian_norm": float(np.linalg.norm(matrix)),
@@ -100,8 +84,7 @@ def nullspace_basis(
         fallback=fallback,
         eps=eps,
     )
-    _u, singular_values, vh = np.linalg.svd(jacobian, full_matrices=True)
-    rank = _rank_from_singular_values(singular_values, rcond)
+    _singular, vh, rank, _threshold, _condition = jacobian_decomposition(jacobian, rcond=rcond, full=True)
     return vh[rank:, :].T.copy()
 
 
@@ -138,16 +121,9 @@ def project_gradient(
         eps=eps,
     )
     g = gradient.flatten(copy=False).astype(float, copy=False)
-    gram = jacobian @ jacobian.T
-    if damping > 0.0:
-        gram = gram + damping * np.eye(gram.shape[0])
+    projected_flat = tangent_projection(g, jacobian, damping=damping, scales=controls.scales)
 
-    # Solve in residual space because hard-control problems usually have many more
-    # control variables than residual equations.  ``lstsq`` handles rank deficiency.
-    rhs = jacobian @ g
-    multiplier = np.linalg.lstsq(gram, rhs, rcond=None)[0]
-    row_component = jacobian.T @ multiplier
-    projected_flat = g - row_component
+    row_component = controls.scales ** 2 * g - projected_flat
     projected = Controls.from_flat(
         controls.spec,
         projected_flat,

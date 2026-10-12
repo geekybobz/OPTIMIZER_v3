@@ -8,6 +8,7 @@ from typing import Any
 import numpy as np
 
 from optimizer.controls import Controls
+from optimizer.core.numerics import jacobian_decomposition
 from optimizer.core.curvature import curvature_evidence
 from optimizer.core.stop_reasons import StopReason
 from optimizer.system_olgs import get_system_spec
@@ -46,32 +47,31 @@ def _reversals(values: list[float]) -> int:
     return int(sum(1 for left, right in zip(steps, steps[1:]) if left * right < 0.0))
 
 
-def _classify(
-    values: list[float],
-    *,
-    rejection_ratio: float,
-    attempts: int,
-) -> tuple[str, float | None, int]:
-    """Classify a lower-is-better sequence whose first entry is the starting value."""
+def _classify_summary(relative, reversals, rejection_ratio, attempts):
+    limits = _DIAGNOSIS_THRESHOLDS
+    if attempts >= 3 and rejection_ratio >= limits["repeating_rejection_ratio"]:
+        return "repeating_rejections"
+    if attempts >= 3 and reversals >= max(2, int(np.ceil(attempts * limits["oscillation_reversal_fraction"]))):
+        return "oscillating"
+    if relative > limits["diverging_relative_increase"]:
+        return "diverging"
+    if relative >= -limits["stalled_relative_change"]:
+        return "stalled"
+    if -relative < limits["slow_relative_improvement"]:
+        return "slow"
+    return "converging"
 
-    thresholds = _DIAGNOSIS_THRESHOLDS
-    if attempts >= 3 and rejection_ratio >= thresholds["repeating_rejection_ratio"]:
-        return "repeating_rejections", None, 0
-    if len(values) < 2:
-        return "stalled", 0.0, 0
-    start, end = values[0], values[-1]
-    scale = abs(start) if start != 0.0 else max(max(abs(value) for value in values), np.finfo(float).tiny)
-    relative = (end - start) / scale
+
+def _classify(values, *, rejection_ratio, attempts):
+    """Sequence adapter for the same aggregate classifier used by results."""
     reversals = _reversals(values)
-    if len(values) >= 4 and reversals >= max(2, int(np.ceil((len(values) - 1) * thresholds["oscillation_reversal_fraction"]))):
-        return "oscillating", relative, reversals
-    if relative > thresholds["diverging_relative_increase"]:
-        return "diverging", relative, reversals
-    if relative >= -thresholds["stalled_relative_change"]:
-        return "stalled", relative, reversals
-    if -relative < thresholds["slow_relative_improvement"]:
-        return "slow", relative, reversals
-    return "converging", relative, reversals
+    if len(values) < 2:
+        relative = 0.0
+    else:
+        scale = abs(values[0]) or max(max(abs(v) for v in values), np.finfo(float).tiny)
+        relative = (values[-1] - values[0]) / scale
+    label = _classify_summary(relative, reversals, rejection_ratio, attempts)
+    return label, (None if label == "repeating_rejections" else relative), reversals
 
 
 def _stop_facts(reason: str | None) -> dict[str, Any]:
@@ -85,73 +85,54 @@ def _stop_facts(reason: str | None) -> dict[str, Any]:
 
 
 def diagnose_run(result: Any, *, mode: str | None = None) -> dict[str, Any]:
-    """Classify OLGS numerical aggregates or OLSS native solver history.
-
-    OLGS retains constant-size counters and objective aggregates, never an
-    iteration log. Results constructed without aggregates report unavailable
-    evidence instead of inventing intermediate samples.
-    """
+    """Classify the common numerical record without evaluating the system."""
     from optimizer.result import OptimizerResult
     from optimizer.system_olss import ShootingResult
-    if isinstance(result, ShootingResult): return _diagnose_shooting(result)
-    if not isinstance(result, OptimizerResult):
+    if not isinstance(result, (OptimizerResult, ShootingResult)):
         raise TypeError("diagnose_run expects an OptimizerResult or a ShootingResult.")
+    shooting = isinstance(result, ShootingResult)
     resolved_mode = "min" if mode is None else str(mode)
-    if resolved_mode not in {"min", "max"}: raise ValueError("mode must be 'min' or 'max'.")
-    base = dict(kind="run_diagnosis", family="olgs", optimizer=result.optimizer,
+    if resolved_mode not in {"min", "max"}:
+        raise ValueError("mode must be 'min' or 'max'.")
+    base = dict(kind="run_diagnosis", family="olss" if shooting else "olgs",
                 stop_reason=result.stop_reason, **_stop_facts(result.stop_reason),
-                objective_metric=result.objective_metric, objective_mode=resolved_mode,
                 thresholds=dict(_DIAGNOSIS_THRESHOLDS))
-    data = result.diagnostics
-    if not data:
-        return dict(base, classification="insufficient_evidence", final_value=result.objective_value,
-                    iterations=result.iterations)
-    attempts, reversals = data['attempts'], data['reversals']
-    rejection_ratio = data['rejected'] / attempts if attempts else 0.0
-    scale = abs(data['start']) or max(abs(data['minimum']), abs(data['maximum']), np.finfo(float).tiny)
-    relative = (data['end']-data['start']) / scale * (1 if resolved_mode == 'min' else -1)
-    limits = _DIAGNOSIS_THRESHOLDS
-    if attempts >= 3 and rejection_ratio >= limits['repeating_rejection_ratio']: label='repeating_rejections'
-    elif attempts >= 3 and reversals >= max(2, int(np.ceil(attempts*limits['oscillation_reversal_fraction']))): label='oscillating'
-    elif relative > limits['diverging_relative_increase']: label='diverging'
-    elif relative >= -limits['stalled_relative_change']: label='stalled'
-    elif -relative < limits['slow_relative_improvement']: label='slow'
-    else: label='converging'
-    trend=_trend([data['start'],data['end']]); trend['count']=attempts+1
-    return dict(base, classification=label, objective_trend=trend, relative_change=relative,
-                direction_reversals=reversals, rejection_ratio=rejection_ratio, iterations=attempts,
-                evidence="constant_size_numerical_aggregates")
-
-
-def _diagnose_shooting(result: Any) -> dict[str, Any]:
-    history = list(result.history)
-    residuals = [float(row["residual_norm"]) for row in history if "residual_norm" in row]
-    accepted = [bool(row["accepted"]) for row in history if "accepted" in row]
-    rejection_ratio = sum(not value for value in accepted) / len(accepted) if accepted else 0.0
-    if result.solver_converged:
-        classification, relative, reversals = "converging", None, _reversals(residuals)
-        if len(residuals) >= 2:
-            relative = (residuals[-1] - residuals[0]) / max(residuals[0], np.finfo(float).tiny)
+    if shooting:
+        base.update(method=result.method, solver_converged=bool(result.solver_converged), qualified=bool(result.qualified))
+        data = {} if result.run_record is None else result.run_record.summary
+        if not data:
+            values = [float(row["residual_norm"]) for row in result.history if "residual_norm" in row]
+            accepted = [bool(row["accepted"]) for row in result.history if "accepted" in row]
+            data = _legacy_aggregates(values, accepted)
     else:
-        classification, relative, reversals = _classify(
-            residuals, rejection_ratio=rejection_ratio, attempts=len(accepted)
-        )
-    return {
-        "kind": "run_diagnosis",
-        "family": "olss",
-        "method": result.method,
-        "stop_reason": result.stop_reason,
-        **_stop_facts(result.stop_reason),
-        "solver_converged": bool(result.solver_converged),
-        "qualified": bool(result.qualified),
-        "classification": classification,
-        "residual_trend": _trend(residuals),
-        "relative_change": relative,
-        "direction_reversals": reversals,
-        "rejection_ratio": rejection_ratio,
-        "iterations": len(history),
-        "thresholds": dict(_DIAGNOSIS_THRESHOLDS),
-    }
+        base.update(optimizer=result.optimizer, objective_metric=result.objective_metric, objective_mode=resolved_mode)
+        # Keep explicit diagnostics removal as the existing way to suppress evidence.
+        data = result.diagnostics
+    if not data:
+        return dict(base, classification="insufficient_evidence",
+                    final_value=None if shooting and not np.isfinite(result.residual_norm) else (result.residual_norm if shooting else result.objective_value),
+                    iterations=result.iterations)
+    attempts, reversals = data["attempts"], data["reversals"]
+    rejection_ratio = data["rejected"] / attempts if attempts else 0.0
+    scale = abs(data["start"]) or max(abs(data["minimum"]), abs(data["maximum"]), np.finfo(float).tiny)
+    relative = (data["end"] - data["start"]) / scale * (1 if resolved_mode == "min" else -1)
+    label = ("converging" if shooting and result.solver_converged else
+             _classify_summary(relative, reversals, rejection_ratio, attempts))
+    trend = _trend([data["start"], data["end"]])
+    trend["count"] = attempts + 1
+    key = "residual_trend" if shooting else "objective_trend"
+    return dict(base, classification=label, **{key: trend}, relative_change=relative,
+                direction_reversals=reversals, rejection_ratio=rejection_ratio, iterations=attempts,
+                evidence="constant_size_numerical_aggregates",
+                samples_truncated=bool(result.run_record is not None and result.run_record.truncated))
+
+
+def _legacy_aggregates(values, accepted):
+    if not values:
+        return {}
+    return dict(start=values[0], end=values[-1], minimum=min(values), maximum=max(values),
+                attempts=len(accepted), rejected=sum(not value for value in accepted),
+                reversals=_reversals(values))
 
 
 def curvature_probe(
@@ -242,19 +223,7 @@ def shooting_geometry_probe(
 
     runtime = ShootingEvaluator(system)
     residuals, jacobian = runtime.residuals_and_jacobian(variables, options=options)
-    left, singular_values, right_t = np.linalg.svd(jacobian, full_matrices=False)
-    del left
-    threshold = (
-        float(rcond) * singular_values[0]
-        if rcond is not None and singular_values.size
-        else max(jacobian.shape) * np.finfo(float).eps * (singular_values[0] if singular_values.size else 0.0)
-    )
-    rank = int(np.sum(singular_values > threshold))
-    condition = (
-        float(singular_values[0] / singular_values[-1])
-        if singular_values.size and singular_values[-1] > threshold
-        else float("inf")
-    )
+    singular_values, right_t, rank, threshold, condition = jacobian_decomposition(jacobian * variables.scales, rcond=rcond)
     weak = right_t[-1] if right_t.size else np.zeros(variables.spec.size)
     weak_blocks = {
         block.name: float(np.linalg.norm(weak[slice(*variables.spec.offsets[block.name])]))
@@ -286,6 +255,7 @@ def shooting_geometry_probe(
         )
     return {
         "kind": "shooting_geometry_probe",
+        "coordinates": "scaled",
         "jacobian_shape": list(jacobian.shape),
         "singular_values": singular_values.tolist(),
         "rank": rank,

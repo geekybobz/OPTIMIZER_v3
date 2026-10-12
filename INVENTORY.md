@@ -52,6 +52,7 @@ Front Door or `INDEX.md` remains the semantic route map.
 | [docs/INSTALLATION.md](docs/INSTALLATION.md) | topic | Install a committed release in Optimizer and use it from any project folder. | Read when installing, checking global commands, or configuring notebooks. |
 | [docs/MIGRATION.md](docs/MIGRATION.md) | topic | Use the current system contracts and retire legacy trees and logger integrations. | Read when converting an older project or looking for the former workspace layout. |
 | [docs/RELEASE_PROCEDURE.md](docs/RELEASE_PROCEDURE.md) | topic | Promote an approved commit into an isolated global wheel, verify provenance and roll back. | Read before publishing, updating or restoring the installed optimizer. |
+| [docs/SHARED_NUMERICAL_CORE.md](docs/SHARED_NUMERICAL_CORE.md) | topic | Shared numerical mechanics, coordinate scaling, verification evidence and remaining solver limitations. | Read to understand the completed shared core and the numerical work that remains outside it. |
 | [docs/WORKFLOWS.md](docs/WORKFLOWS.md) | topic | Find the supported routes for independent experiments, control exchange, jobs and verification. | Read after the first run to choose your next workflow. |
 | [optimizer/BASE_HUB.md](optimizer/BASE_HUB.md) | front-door | Shared data types and top-level calls of the base catalog group: controls, results, state, and root calls. | Read when working with Controls, results, run state, or a top-level opt call. |
 | [optimizer/TRANSACTIONS.md](optimizer/TRANSACTIONS.md) | topic | Family-aware request-response boundary shared by OLGS, OLSS, and future adapters. | Read when integrating systems with shared core, terminal, or MCP-facing code. |
@@ -126,6 +127,7 @@ Front Door or `INDEX.md` remains the semantic route map.
 | [optimizer/utils/UTIL_SPECTRUM_SMOOTHNESS.md](optimizer/utils/UTIL_SPECTRUM_SMOOTHNESS.md) | topic | Control spectra and smoothness measures that leave controls unchanged. | Read when checking how smooth or band-limited a control is. |
 | [optimizer/visualization/VISUALIZATION_HUB.md](optimizer/visualization/VISUALIZATION_HUB.md) | front-door | System-owned plot data and reusable renderers for Bloch, projection, and control panels. | Read when plotting a system's data. |
 | [test_contained/ho_purification/PROBLEM_CONTEXT.md](test_contained/ho_purification/PROBLEM_CONTEXT.md) | topic | Contained harmonic-oscillator purification system and historical tracker-trial provenance. | Read when running or changing the HO purification trial. |
+| [test_contained/pi_pulse_samples/MCP_TEST_PLAN.md](test_contained/pi_pulse_samples/MCP_TEST_PLAN.md) | topic | Planned four-case installed-MCP π-pulse experiment, action derivation, control exchange and visible evidence. | Read before the next π-pulse campaign; this is a plan, not an execution receipt. |
 | [test_contained/second_order_pmp/PROBLEM_CONTEXT.md](test_contained/second_order_pmp/PROBLEM_CONTEXT.md) | topic | Contained second-order qubit-transfer system and historical tracker-campaign provenance. | Read when running or changing the second-order PMP trial. |
 | [tests/TESTING_HUB.md](tests/TESTING_HUB.md) | front-door | The test suite, its fixtures, contained scenario evidence, and contained numerical systems. | Read when running tests or locating test evidence. |
 
@@ -143,6 +145,7 @@ Front Door or `INDEX.md` remains the semantic route map.
 | [test_contained/olss_scenarios/REPORT.md](test_contained/olss_scenarios/REPORT.md) | deep | OLSS issue record: resolution status, original findings, and campaign evidence. | Read when checking an OLSS issue or rerunning the scenario campaign. |
 | [test_contained/pi_pulse_samples/REPORT.md](test_contained/pi_pulse_samples/REPORT.md) | deep | Known-answer pi-pulse tests for gradient and shooting, soft and hard, through the Python API, the operation service and the terminal. | Read when checking the interfaces on small problems with analytical answers, or rerunning the sample suite. |
 | [test_contained/review_2026_10_12/REPORT.md](test_contained/review_2026_10_12/REPORT.md) | deep | 2026-10-12 review: two rounds of fixes with tests, issue statuses, the shared-core inspection, and shared-core phase 1. | Read when checking the 2026-10-12 fixes and their evidence, or before designing or implementing the shared core. |
+| [test_contained/shared_core/REPORT.md](test_contained/shared_core/REPORT.md) | deep | Shared-core verification: exact OLGS parity, intended OLSS scaling change, CPU reserve and known solver limits. | Read when reviewing the 2026-10-13 numerical consolidation and its baseline comparisons. |
 
 ---
 

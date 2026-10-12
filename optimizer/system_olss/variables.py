@@ -205,6 +205,22 @@ class ShootingVariables:
             flat.append(value.reshape(-1))
         return cls(spec, np.concatenate(flat), name=name)
 
+    @classmethod
+    def from_dict(cls, spec: ShootingSpec, payload: Mapping[str, Any]) -> "ShootingVariables":
+        if "values" not in payload:
+            return cls.from_blocks(spec, payload)
+        if "spec" in payload:
+            declared = payload["spec"]
+            actual = ShootingSpec(tuple(ShootingBlock(**{key: value for key, value in block.items() if key != "size"})
+                                        for block in declared["blocks"]), dtype=declared.get("dtype", "float64"))
+            _validate_shooting_spec_compatibility(spec, actual)
+        return cls.from_flat(spec, payload["values"], name=payload.get("name", "shooting"),
+                             metadata=payload.get("metadata"))
+
+    @property
+    def scales(self) -> np.ndarray:
+        return self.spec.scales
+
     def flatten(self, *, copy: bool = True) -> np.ndarray:
         return self.values.copy() if copy else self.values
 

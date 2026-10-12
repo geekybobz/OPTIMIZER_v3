@@ -8,13 +8,19 @@ reviewed: 2026-10-13
 ---
 # Release evidence
 
-Version **4.0.5** combines the current numerical contracts, foreground service,
+Version **4.0.6** combines the current numerical contracts, foreground service,
 structured CLI, persistent experiments, control transforms, bounded jobs and
-standard-I/O MCP adapter with explicit commit-bound wheel deployment.
+standard-I/O MCP adapter with explicit commit-bound wheel deployment. It adds
+the [shared numerical core](docs/SHARED_NUMERICAL_CORE.md), scale-aware solver
+coordinates, bounded run records and the available-cores-minus-three resource
+ceiling. [Core verification](test_contained/shared_core/REPORT.md) records its
+parity checks and deferred numerical enhancements. The next scientific exercise
+is the [four-case MCP π-pulse plan](test_contained/pi_pulse_samples/MCP_TEST_PLAN.md);
+that campaign is planned, not a release result.
 
 Exact commit, wheel/source SHA-256, installed-package tests and dependency
 constraints are external release artifacts, published with the
-[GitHub release](https://github.com/geekybobz/OPTIMIZER_v3/releases/tag/v4.0.5).
+[GitHub release](https://github.com/geekybobz/OPTIMIZER_v3/releases/tag/v4.0.6).
 `RELEASE_MANIFEST.json` describes the release policy; it is not a wheel receipt.
 The local installation receipt is `~/.local/share/optimizer/install.json`.
 

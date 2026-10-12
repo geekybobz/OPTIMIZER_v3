@@ -43,6 +43,8 @@ reviewed: 2026-10-12
 
 - [Base API Hub](optimizer/BASE_HUB.md) — shared public objects and root calls.
 - [Core Hub](optimizer/core/CORE_HUB.md) — shared engine and method boundary.
+- [Shared numerical core](docs/SHARED_NUMERICAL_CORE.md) — scaling, common mechanics, CPU limits and remaining numerical upgrades.
+- [Four-case MCP π-pulse plan](test_contained/pi_pulse_samples/MCP_TEST_PLAN.md) — planned installed-runtime tests, action derivation, control exchange and visible progress.
 - [Optimizer Hub](optimizer/optimizers/OPTIMIZERS_HUB.md) — gradient and derivative-free methods.
 - [Optimizer Contract](optimizer/optimizers/OPTIMIZER_CONTRACT.md) — common call and result rules.
 - [Optimizer Methods](optimizer/optimizers/OPTIMIZER_METHODS.md) — method taxonomy and selection.

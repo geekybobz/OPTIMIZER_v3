@@ -38,7 +38,7 @@ silently restarts them, and never claims an exact restart from disk. Use explici
 Retrieved results do not certify foreground method-state continuation; select
 their `.controls` or `.variables` explicitly. Other methods reject pause.
 
-Defaults: at most **two workers**, one native-library thread each, 1 GiB total
+Defaults: at most **two workers** (one on machines with a one-slot budget), one native-library thread each, 1 GiB total
 reservation, 256 MiB coordinator reserve, 16 queued jobs, 64 retained jobs,
 8 MiB per input/source bundle and 128 MiB aggregate temporary scratch.
 Each job reserves 256 MiB worker RAM and 4 MiB serialized result by default.
@@ -47,12 +47,16 @@ when a worker exceeds its estimate; this is **not a hard OS memory limit**.
 Native thread environment variables are hints that project libraries must honor.
 Paused workers retain their process slot and memory reservation. These limits
 apply per coordinator/service, not as a machine-wide allocator across experiments.
+The CPU budget reserves three available logical CPUs: worker count times native
+threads cannot exceed `max(1, available_cpus - 3)`. Local ParallelConfig executors
+cap their workers at the same limit. See [CPU safeguards](../../docs/SHARED_NUMERICAL_CORE.md#cpu-safeguard)
+for aggregate execution and native-library limits.
 
 ## Commands
 
 | Call | Behavior |
 |---|---|
-| `jobs.configure(max_workers=..., threads_per_worker=..., memory_bytes=..., coordinator_bytes=..., max_queue=..., max_jobs=..., input_bytes=..., scratch_bytes=..., shutdown_seconds=...)` | Configure while no jobs are retained. Worker count times thread count cannot exceed reported CPU capacity. |
+| `jobs.configure(max_workers=..., threads_per_worker=..., memory_bytes=..., coordinator_bytes=..., max_queue=..., max_jobs=..., input_bytes=..., scratch_bytes=..., shutdown_seconds=...)` | Configure while no jobs are retained. Worker count times thread count cannot exceed available logical CPUs minus three (minimum one). |
 | `jobs.submit("adam", controls=None, variables=None, options={"maxiter": ...}, label=None, worker_bytes=..., result_bytes=..., context=None)` | Freeze an explicit physical input or the selected head and queue one registered solver. |
 | `jobs.status(job=None)` | One job or scheduler status, limits, reservations and enforcement scope. |
 | `jobs.wait(job, timeout=10)` | Wait at most 30 seconds for terminal status or an acknowledged pause; cancellation waits for terminal status. A timeout does not cancel. |

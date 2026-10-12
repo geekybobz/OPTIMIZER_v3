@@ -39,6 +39,8 @@ typed requests to the same service and experiment owner.
 
 - To choose a path for a task, use the [Route Map](MAP.md).
 - To understand components and source ownership, use the [Code Map](CODE_MAP.md).
+- To understand the numerical consolidation and remaining solver limits, use
+  [Shared numerical core](docs/SHARED_NUMERICAL_CORE.md).
 - To find every maintained topic, use the [Topic Index](INDEX.md).
 - To look up an exact public signature, use the generated
   [API Reference](API_REFERENCE.md).

@@ -62,6 +62,8 @@ class TrustRegionConfig:
 
 def _boundary_tau(point: np.ndarray, direction: np.ndarray, radius: float) -> float:
     a = float(np.dot(direction, direction))
+    if a == 0.0:
+        return 0.0
     b = 2.0 * float(np.dot(point, direction))
     c = float(np.dot(point, point)) - float(radius) ** 2
     discriminant = max(0.0, b * b - 4.0 * a * c)

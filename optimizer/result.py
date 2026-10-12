@@ -43,10 +43,11 @@ from optimizer.controls import Controls
 from optimizer.state import RunState, WarmStartState
 from optimizer.system_olgs import validate_metrics
 from optimizer.serialization import to_plain
+from optimizer.core.record import RunRecord
 
 def controls_to_dict(controls: Controls) -> dict[str, Any]:
     """Serialize controls into a plain dictionary for result exports."""
-    return {'name': controls.name, 'spec': controls.spec.to_dict(), 'matrix': controls.as_matrix(copy=True).tolist(), 'meta': dict(controls.meta)}
+    return controls.to_dict()
 
 @dataclass(frozen=True)
 class Evaluation:
@@ -96,11 +97,16 @@ class OptimizerResult:
     state: RunState | None = None
     system_params: dict[str, Any] = field(default_factory=dict)
     diagnostics: dict[str, Any] = field(default_factory=dict)
+    run_record: RunRecord | None = None
 
     @classmethod
     def from_state(cls, state: RunState, *, stop_reason: str, optimizer: str | None=None, objective_metric: str='J', diagnostics: dict[str, Any] | None=None) -> 'OptimizerResult':
         """Create a public result from a final run state."""
         return cls(controls=state.controls.copy(name=state.controls.name), metrics=validate_metrics(state.metrics, objective_metric=objective_metric), stop_reason=str(stop_reason), iterations=int(state.iteration), optimizer=optimizer or state.optimizer_name or 'unknown', objective_metric=str(objective_metric), state=state, system_params=dict(state.system_params), diagnostics=dict(diagnostics or {}))
+
+    @property
+    def counters(self) -> dict[str, int]:
+        return dict(self.diagnostics.get("counters", {}))
 
     @property
     def J(self) -> float:
@@ -123,6 +129,7 @@ class OptimizerResult:
         checkpoint persistence belongs to the future logs/checkpoint layer.
         """
         payload: dict[str, Any] = {'controls': controls_to_dict(self.controls), 'metrics': to_plain(self.metrics), 'objective_metric': self.objective_metric, 'objective_value': to_plain(self.objective_value), 'J': None if 'J' not in self.metrics else to_plain(float(self.metrics['J'])), 'stop_reason': self.stop_reason, 'iterations': int(self.iterations), 'optimizer': self.optimizer, 'system_params': to_plain(self.system_params), 'diagnostics': to_plain(self.diagnostics)}
+        payload["run_record"] = None if self.run_record is None else self.run_record.to_dict()
         if include_state and self.state is not None:
             payload['state'] = {'iteration': int(self.state.iteration), 'global_iteration': int(self.state.global_iteration), 'step_size': to_plain(self.state.step_size), 'optimizer_name': self.state.optimizer_name, 'stop_reason': self.state.stop_reason, 'best_metrics': to_plain(self.state.best_metrics)}
         return payload

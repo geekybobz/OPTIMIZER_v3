@@ -133,7 +133,7 @@ def _control_layout(spec: Any, declared: Any) -> None:
     if not isinstance(declared, Mapping):
         raise ValueError("declared control spec must be a mapping.")
     _keys(declared, {"keys", "control_dim", "dtype", "dt"},
-          {"keys", "control_dim", "dtype", "dt", "n_controls", "shape", "meta"})
+          {"keys", "control_dim", "dtype", "dt", "n_controls", "shape", "meta", "scales"})
     if not isinstance(declared["keys"], (list, tuple)) or any(
         not isinstance(key, str) for key in declared["keys"]
     ):
@@ -141,7 +141,7 @@ def _control_layout(spec: Any, declared: Any) -> None:
     dim = declared["control_dim"]
     if isinstance(dim, bool) or not isinstance(dim, (int, np.integer)):
         raise ValueError("control_dim must be an integer.")
-    actual = ControlSpec(tuple(declared["keys"]), dim, dtype=declared["dtype"], dt=declared["dt"])
+    actual = ControlSpec(tuple(declared["keys"]), dim, dtype=declared["dtype"], dt=declared["dt"], scales=declared.get("scales"))
     _validate_control_spec_compatibility(spec, actual)
     if "shape" in declared and list(declared["shape"]) != list(actual.shape):
         raise ValueError("declared control shape is inconsistent.")

@@ -8,6 +8,10 @@ reviewed: 2026-10-12
 ---
 # Pi-Pulse Sample Tests
 
+The next installed-MCP campaign has a separate [four-case plan](MCP_TEST_PLAN.md)
+with T=1 and 1000 intervals. It has not run; the evidence below is historical.
+
+
 Small problems with analytical answers check that one workflow gives the same
 correct result through every interface. They test interface behavior and tool
 structure; they are not scientific benchmarks and tune no parameters.

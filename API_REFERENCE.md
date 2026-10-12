@@ -26,7 +26,7 @@ surfaces and defaults.
 | [`utils`](#utils) | 32 | Diagnostics, derivative checks, residual geometry, repair, guards, and spectrum tools. |
 | [`schedules`](#schedules) | 5 | Small step-size policy objects for optimizer or repair workflows. |
 | [`base`](#base) | 41 | Base data objects and top-level entry points: Controls, results, warmstart state, diagnostics, and bound context utilities. |
-| [`core`](#core) | 16 | Shared chunk engine: the proposal contract, validated system evaluation, acceptance guards, and stopping rules. |
+| [`core`](#core) | 19 | Shared chunk engine: the proposal contract, validated system evaluation, acceptance guards, and stopping rules. |
 | [`campaigns`](#campaigns) | 9 | Durable multi-stage coordination using objective and provenance declared by system_spec(). |
 | [`visualization`](#visualization) | 14 | Render explicit system-owned plot data; visualization never invents a trajectory. |
 | [`system_olgs`](#system-olgs) | 52 | Mandatory static system semantics and capability-gated numerical hooks owned by each problem. |
@@ -1075,7 +1075,7 @@ Derivative-free population search with isotropic or diagonal sampling radius.
 Family: `olgs`. Root shortcut: `opt.cma_es`.
 
 ```python
-cma_es(system: 'Any', controls: 'Controls | None' = None, *, variant: 'str' = 'diagonal', maxiter: 'int' = 100, population_size: 'int | None' = None, elite_fraction: 'float' = 0.5, sigma: 'float' = 0.1, min_sigma: 'float' = 1e-08, covariance_lr: 'float' = 0.2, seed: 'int | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, state: 'RunState | None' = None, warmstart: 'Any | None' = None, stopping: 'StoppingConfig | None' = None, target_value: 'float | None' = None, target_metric: 'str | None' = None, target_mode: 'str | None' = None, stall_patience: 'int | None' = None, stall_tolerance: 'float' = 0.0, stall_metric: 'str | None' = None, stall_mode: 'str | None' = None, system_params: 'Mapping[str, Any] | None' = None, stage: 'str | None' = None, use_cache: 'bool' = True) -> 'OptimizerResult'
+cma_es(system: 'Any', controls: 'Controls | None' = None, *, variant: 'str' = 'diagonal', maxiter: 'int' = 100, population_size: 'int | None' = None, elite_fraction: 'float' = 0.5, sigma: 'float' = 0.1, min_sigma: 'float' = 1e-08, covariance_lr: 'float' = 0.2, seed: 'int | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, state: 'RunState | None' = None, warmstart: 'Any | None' = None, stopping: 'StoppingConfig | None' = None, target_value: 'float | None' = None, target_metric: 'str | None' = None, target_mode: 'str | None' = None, stall_patience: 'int | None' = None, stall_tolerance: 'float' = 0.0, stall_metric: 'str | None' = None, stall_mode: 'str | None' = None, system_params: 'Mapping[str, Any] | None' = None, stage: 'str | None' = None, use_cache: 'bool' = True, parallel: 'Any | None' = None, system_factory: 'Any | None' = None) -> 'OptimizerResult'
 ```
 
 #### Inputs
@@ -2605,7 +2605,7 @@ Result object returned by repair_newton.
 Family: `olgs`. Root shortcut: `opt.RepairResult`.
 
 ```python
-RepairResult(controls: 'Controls', residuals: 'np.ndarray', residual_norm: 'float', residual_max_abs: 'float', converged: 'bool', iterations: 'int', method: 'str', residual_name: 'str', jacobian_source: 'str', history: 'list[dict[str, Any]]' = <factory>, stop_reason: 'str' = 'unknown') -> None
+RepairResult(controls: 'Controls', residuals: 'np.ndarray', residual_norm: 'float', residual_max_abs: 'float', converged: 'bool', iterations: 'int', method: 'str', residual_name: 'str', jacobian_source: 'str', history: 'list[dict[str, Any]]' = <factory>, stop_reason: 'str' = 'unknown', run_record: 'RunRecord | None' = None, counters: 'dict[str, int]' = <factory>) -> None
 ```
 
 #### Inputs
@@ -3211,7 +3211,7 @@ Named control layout: channel keys, control_dim, dtype, dt, and metadata.
 Family: `olgs`.
 
 ```python
-ControlSpec(keys: 'Sequence[str]', control_dim: 'int', dtype: 'Any' = <class 'float'>, dt: 'float | None' = None, meta: 'Mapping[str, Any]' = <factory>) -> None
+ControlSpec(keys: 'Sequence[str]', control_dim: 'int', dtype: 'Any' = <class 'float'>, dt: 'float | None' = None, meta: 'Mapping[str, Any]' = <factory>, scales: 'Mapping[str, float] | Sequence[float] | None' = None) -> None
 ```
 
 #### Inputs
@@ -3420,7 +3420,7 @@ Standard return object from optimizer calls.
 Family: `olgs`.
 
 ```python
-OptimizerResult(controls: 'Controls', metrics: 'dict[str, Any]', stop_reason: 'str', iterations: 'int', optimizer: 'str', objective_metric: 'str' = 'J', state: 'RunState | None' = None, system_params: 'dict[str, Any]' = <factory>, diagnostics: 'dict[str, Any]' = <factory>) -> None
+OptimizerResult(controls: 'Controls', metrics: 'dict[str, Any]', stop_reason: 'str', iterations: 'int', optimizer: 'str', objective_metric: 'str' = 'J', state: 'RunState | None' = None, system_params: 'dict[str, Any]' = <factory>, diagnostics: 'dict[str, Any]' = <factory>, run_record: 'RunRecord | None' = None) -> None
 ```
 
 #### Inputs
@@ -4153,7 +4153,7 @@ Result chain of an OLGS continuation plan: stages, final result, final system, a
 Family: `olgs`.
 
 ```python
-ContinuationResult(stages: 'tuple[StageResult, ...]', final_result: 'OptimizerResult', final_system: 'Any', stop_reason: 'str', plan_id: 'str') -> None
+ContinuationResult(stages: 'tuple[StageResult, ...]', final_result: 'OptimizerResult', final_system: 'Any', stop_reason: 'str', plan_id: 'str', attempts: 'list[dict[str, Any]]' = <factory>) -> None
 ```
 
 Source: `optimizer/continuation.py`.
@@ -4256,19 +4256,19 @@ Shared chunk engine: the proposal contract, validated system evaluation, accepta
 
 Shared optimizer engine for custom StepProposal functions.
 
-Family: `olgs`. Root shortcut: `opt.run_chunk`.
+Family: `olgs`, `olss`. Root shortcut: `opt.run_chunk`.
 
 ```python
-run_chunk(system: 'Any', controls: 'Controls | None' = None, *, step: 'StepFunction', optimizer_name: 'str', maxiter: 'int', state: 'RunState | None' = None, warmstart: 'WarmStartState | None' = None, step_size: 'float | None' = None, stopping: 'StoppingConfig | None' = None, target_value: 'float | None' = None, target_metric: 'str | None' = None, target_mode: 'str | None' = None, stall_patience: 'int | None' = None, stall_tolerance: 'float' = 0.0, stall_metric: 'str | None' = None, stall_mode: 'str | None' = None, gradient_tolerance: 'float | None' = None, stationary_curvature_tolerance: 'float' = 1e-10, accept: 'AcceptFunction | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, system_params: 'Mapping[str, Any] | None' = None, stage: 'str | None' = None, use_cache: 'bool' = True, enforce_bounds: 'bool' = True, failed_trial_retries: 'int' = 3, failed_trial_shrink: 'float' = 0.5, gradient_source: 'str' = 'gradient', prefer_value_and_gradient: 'bool' = True) -> 'OptimizerResult'
+run_chunk(system: 'Any', controls: 'Controls | None' = None, *, step: 'StepFunction', optimizer_name: 'str', maxiter: 'int', state: 'RunState | None' = None, warmstart: 'WarmStartState | None' = None, step_size: 'float | None' = None, stopping: 'StoppingConfig | None' = None, target_value: 'float | None' = None, target_metric: 'str | None' = None, target_mode: 'str | None' = None, stall_patience: 'int | None' = None, stall_tolerance: 'float' = 0.0, stall_metric: 'str | None' = None, stall_mode: 'str | None' = None, gradient_tolerance: 'float | None' = None, stationary_curvature_tolerance: 'float' = 1e-10, accept: 'AcceptFunction | None' = None, accept_metric: 'str | None' = None, accept_mode: 'str | None' = None, accept_tolerance: 'float' = 0.0, system_params: 'Mapping[str, Any] | None' = None, stage: 'str | None' = None, use_cache: 'bool' = True, enforce_bounds: 'bool' = True, failed_trial_retries: 'int' = 3, failed_trial_shrink: 'float' = 0.5, gradient_source: 'str' = 'gradient', prefer_value_and_gradient: 'bool' = True, coordinate_mode: 'str' = 'auto') -> 'OptimizerResult'
 ```
 
 #### Inputs
 
 | Name | Meaning |
 |---|---|
-| `system` | Must provide evaluate(...) and usually gradient(...). |
+| `system` | OLGS or OLSS project contract; dispatches by family. |
 | `controls/state/warmstart` | Starting point for the chunk. |
-| `step` | Callable from StepContext to StepProposal or Controls. |
+| `step` | Callable from StepContext to StepProposal or native variables. |
 | `optimizer_name` | Name recorded in the numerical result. |
 | `maxiter` | Chunk iteration budget. |
 
@@ -4282,9 +4282,8 @@ run_chunk(system: 'Any', controls: 'Controls | None' = None, *, step: 'StepFunct
 
 #### Requires
 
-- system.evaluate
-- system.gradient
-- Controls
+- family contract
+- native variables
 - step callable
 
 #### Best for
@@ -4316,17 +4315,17 @@ Source: `optimizer/core/engine.py`.
 
 Read-only bundle the engine hands to a proposal function each iteration.
 
-Family: `olgs`. Root shortcut: `opt.StepContext`.
+Family: `olgs`, `olss`. Root shortcut: `opt.StepContext`.
 
 ```python
-StepContext(system: 'OptimizerSystem', evaluator: 'SystemEvaluator', state: 'RunState', evaluation: 'Evaluation', gradient: 'Controls', objective_direction: 'str', iteration: 'int', stage: 'str | None' = None) -> None
+StepContext(system: 'OptimizerSystem', evaluator: 'SystemEvaluator', state: 'RunState', evaluation: 'Evaluation | None', gradient: 'Controls | None', objective_direction: 'str', iteration: 'int', stage: 'str | None' = None, residuals: 'np.ndarray | None' = None, jacobian: 'np.ndarray | None' = None) -> None
 ```
 
 #### Returns
 
 | Name | Meaning |
 |---|---|
-| `fields` | system, evaluator, state, evaluation, gradient, iteration, stage |
+| `fields` | system, evaluator, state, variables, evaluation, gradient, residuals, jacobian, iteration, stage |
 | `meaning` | Everything a method needs to propose the next trial controls. |
 
 #### Requires
@@ -4354,25 +4353,25 @@ Source: `optimizer/core/engine.py`.
 
 Trial update returned by one optimizer iteration.
 
-Family: `olgs`. Root shortcut: `opt.StepProposal`.
+Family: `olgs`, `olss`. Root shortcut: `opt.StepProposal`.
 
 ```python
-StepProposal(controls: 'Controls', step_size: 'float | None' = None, optimizer_state: 'Mapping[str, Any] | None' = None, optimizer_state_on_accept: 'Mapping[str, Any] | None' = None, optimizer_state_on_reject: 'Mapping[str, Any] | None' = None, step_size_on_accept: 'float | None' = None, step_size_on_reject: 'float | None' = None, technical: 'Mapping[str, Any]' = <factory>, reason: 'str | None' = None, stop_reason: 'str | None' = None) -> None
+StepProposal(controls: 'Any', step_size: 'float | None' = None, optimizer_state: 'Mapping[str, Any] | None' = None, optimizer_state_on_accept: 'Mapping[str, Any] | None' = None, optimizer_state_on_reject: 'Mapping[str, Any] | None' = None, step_size_on_accept: 'float | None' = None, step_size_on_reject: 'float | None' = None, technical: 'Mapping[str, Any]' = <factory>, reason: 'str | None' = None, stop_reason: 'str | None' = None) -> None
 ```
 
 #### Inputs
 
 | Name | Meaning |
 |---|---|
-| `controls` | Proposed trial controls. |
+| `controls` | Proposed native variables (Controls or ShootingVariables). |
 | `step_size` | Optional step size to retain on the chunk state. |
 | `optimizer_state` | Optimizer-private state update applied after the proposal. |
 | `optimizer_state_on_accept/on_reject` | Branch-specific state so moments advance only on accepted moves. |
-| `technical` | Free-form payload recorded in the iteration log. |
+| `technical` | Free-form proposal evidence. |
 
 #### Requires
 
-- Controls
+- native variables
 
 #### Best for
 
@@ -4570,6 +4569,42 @@ guard = opt.core.metric_guard(improve='J', require={'fidelity': ('>=', 0.0)})
 ```
 
 Source: `optimizer/core/guards.py`.
+
+### `core.Variables`
+
+Structural flat variables with scales, reconstruction and serialization; implemented by Controls and ShootingVariables.
+
+Family: `olgs`, `olss`.
+
+```python
+Variables(*args, **kwargs)
+```
+
+Source: `optimizer/core/variables.py`.
+
+### `core.RunRecord`
+
+Bounded numerical samples and whole-run aggregates; distinct from frontend command history.
+
+Family: `olgs`, `olss`.
+
+```python
+RunRecord(limit: 'int' = 256, rows: 'list[dict[str, Any]]' = <factory>, total: 'int' = 0, truncated: 'bool' = False, summary: 'dict[str, Any]' = <factory>) -> None
+```
+
+Source: `optimizer/core/record.py`.
+
+### `core.CallOutcome`
+
+Captured validated operation outcome with value, ok, reason and error.
+
+Family: `olgs`, `olss`.
+
+```python
+CallOutcome(value: 'T | None', ok: 'bool', reason: 'str' = 'ok', error: 'str | None' = None) -> None
+```
+
+Source: `optimizer/core/runtime.py`.
 
 ### `core.StopReason`
 
@@ -5758,7 +5793,7 @@ One root solve: candidate, residuals, metrics, convergence, verification, qualif
 Family: `olss`. Root shortcut: `opt.ShootingResult`.
 
 ```python
-ShootingResult(variables: 'ShootingVariables', residuals: 'np.ndarray', metrics: 'dict[str, Any]', solver_converged: 'bool', verified: 'bool', qualified: 'bool', iterations: 'int', method: 'str', stop_reason: 'str', jacobian_source: 'str', verification: 'ShootingVerification | None' = None, counters: 'dict[str, int]' = <factory>, history: 'list[dict[str, Any]]' = <factory>, error: 'str | None' = None, verification_tolerance: 'float | None' = None, verification_tolerance_source: 'str | None' = None) -> None
+ShootingResult(variables: 'ShootingVariables', residuals: 'np.ndarray', metrics: 'dict[str, Any]', solver_converged: 'bool', verified: 'bool', qualified: 'bool', iterations: 'int', method: 'str', stop_reason: 'str', jacobian_source: 'str', verification: 'ShootingVerification | None' = None, counters: 'dict[str, int]' = <factory>, history: 'list[dict[str, Any]]' = <factory>, error: 'str | None' = None, verification_tolerance: 'float | None' = None, verification_tolerance_source: 'str | None' = None, run_record: 'RunRecord | None' = None, state: 'RunState | None' = None) -> None
 ```
 
 Source: `optimizer/system_olss/results.py`.
@@ -6082,7 +6117,7 @@ Solve one OLSS residual equation and independently verify the candidate.
 Family: `olss`. Root shortcut: `opt.solve_shooting`.
 
 ```python
-solve_shooting(system: 'Any', initial: 'ShootingVariables', *, method: 'str' = 'lm', tolerance: 'float' = 1e-10, verification_tolerance: 'float | None' = None, maxiter: 'int' = 40, damping: 'float' = 1e-10, max_step_norm: 'float | None' = None, line_search: 'bool' = True, shrink: 'float' = 0.5, max_backtracks: 'int' = 12, options: 'Mapping[str, Any] | None' = None, verification_options: 'Mapping[str, Any] | None' = None, evaluator: 'ShootingEvaluator | None' = None, previous_result: 'ShootingResult | None' = None, on_iteration: 'Callable[[Mapping[str, Any]], None] | None' = None, on_event: 'Callable[[Mapping[str, Any]], None] | None' = None) -> 'ShootingResult'
+solve_shooting(system: 'Any', initial: 'ShootingVariables', *, method: 'str' = 'lm', tolerance: 'float' = 1e-10, verification_tolerance: 'float | None' = None, maxiter: 'int' = 40, damping: 'float' = 1e-10, max_step_norm: 'float | None' = None, line_search: 'bool' = True, shrink: 'float' = 0.5, max_backtracks: 'int' = 12, options: 'Mapping[str, Any] | None' = None, verification_options: 'Mapping[str, Any] | None' = None, evaluator: 'ShootingEvaluator | None' = None, previous_result: 'ShootingResult | None' = None, on_iteration: 'Callable[[Mapping[str, Any]], None] | None' = None, on_event: 'Callable[[Mapping[str, Any]], None] | None' = None, step: 'Callable | None' = None, record_limit: 'int' = 256) -> 'ShootingResult'
 ```
 
 #### Inputs
@@ -6392,7 +6427,7 @@ before the colon. Continuable means the final state is a valid start for another
 | `stationary_nonminimum` | stopped | olgs | yes | The gradient tolerance is met but sampled curvature is negative: a saddle or a maximum. | engine |
 | `gradient_failed` | failed | olgs | no | The system gradient failed at the current controls. | engine |
 | `smooth_gradient_failed` | failed | olgs | no | The smooth-gradient call of a proximal run failed. | engine |
-| `proposal_failed` | failed | olgs | yes | The step function raised or proposed invalid controls. | engine |
+| `proposal_failed` | failed | olgs, olss | yes | The step function raised or proposed invalid variables. | engine, root solvers |
 | `stopped` | stopped | olgs | yes | Fallback label for a stop without a named reason. | engine |
 | `projected_kkt_converged` | converged | olgs | yes | Projected gradient met its feasibility and projected-stationarity tolerances. | projected_gradient |
 | `restoration_failed` | failed | olgs | yes | Projected gradient could not restore feasibility. | projected_gradient |
@@ -6401,10 +6436,10 @@ before the colon. Continuable means the final state is a valid start for another
 | `converged` | converged | olgs | yes | The residual norm is at or below the repair tolerance. | residual repair |
 | `stage_gate_failed` | failed | olgs | yes | A continuation stage did not pass its gate; the stage label follows the colon. | continuation |
 | `root_tolerance` | converged | olss | yes | The residual norm reached the working tolerance. | solve_shooting |
-| `singular_step` | failed | olss | yes | The step could not be computed from the Jacobian. | solve_shooting |
+| `singular_step` | failed | olgs, olss | yes | The step could not be computed from the Jacobian. | solve_shooting, repair |
 | `least_squares_stationary` | stopped | olss | yes | The residual cannot be reduced further: a least-squares stationary point, not a root. | solve_shooting |
-| `bound_stalled` | stopped | olss | yes | Declared bounds blocked every step. | solve_shooting |
-| `jacobian_failed` | failed | olss | no | The Jacobian failed at an accepted point. | solve_shooting, direct shooting |
+| `bound_stalled` | stopped | olgs, olss | yes | Declared bounds blocked every step. | solve_shooting, repair |
+| `jacobian_failed` | failed | olgs, olss | no | The Jacobian failed at an accepted point. | solve_shooting, direct shooting, repair |
 | `evaluation_failed` | failed | olss | no | Declared metrics failed at the converged point. | solve_shooting |
 | `verification_failed` | failed | olss | yes | Independent verification failed, raised, missed its tolerance, or failed a named check. | solve_shooting, continuation |
 | `verification_not_independent` | failed | olss | yes | Verification reused the working options, so it cannot qualify the root. | solve_shooting |

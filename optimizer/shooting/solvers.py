@@ -6,7 +6,10 @@ from typing import Any, Callable, Mapping
 
 import numpy as np
 
-from optimizer.core.progress import _report
+from optimizer.core.iteration import drive, backtrack
+from optimizer.core.progress import _report, _Progress
+from optimizer.state import RunState
+from optimizer.core.numerics import residual_step, tangent_projection
 
 from optimizer.shooting.evaluator import (
     ShootingEvaluator,
@@ -65,15 +68,6 @@ def _solve_or_record(system: Any, initial: ShootingVariables, options: Mapping[s
         return _initial_failure_result(system, initial, exc, method=dict(options).get("method", "lm"))
 
 
-def _solve_delta(jacobian: np.ndarray, residuals: np.ndarray, method: str, damping: float) -> np.ndarray:
-    if method == "newton":
-        return np.linalg.lstsq(jacobian, -residuals, rcond=None)[0]
-    if method in {"lm", "damped"}:
-        identity = np.eye(jacobian.shape[1])
-        augmented = np.vstack((jacobian, np.sqrt(damping) * identity))
-        target = np.concatenate((-residuals, np.zeros(jacobian.shape[1])))
-        return np.linalg.lstsq(augmented, target, rcond=None)[0]
-    raise ValueError("method must be 'newton', 'lm', or 'damped'.")
 
 
 def solve_shooting(
@@ -95,9 +89,13 @@ def solve_shooting(
     previous_result: ShootingResult | None = None,
     on_iteration: Callable[[Mapping[str, Any]], None] | None = None,
     on_event: Callable[[Mapping[str, Any]], None] | None = None,
+    step: Callable | None = None,
+    record_limit: int = 256,
 ) -> ShootingResult:
     """Solve the OLSS residual equation and independently verify the result."""
 
+    if step is not None and not callable(step):
+        raise TypeError("step must be callable or None.")
     method = str(method).lower()
     if method not in {"newton", "lm", "damped"}:
         raise ValueError("method must be 'newton', 'lm', or 'damped'.")
@@ -126,6 +124,8 @@ def solve_shooting(
         working_tolerance=tolerance,
         verification_tolerance=verification_tolerance,
     )
+    if previous_result is not None:
+        initial = previous_result.variables
     current = initial.copy(name=initial.name)
     history: list[dict[str, Any]] = (
         [dict(row) for row in previous_result.history] if previous_result is not None else []
@@ -141,6 +141,11 @@ def solve_shooting(
         if on_event is not None:
             on_event(message)
         if event == "iteration":
+            if "accepted" in payload:
+                progress.observe({"residual_norm": payload.get("trial_residual_norm", payload["residual_norm"])},
+                                 accepted=payload["accepted"], failure=stop_reason,
+                                 derivative_norm=payload.get("normal_gradient_norm"),
+                                 step_norm=payload.get("scaled_step_norm"))
             _report(kind="iteration", method="solve_shooting",
                     iteration=int(payload["iteration"]) - iteration_offset + 1, total=int(maxiter) + 1,
                     metric="residual", value=float(payload["residual_norm"]))
@@ -166,113 +171,114 @@ def solve_shooting(
             f"initial shooting variables failed evaluation: {_failure_text(exc)}"
         ) from exc
     current_residuals = residuals
-    for iteration in range(int(maxiter) + 1):
+    progress = _Progress({"residual_norm": float(np.linalg.norm(residuals))}, "residual_norm", report=False)
+    progress.record.limit = int(record_limit)
+    if progress.record.limit < 1:
+        raise ValueError("record_limit must be positive.")
+    run_state = RunState.initial(current, metrics={"residual_norm": float(np.linalg.norm(residuals))}, optimizer_name=method)
+    if previous_result is not None and previous_result.state is not None:
+        import copy
+        run_state.optimizer_state = copy.deepcopy(previous_result.state.optimizer_state)
+        run_state.global_iteration = previous_result.state.global_iteration
+    def advance(iteration):
+        nonlocal current, current_residuals, residuals, jacobian, stop_reason, solver_converged, error
         if iteration > 0:
             try:
                 residuals, jacobian = runtime.residuals_and_jacobian(current, options=options)
-            except Exception as exc:  # noqa: BLE001 - recorded as a clean stop.
-                stop_reason = "jacobian_failed"
+            except Exception as exc:
+                stop_reason = 'jacobian_failed'
                 error = _failure_text(exc)
-                break
+                return stop_reason
             current_residuals = residuals
         norm = float(np.linalg.norm(residuals))
         max_abs = float(np.max(np.abs(residuals))) if residuals.size else 0.0
-        row: dict[str, Any] = {
-            "iteration": iteration_offset + iteration,
-            "residual_norm": norm,
-            "residual_max_abs": max_abs,
-        }
+        row: dict[str, Any] = {'iteration': iteration_offset + iteration, 'residual_norm': norm, 'residual_max_abs': max_abs}
         history.append(row)
+        if len(history) > record_limit:
+            del history[0]
         if norm <= tolerance:
             solver_converged = True
-            stop_reason = "root_tolerance"
-            emit("iteration", row)
-            break
+            stop_reason = 'root_tolerance'
+            emit('iteration', row)
+            return stop_reason
         if iteration == int(maxiter):
-            emit("iteration", row)
-            break
-
+            emit('iteration', row)
+            return stop_reason
         from optimizer.jobs.boundary import _checkpoint
         _checkpoint('olss', current, iteration_offset + iteration)
-
-        normal_gradient_norm = float(np.linalg.norm(jacobian.T @ residuals))
-        row["normal_gradient_norm"] = normal_gradient_norm
+        normal_gradient_norm = float(np.linalg.norm(current.scales * (jacobian.T @ residuals)))
+        row['normal_gradient_norm'] = normal_gradient_norm
         try:
-            delta = _solve_delta(jacobian, residuals, method, damping)
-        except np.linalg.LinAlgError as exc:
-            delta = np.full(current.spec.size, np.nan)
+            if step is None:
+                proposal = None
+                delta = residual_step(jacobian, residuals, method=method, damping=damping, scales=current.scales, formulation='augmented')
+            else:
+                from optimizer.core.engine import StepContext, StepProposal, _proposal_state_update
+                run_state.controls = current
+                run_state.metrics = {"residual_norm": norm}
+                context = StepContext(system, runtime, run_state, None, None, "minimize",
+                                      iteration_offset + iteration, residuals=residuals.copy(), jacobian=jacobian.copy())
+                raw = step(context)
+                proposal = raw if isinstance(raw, StepProposal) else StepProposal(raw)
+                from optimizer.system_olss.variables import _validate_shooting_spec_compatibility
+                if not isinstance(proposal.controls, ShootingVariables):
+                    raise TypeError("An OLSS step must propose ShootingVariables.")
+                _validate_shooting_spec_compatibility(current.spec, proposal.controls.spec)
+                delta = proposal.controls.flatten(copy=False) - current.flatten(copy=False)
+        except Exception as exc:
             error = _failure_text(exc)
+            stop_reason = 'singular_step' if step is None else 'proposal_failed'
+            emit('iteration', row)
+            return stop_reason
         raw_norm = float(np.linalg.norm(delta))
         if not np.all(np.isfinite(delta)):
-            stop_reason = "singular_step"
-            emit("iteration", row)
-            break
+            stop_reason = 'singular_step'
+            emit('iteration', row)
+            return stop_reason
         scaled_step_norm = float(np.linalg.norm(delta / current.spec.scales))
-        row["scaled_step_norm"] = scaled_step_norm
+        row['scaled_step_norm'] = scaled_step_norm
         if scaled_step_norm <= np.finfo(float).eps:
-            stop_reason = "least_squares_stationary"
-            emit("iteration", row)
-            break
-        if max_step_norm is not None and raw_norm > float(max_step_norm):
-            delta *= float(max_step_norm) / raw_norm
+            stop_reason = (str(proposal.stop_reason) if proposal is not None and proposal.stop_reason is not None
+                           else 'least_squares_stationary')
+            emit('iteration', row)
+            return stop_reason
+        if max_step_norm is not None and scaled_step_norm > float(max_step_norm):
+            delta *= float(max_step_norm) / scaled_step_norm
+        row['scaled_step_norm'] = float(np.linalg.norm(delta / current.scales))
         attempts = int(max_backtracks) if line_search else 1
-        accepted = False
-        scale = 1.0
-        candidate_norm = norm
-        candidate = current
-        candidate_residuals = residuals
-        tried = 0
-        failed_trials = 0
-        trial_error: str | None = None
-        for _ in range(attempts):
-            trial_values = current.flatten(copy=False) + scale * delta
-            if bounds is not None:
-                trial_values = np.clip(trial_values, bounds[0], bounds[1])
-                if np.array_equal(trial_values, current.flatten(copy=False)):
-                    stop_reason = "bound_stalled"
-                    break
-            tried += 1
-            try:
-                trial = current.with_flat(trial_values, name="shooting_trial")
-                trial_residuals = runtime.residuals(trial, options=options)
-            except Exception as exc:  # noqa: BLE001 - a failed trial is a rejection, as in the OLGS engine.
-                failed_trials += 1
-                trial_error = _failure_text(exc)
-                scale *= shrink
-                continue
-            trial_norm = float(np.linalg.norm(trial_residuals))
-            if trial_norm < candidate_norm:
-                candidate = trial
-                candidate_norm = trial_norm
-                candidate_residuals = trial_residuals
-                accepted = True
-                break
-            scale *= shrink
-        row.update(
-            {
-                "jacobian_shape": list(jacobian.shape),
-                "raw_step_norm": raw_norm,
-                "accepted": accepted,
-                "accepted_scale": scale if accepted else 0.0,
-                "trial_residual_norm": candidate_norm,
-                "failed_trial_evaluations": failed_trials,
-            }
-        )
+        selected = backtrack(current, residuals, delta,
+                             evaluate=lambda trial: runtime.residuals(trial, options=options),
+                             merit=np.linalg.norm, attempts=attempts, shrink=shrink,
+                             bounds=bounds, name="shooting_trial")
+        accepted = selected.accepted
+        candidate, candidate_residuals, candidate_norm = selected.value, selected.evidence, selected.merit
+        scale, tried, failed_trials, trial_error = selected.scale, selected.attempted, selected.failed, selected.error
+        if selected.bound_stalled:
+            stop_reason = "bound_stalled"
+        if proposal is not None:
+            run_state.optimizer_state.update(_proposal_state_update(proposal, accepted=accepted))
+        row.update({'jacobian_shape': list(jacobian.shape), 'raw_step_norm': raw_norm, 'accepted': accepted, 'accepted_scale': scale if accepted else 0.0, 'trial_residual_norm': candidate_norm, 'failed_trial_evaluations': failed_trials})
         if trial_error is not None:
-            row["trial_error"] = trial_error
-        emit("iteration", row)
+            row['trial_error'] = trial_error
+        emit('iteration', row)
         if not accepted:
-            if stop_reason != "bound_stalled":
+            if stop_reason != 'bound_stalled':
                 if tried and failed_trials == tried:
-                    stop_reason = "nonfinite_trial"
+                    stop_reason = 'nonfinite_trial'
                     error = trial_error
                 elif normal_gradient_norm <= max(tolerance, np.sqrt(np.finfo(float).eps)):
-                    stop_reason = "least_squares_stationary"
+                    stop_reason = 'least_squares_stationary'
                 else:
-                    stop_reason = "line_search_failed"
-            break
+                    stop_reason = 'line_search_failed'
+            return stop_reason
         current = candidate
         current_residuals = candidate_residuals
+        run_state.update_current(current, {"residual_norm": candidate_norm}, iteration_increment=1)
+        run_state.mark_best()
+        if proposal is not None and proposal.stop_reason is not None:
+            return str(proposal.stop_reason)
+
+    stop_reason = drive(advance, maxiter=maxiter, terminal=True)
 
     final_residuals = current_residuals
     try:
@@ -319,6 +325,8 @@ def solve_shooting(
                     else "verification_not_independent"
                 )
     source = runtime.system_spec["derivatives"]["jacobian"]["source"]
+    run_state.controls = current
+    run_state.metrics = dict(metrics)
     result = ShootingResult(
         variables=current,
         residuals=final_residuals,
@@ -326,7 +334,7 @@ def solve_shooting(
         solver_converged=solver_converged,
         verified=verified,
         qualified=bool(solver_converged and verified),
-        iterations=max(0, len(history) - 1),
+        iterations=max(0, int(history[-1]["iteration"])) if history else 0,
         method=method,
         stop_reason=stop_reason,
         jacobian_source=str(source),
@@ -336,7 +344,11 @@ def solve_shooting(
         error=error,
         verification_tolerance=verification_tolerance,
         verification_tolerance_source=tolerance_source,
+        run_record=progress.record,
+        state=run_state,
     )
+    progress.finish(runtime.counters(compact=True))
+    run_state.stop_reason = stop_reason
     emit(
         "terminal",
         {
@@ -396,54 +408,40 @@ def solve_direct_shooting(
     current = feasible.variables
     metrics = runtime.metrics(current, options=options)
     current_cost = float(metrics[metric_id])
+    progress = _Progress({metric_id: current_cost}, metric_id, report=False)
     direct_history: list[dict[str, Any]] = []
     stop_reason = "maxiter"
     error: str | None = None
-    for iteration in range(int(maxiter)):
+    def advance_cost(iteration):
+        nonlocal current, current_cost, metrics, stop_reason, error
         try:
             residuals, jacobian = runtime.residuals_and_jacobian(current, options=options)
-        except Exception as exc:  # noqa: BLE001 - recorded as a clean stop.
-            stop_reason, error = "jacobian_failed", _failure_text(exc)
-            break
+        except Exception as exc:
+            stop_reason, error = ('jacobian_failed', _failure_text(exc))
+            return stop_reason
         try:
             gradient = direction_sign * runtime.cost_gradient(current, options=options)
-        except Exception as exc:  # noqa: BLE001 - recorded as a clean stop.
-            stop_reason, error = "cost_gradient_failed", _failure_text(exc)
-            break
-        gram = jacobian @ jacobian.T + float(damping) * np.eye(jacobian.shape[0])
-        multiplier = np.linalg.lstsq(gram, jacobian @ gradient, rcond=None)[0]
-        tangent_gradient = gradient - jacobian.T @ multiplier
-        tangent_norm = float(np.linalg.norm(tangent_gradient))
-        row = {
-            "iteration": iteration,
-            "cost": current_cost,
-            "residual_norm": float(np.linalg.norm(residuals)),
-            "tangent_gradient_norm": tangent_norm,
-        }
+        except Exception as exc:
+            stop_reason, error = ('cost_gradient_failed', _failure_text(exc))
+            return stop_reason
+        tangent_gradient = tangent_projection(gradient, jacobian, damping=damping, scales=current.scales)
+        tangent_norm = float(np.linalg.norm(tangent_gradient / current.scales))
+        row = {'iteration': iteration, 'cost': current_cost, 'residual_norm': float(np.linalg.norm(residuals)), 'tangent_gradient_norm': tangent_norm}
         direct_history.append(row)
-        _report(kind="iteration", method="solve_direct_shooting", iteration=iteration + 1,
-                total=int(maxiter), metric="cost", value=float(current_cost))
+        if len(direct_history) > progress.record.limit:
+            del direct_history[0]
+        _report(kind='iteration', method='solve_direct_shooting', iteration=iteration + 1, total=int(maxiter), metric='cost', value=float(current_cost))
         if tangent_norm <= tolerance:
-            stop_reason = "cost_stationary"
-            break
+            stop_reason = 'cost_stationary'
+            return stop_reason
         accepted = False
         scale = float(step_size)
         failed_trials = 0
         for _ in range(12):
             try:
                 trial = current.with_flat(current.flatten(copy=False) - scale * tangent_gradient)
-                corrected = solve_shooting(
-                    system,
-                    trial,
-                    method="newton",
-                    tolerance=tolerance,
-                    verification_tolerance=verification_tolerance,
-                    maxiter=correction_maxiter,
-                    options=options,
-                    verification_options=verification_options,
-                    evaluator=runtime,
-                )
-            except ValueError as exc:  # non-finite trial or a trial start that cannot be evaluated
+                corrected = solve_shooting(system, trial, method='newton', tolerance=tolerance, verification_tolerance=verification_tolerance, maxiter=correction_maxiter, options=options, verification_options=verification_options, evaluator=runtime)
+            except ValueError as exc:
                 failed_trials += 1
                 error = _failure_text(exc)
                 scale *= 0.5
@@ -459,16 +457,13 @@ def solve_direct_shooting(
                     accepted = True
                     break
             scale *= 0.5
-        row.update(
-            {
-                "accepted": accepted,
-                "accepted_step": scale if accepted else 0.0,
-                "failed_trial_evaluations": failed_trials,
-            }
-        )
+        row.update({'accepted': accepted, 'accepted_step': scale if accepted else 0.0, 'failed_trial_evaluations': failed_trials})
+        progress.observe({metric_id: current_cost}, accepted=accepted, derivative_norm=tangent_norm, step_norm=scale * tangent_norm if accepted else 0.0)
         if not accepted:
-            stop_reason = "cost_line_search_failed"
-            break
+            stop_reason = 'cost_line_search_failed'
+            return stop_reason
+
+    stop_reason = drive(advance_cost, maxiter=maxiter)
 
     final = solve_shooting(
         system,
@@ -483,7 +478,10 @@ def solve_direct_shooting(
     )
     final.method = "direct_shooting"
     final.stop_reason = stop_reason if final.qualified else final.stop_reason
-    final.history = direct_history + final.history
+    final.history = (direct_history + final.history)[-progress.record.limit:]
+    final.run_record = progress.record
+    progress.finish(runtime.counters(compact=True))
+    final.iterations = int(direct_history[-1]["iteration"]) + 1 if direct_history else 0
     final.metrics = runtime.metrics(final.variables, options=options)
     final.counters = runtime.counters(compact=True)
     if final.error is None:

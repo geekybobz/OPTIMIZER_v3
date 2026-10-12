@@ -40,6 +40,16 @@ bytecode out of the checkout.
 
 ### Worked examples
 
+[Shared core tests](test_shared_core.py) check cross-family scaling, physical
+hook arguments, bounded records, checkpoint compatibility, custom shooting
+steps, population parity and the CPU reserve. The
+[numerical core guide](../docs/SHARED_NUMERICAL_CORE.md) explains the remaining
+solver limitations separately from those software invariants.
+The [shared-core verification report](../test_contained/shared_core/REPORT.md)
+records the suite and campaign comparisons against the pre-change source.
+The [MCP π-pulse plan](../test_contained/pi_pulse_samples/MCP_TEST_PLAN.md)
+defines the next four-case experiment; it has not been executed.
+
 [Parallel job tests](test_jobs.py) use neutral OLGS/OLSS systems to check actual
 worker processes, frozen inputs, bounded resources, cancellation and history
 commit ordering. [The jobs reference](../optimizer/jobs/JOBS.md) owns their runtime

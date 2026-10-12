@@ -34,7 +34,7 @@ project system
 | Structured terminal | `optimizer/cli/` | Restricted AST commands, reference binding, prompt/scripts, colon commands, discovery, rich panels and the live progress line | `test_cli_language.py`, `test_cli.py`, `test_cli_ux.py` |
 | MCP interface | `optimizer/mcp/`, `optimizer/operations/frontend.py` | Typed recorded requests, bounded standard I/O, shared experiment attachment and paginated inspection | `test_mcp.py` |
 | Durable experiments | `optimizer/persistence/`, `optimizer/checkpoints/` | Independent stores, typed state, rollback, leases, quotas and atomic recovery | `test_persistence.py` |
-| Shared gradient engine | `optimizer/core/` | Evaluation, proposal validation, bounds, acceptance, stopping and numerical aggregates | `test_engine.py` |
+| Shared numerical core | `optimizer/core/` | Evaluator mechanics, coordinate scaling, kernels, iteration driver, bounded records and continuation; see [numerical core](docs/SHARED_NUMERICAL_CORE.md) | `test_engine.py`, `test_shared_core.py` |
 | Gradient methods | `optimizer/optimizers/` | Method-specific updates and private state | `test_optimizers.py`, `test_advanced_optimizers.py` |
 | Shooting methods | `optimizer/shooting/` | Root solving, direct shooting, continuation, multistart, seeds, and replay | `test_olss.py`, `test_olss_scenarios.py` |
 | Diagnostics and repair | `optimizer/utils/` | Short-run diagnosis, derivatives, geometry, repair, and control inspection | `test_utils_tools.py`, `test_run_diagnostics.py` |

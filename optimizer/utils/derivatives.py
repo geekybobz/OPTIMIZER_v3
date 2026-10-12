@@ -36,6 +36,7 @@ from typing import Any, Callable, Mapping
 
 import numpy as np
 
+from optimizer.core.numerics import difference_jacobian
 from optimizer.controls import Controls
 from optimizer.system_olgs import (
     evaluate_system,
@@ -222,25 +223,10 @@ def finite_difference_jacobian(
     if method not in {"central", "forward"}:
         raise ValueError("method must be 'central' or 'forward'.")
 
-    base_flat = controls.flatten(copy=True)
-    base_residuals = optional_residuals(system, controls, name=residuals)
-    jacobian = np.zeros((base_residuals.size, base_flat.size), dtype=float)
-
-    for index in range(base_flat.size):
-        direction = np.zeros_like(base_flat)
-        direction[index] = 1.0
-        plus = _controls_from_flat(controls, base_flat + eps * direction, name="fd_jac_plus")
-        plus_residuals = optional_residuals(system, plus, name=residuals)
-        if method == "central":
-            minus = _controls_from_flat(controls, base_flat - eps * direction, name="fd_jac_minus")
-            minus_residuals = optional_residuals(system, minus, name=residuals)
-            jacobian[:, index] = (plus_residuals - minus_residuals) / (2.0 * eps)
-        else:
-            jacobian[:, index] = (plus_residuals - base_residuals) / eps
-
-    if not np.all(np.isfinite(jacobian)):
-        raise ValueError("finite-difference Jacobian produced non-finite values.")
-    return jacobian
+    return difference_jacobian(
+        lambda flat: optional_residuals(system, controls.with_flat(flat), name=residuals),
+        controls.flatten(copy=False), eps=eps, method=method, scales=controls.scales,
+    )
 
 
 def get_jacobian(

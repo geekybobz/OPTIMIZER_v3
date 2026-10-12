@@ -1,7 +1,7 @@
 {
   "schema_version": "optimizer.release-policy/v3",
-  "release_version": "4.0.5",
-  "tag": "v4.0.5",
+  "release_version": "4.0.6",
+  "tag": "v4.0.6",
   "environment": "Optimizer",
   "install_mode": "non-editable wheel from explicit approved commit",
   "artifact_manifest": "release.json attached to the GitHub release",

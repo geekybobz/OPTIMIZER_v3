@@ -3,7 +3,7 @@
 Run from the V4 checkout with bytecode disabled:
 
     PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=.:test_contained/olgs_convergence \
-        python -B test_contained/olgs_convergence/run_matrix.py --json OUT --workers 8
+        python -B test_contained/olgs_convergence/run_matrix.py --json OUT --workers 4
 
 Every number is numerical evidence for the declared configuration only; nothing
 here ranks optimizers universally or certifies a physical result.
@@ -329,7 +329,7 @@ def campaign_check(root: Path) -> list[dict]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--json", type=Path)
-    parser.add_argument("--workers", type=int, default=8)
+    parser.add_argument("--workers", type=int, default=4)
     args = parser.parse_args()
     t0 = time.perf_counter()
     jobs = matrix_jobs()

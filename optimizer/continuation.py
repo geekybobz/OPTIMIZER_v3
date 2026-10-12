@@ -11,6 +11,7 @@ import numpy as np
 from optimizer import catalog
 from optimizer.controls import ControlSpec, Controls
 from optimizer.core.evaluate import SystemEvaluator
+from optimizer.core.coordinator import ContinuationCoordinator
 from optimizer.result import OptimizerResult
 from optimizer.system_olgs import get_secondary_update_hook, require_system
 from optimizer.serialization import to_plain
@@ -101,6 +102,7 @@ class ContinuationResult:
     final_system: Any
     stop_reason: str
     plan_id: str
+    attempts: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def controls(self) -> Controls:
@@ -117,6 +119,7 @@ class ContinuationResult:
     def to_dict(self) -> dict[str, Any]:
         return {
             "plan_id": self.plan_id,
+            "attempts": to_plain(self.attempts),
             "stop_reason": self.stop_reason,
             "stages": [stage.to_dict() for stage in self.stages],
             "final_result": self.final_result.to_dict(),
@@ -176,11 +179,11 @@ def _transition_controls(
 
 
 def _stage_gate(system: Any, result: OptimizerResult, gate: StageGate) -> tuple[bool, dict[str, Any]]:
-    facts: dict[str, Any] = {"J": result.J}
+    facts: dict[str, Any] = {result.objective_metric: result.objective_value}
     passed = True
     if gate.objective_target is not None:
         target = float(gate.objective_target)
-        objective_passed = result.J <= target if gate.objective_mode == "min" else result.J >= target
+        objective_passed = result.objective_value <= target if gate.objective_mode == "min" else result.objective_value >= target
         facts.update({"objective_target": target, "objective_passed": objective_passed})
         passed = passed and objective_passed
     if gate.feasibility_tolerance is not None:
@@ -209,7 +212,8 @@ def _stage_gate(system: Any, result: OptimizerResult, gate: StageGate) -> tuple[
         source = "optimizer_state"
         if stationarity is None:
             evaluator = SystemEvaluator(system)
-            stationarity = evaluator.gradient(result.controls).norm()
+            gradient = evaluator.gradient(result.controls).flatten(copy=False)
+            stationarity = float(np.linalg.norm(result.controls.scales * gradient))
             facts["stationarity_gate_counters"] = evaluator.counters()
             source = "explicit_final_gradient"
         stationarity_passed = stationarity <= float(gate.stationarity_tolerance)
@@ -242,39 +246,30 @@ def continuation(
     stage_results: list[StageResult] = []
     stop_reason = "completed"
     plan_id = uuid4().hex
-    for index, raw_stage in enumerate(stages):
-        stage = _coerce_stage(raw_stage)
+    coordinator = ContinuationCoordinator()
+    def advance_stage(iteration):
+        nonlocal active_system, active_controls, stop_reason
+        index = iteration
+        stage = _coerce_stage(stages[index])
         next_system = stage.system_factory(active_system) if stage.system_factory is not None else active_system
         if stage.secondary_updates:
             next_system = get_secondary_update_hook(next_system)(**stage.secondary_updates)
         require_system(next_system)
-        stage_controls, transfer_name = _transition_controls(
-            active_system,
-            next_system,
-            active_controls,
-            stage.control_transfer or control_transfer,
-        )
+        stage_controls, transfer_name = _transition_controls(active_system, next_system, active_controls, stage.control_transfer or control_transfer)
         method = _registered_optimizer(stage.optimizer) if isinstance(stage.optimizer, str) else stage.optimizer
         options = dict(stage.optimizer_options)
-        options.setdefault("stage", stage.label)
+        options.setdefault('stage', stage.label)
         result = method(next_system, stage_controls, **options)
         gate_passed, gate_metrics = _stage_gate(next_system, result, stage.gate)
-        stage_results.append(
-            StageResult(
-                index=index,
-                stage=stage,
-                system=next_system,
-                result=result,
-                gate_passed=gate_passed,
-                gate_metrics=gate_metrics,
-                transfer=transfer_name,
-            )
-        )
+        stage_results.append(StageResult(index=index, stage=stage, system=next_system, result=result, gate_passed=gate_passed, gate_metrics=gate_metrics, transfer=transfer_name))
+        coordinator.record(index=index, accepted=gate_passed, reason=result.stop_reason, label=stage.label, gate_metrics=gate_metrics)
         active_system = next_system
-        active_controls = result.controls.copy(name="continuation_stage_result")
+        active_controls = result.controls.copy(name='continuation_stage_result')
         if not gate_passed and stop_on_gate_failure:
-            stop_reason = f"stage_gate_failed:{stage.label}"
-            break
+            stop_reason = f'stage_gate_failed:{stage.label}'
+            return stop_reason
+
+    stop_reason = coordinator.run(advance_stage, limit=len(stages))
     final = stage_results[-1]
     return ContinuationResult(
         stages=tuple(stage_results),
@@ -282,4 +277,5 @@ def continuation(
         final_system=final.system,
         stop_reason=stop_reason,
         plan_id=plan_id,
+        attempts=coordinator.attempts,
     )

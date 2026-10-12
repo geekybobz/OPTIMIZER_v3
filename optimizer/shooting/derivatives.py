@@ -7,6 +7,7 @@ from typing import Any, Mapping
 import numpy as np
 
 from optimizer.shooting.evaluator import ShootingEvaluator
+from optimizer.core.numerics import difference_jacobian
 from optimizer.system_olss import ShootingVariables, get_shooting_system_spec
 
 
@@ -21,20 +22,10 @@ def finite_difference_shooting_jacobian(
     if not np.isfinite(eps) or eps <= 0.0:
         raise ValueError("eps must be finite and positive.")
     evaluator = ShootingEvaluator(system, use_cache=False)
-    base = variables.flatten(copy=False)
-    rows = evaluator.residuals(variables, options=options).size
-    jacobian = np.empty((rows, variables.spec.size), dtype=float)
-    for column in range(variables.spec.size):
-        scale = max(1.0, abs(float(base[column])))
-        step = eps * scale
-        plus = base.copy()
-        minus = base.copy()
-        plus[column] += step
-        minus[column] -= step
-        r_plus = evaluator.residuals(variables.with_flat(plus), options=options)
-        r_minus = evaluator.residuals(variables.with_flat(minus), options=options)
-        jacobian[:, column] = (r_plus - r_minus) / (2.0 * step)
-    return jacobian
+    return difference_jacobian(
+        lambda flat: evaluator.residuals(variables.with_flat(flat), options=options),
+        variables.flatten(copy=False), eps=eps, scales=variables.scales, relative=True,
+    )
 
 
 # Ratio between the two comparison steps used for a numerical-declared Jacobian.

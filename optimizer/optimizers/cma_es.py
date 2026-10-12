@@ -40,9 +40,11 @@ from dataclasses import dataclass, replace
 from typing import Any, Iterable, Mapping
 from uuid import uuid4
 import numpy as np
+from optimizer.core.iteration import drive
 from optimizer.core.progress import _Progress
 from optimizer.controls import Controls
 from optimizer.core.evaluate import SystemEvaluator
+from optimizer.core.population import evaluate_population
 from optimizer.optimizers._common import controls_from_flat_like, require_finite, require_variant
 from optimizer.optimizers._common import coerce_warmstart
 from optimizer.result import Evaluation, OptimizerResult
@@ -134,7 +136,7 @@ def _system_params(system: Any, explicit: Mapping[str, Any] | None) -> dict[str,
         return dict(vars(params))
     return {}
 
-def cma_es(system: Any, controls: Controls | None=None, *, variant: str='diagonal', maxiter: int=100, population_size: int | None=None, elite_fraction: float=0.5, sigma: float=0.1, min_sigma: float=1e-08, covariance_lr: float=0.2, seed: int | None=None, accept_metric: str | None=None, accept_mode: str | None=None, accept_tolerance: float=0.0, state: RunState | None=None, warmstart: Any | None=None, stopping: StoppingConfig | None=None, target_value: float | None=None, target_metric: str | None=None, target_mode: str | None=None, stall_patience: int | None=None, stall_tolerance: float=0.0, stall_metric: str | None=None, stall_mode: str | None=None, system_params: Mapping[str, Any] | None=None, stage: str | None=None, use_cache: bool=True) -> OptimizerResult:
+def cma_es(system: Any, controls: Controls | None=None, *, variant: str='diagonal', maxiter: int=100, population_size: int | None=None, elite_fraction: float=0.5, sigma: float=0.1, min_sigma: float=1e-08, covariance_lr: float=0.2, seed: int | None=None, accept_metric: str | None=None, accept_mode: str | None=None, accept_tolerance: float=0.0, state: RunState | None=None, warmstart: Any | None=None, stopping: StoppingConfig | None=None, target_value: float | None=None, target_metric: str | None=None, target_mode: str | None=None, stall_patience: int | None=None, stall_tolerance: float=0.0, stall_metric: str | None=None, stall_mode: str | None=None, system_params: Mapping[str, Any] | None=None, stage: str | None=None, use_cache: bool=True, parallel: Any | None=None, system_factory: Any | None=None) -> OptimizerResult:
     """Run compact CMA-ES style derivative-free search."""
     objective = get_system_spec(system)['objective']
     resolved_metric = str(objective['metric_id']) if accept_metric is None else str(accept_metric)
@@ -155,6 +157,9 @@ def cma_es(system: Any, controls: Controls | None=None, *, variant: str='diagona
         raise ValueError('cma_es requires controls, state, or warmstart.')
     evaluator = SystemEvaluator(system, use_cache=use_cache)
     validate_controls_for_system(evaluator.system, controls)
+    bounds = evaluator.control_bounds() if evaluator.capabilities.get("has_control_bounds", False) else None
+    if bounds is not None:
+        controls = controls.with_flat(np.clip(controls.flatten(copy=False), bounds.lower.flatten(copy=False), bounds.upper.flatten(copy=False)))
     params = _system_params(evaluator.system, system_params)
     initial_outcome = evaluator.try_evaluate(controls)
     if not initial_outcome.ok or initial_outcome.evaluation is None:
@@ -169,6 +174,9 @@ def cma_es(system: Any, controls: Controls | None=None, *, variant: str='diagona
         state.optimizer_state = dict(warm.optimizer_state)
     progress = _Progress(state.metrics, str(objective['metric_id']), method='cma_es', budget=maxiter)
     rng = np.random.default_rng(seed)
+    if "rng_state" in state.optimizer_state:
+        rng.bit_generator.state = state.optimizer_state["rng_state"]
+    generation_offset = int(state.optimizer_state.get("generation", 0))
     dimension = controls.spec.size
     population = config.effective_population_size(dimension)
     elite_count = config.elite_count(population)
@@ -199,31 +207,31 @@ def cma_es(system: Any, controls: Controls | None=None, *, variant: str='diagona
         certification: dict[str, Any] = {}
         if failed_generation_count:
             certification['cma_es_degeneracy'] = {'status': 'all_generations_degenerate' if not usable_generation_any else 'degeneracy_observed_after_usable_generation', 'failed_generations': failed_generation_count, 'first_usable_generation': first_usable_generation, 'population_size': int(population)}
-    for generation in range(int(stop_config.maxiter)):
+    def advance_population(iteration):
+        nonlocal requested_stop, mean, diagonal_sigma, usable_generation_any, first_usable_generation, failed_generation_count, current_value, accepted_any
+        generation = iteration
         if requested_stop is not None:
-            break
+            return requested_stop
         if config.variant == 'isotropic':
-            samples = mean[None, :] + float(np.mean(diagonal_sigma)) * rng.normal(size=(population, dimension))
+            samples = mean[None, :] + float(np.mean(diagonal_sigma)) * rng.normal(size=(population, dimension)) * controls.scales
         else:
-            samples = mean[None, :] + rng.normal(size=(population, dimension)) * diagonal_sigma[None, :]
+            samples = mean[None, :] + rng.normal(size=(population, dimension)) * diagonal_sigma[None, :] * controls.scales
         samples[0] = mean
         evaluations: list[Evaluation | None] = []
         values = np.full(population, np.inf if config.accept_mode == 'min' else -np.inf, dtype=float)
         errors: list[str | None] = []
-        for row in range(population):
-            candidate = controls_from_flat_like(controls, samples[row], name=f'cma_es_candidate_{row}')
-            try:
-                outcome = evaluator.try_evaluate(candidate)
-            except KeyboardInterrupt:
-                finish_state('interrupted')
-                raise
+        if bounds is not None:
+            samples = np.clip(samples, bounds.lower.flatten(copy=False), bounds.upper.flatten(copy=False))
+        try:
+            outcomes = evaluate_population(evaluator, controls, samples, parallel=parallel, system_factory=system_factory)
+        except KeyboardInterrupt:
+            finish_state("interrupted")
+            raise
+        for row, outcome in enumerate(outcomes):
+            evaluations.append(outcome.evaluation)
             if outcome.ok and outcome.evaluation is not None:
-                evaluations.append(outcome.evaluation)
                 values[row] = _metric(outcome.evaluation.metrics, config.accept_metric)
-                errors.append(None)
-            else:
-                evaluations.append(None)
-                errors.append(outcome.error)
+            errors.append(outcome.error)
         successful_indices = np.asarray([index for index, evaluation in enumerate(evaluations) if evaluation is not None], dtype=int)
         if successful_indices.size:
             usable_generation_any = True
@@ -235,7 +243,7 @@ def cma_es(system: Any, controls: Controls | None=None, *, variant: str='diagona
             usable_elite_count = min(int(elite_count), int(successful_indices.size))
             elites = samples[order[:usable_elite_count]]
             elite_mean = _weighted_elite_mean(elites)
-            elite_spread = np.mean((elites - elite_mean[None, :]) ** 2, axis=0)
+            elite_spread = np.mean(((elites - elite_mean[None, :]) / controls.scales) ** 2, axis=0)
             next_diagonal_sigma = np.sqrt((1.0 - float(config.covariance_lr)) * (diagonal_sigma * diagonal_sigma) + float(config.covariance_lr) * np.maximum(elite_spread, float(config.min_sigma) ** 2))
             next_diagonal_sigma = np.maximum(next_diagonal_sigma, float(config.min_sigma))
             best_eval = evaluations[best_index]
@@ -262,12 +270,18 @@ def cma_es(system: Any, controls: Controls | None=None, *, variant: str='diagona
             state.iteration += 1
             state.global_iteration += 1
             state.step_size = float(np.mean(diagonal_sigma))
-        state.optimizer_state = {'variant': config.variant, 'mean': mean.copy(), 'diagonal_sigma': diagonal_sigma.copy(), 'population_size': int(population), 'elite_count': int(elite_count), 'generation': int(generation + 1), 'seed': seed, 'best_population_value': best_value, 'best_population_index': best_index}
+        state.optimizer_state = {'variant': config.variant, 'mean': mean.copy(), 'diagonal_sigma': diagonal_sigma.copy(), 'population_size': int(population), 'elite_count': int(elite_count), 'generation': generation_offset + int(generation + 1), 'rng_state': rng.bit_generator.state, 'seed': seed, 'best_population_value': best_value, 'best_population_index': best_index}
         progress.observe(state.metrics, accepted=accepted)
         decision = tracker.check_metrics(state.metrics)
         if decision.stop:
-            requested_stop = decision.reason or 'stopped'
+            return decision.reason or 'stopped'
+
+    from optimizer.jobs.boundary import _checkpoint
+    requested_stop = drive(advance_population, maxiter=stop_config.maxiter, boundary=lambda _: _checkpoint("olgs", state, state.global_iteration), budget_reason="maxiter" if usable_generation_any else "no_usable_candidates")
+    if requested_stop == "no_usable_candidates" and (usable_generation_any or int(stop_config.maxiter) == 0):
+        requested_stop = "maxiter"
     stop_reason = requested_stop or ('maxiter' if usable_generation_any or int(stop_config.maxiter) == 0 else 'no_usable_candidates')
     finish_state(stop_reason, degenerate=int(stop_config.maxiter) == 0 or not usable_generation_any)
     result = OptimizerResult.from_state(state, stop_reason=state.stop_reason, optimizer='cma_es', objective_metric=str(objective['metric_id']), diagnostics=progress.finish(evaluator.counters()))
+    result.run_record = progress.record
     return result

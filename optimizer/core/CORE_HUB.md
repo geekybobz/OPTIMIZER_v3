@@ -12,6 +12,11 @@ This folder contains the shared chunk engine: the loop every gradient-based opti
 runs, the validated boundary to the system, the acceptance policy, and the stopping
 rules.
 
+It also owns the common lifecycle, kernels, records and continuation mechanics
+used by shooting, repair and population methods. See the
+[shared numerical core](../../docs/SHARED_NUMERICAL_CORE.md) for implementation
+ownership, coordinate rules and the remaining solver limitations.
+
 A concrete optimizer supplies only a proposal function.  Core owns everything around
 it, so Adam, momentum, line search, L-BFGS, and nonlinear CG stay small.
 

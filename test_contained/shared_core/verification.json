@@ -1,0 +1,261 @@
+{
+  "baseline_commit": "8d21ad7a152bdbb4ebaa48aae208e3c052c871af",
+  "source_tree_sha256": "812dbac89e8adc112adbaf999e0fc2ecad1eb4113545b3a24a6e3e354cef6f39",
+  "source_tree_hash_scope": "Sorted optimizer/**/*.py followed by tests/test_shared_core.py; relative filename, NUL, bytes, NUL.",
+  "cpu_policy": {
+    "available_logical_cpus": 10,
+    "reserved": 3,
+    "campaign_workers": 4,
+    "native_threads_per_worker": 1,
+    "campaigns_sequential": true
+  },
+  "full_tests": {
+    "passed": 491,
+    "subtests_passed": 450
+  },
+  "final_focused_tests": {
+    "passed": 45,
+    "subtests_passed": 24
+  },
+  "olgs": {
+    "rows": 425,
+    "changed_numeric_rows": 0,
+    "exact_parity": {
+      "matrix": true,
+      "workflows": true,
+      "physical": true,
+      "large_dimension": true
+    },
+    "campaigns": [
+      {
+        "backend": "serial",
+        "ok": true
+      },
+      {
+        "backend": "thread",
+        "ok": true
+      },
+      {
+        "backend": "process",
+        "ok": true
+      }
+    ],
+    "campaign_summary_bytes_changed": true
+  },
+  "olss": {
+    "baseline_counts": {
+      "pass": 20,
+      "gap": 2,
+      "fail": 1
+    },
+    "source_counts": {
+      "pass": 21,
+      "gap": 1,
+      "fail": 1
+    },
+    "changes": [
+      {
+        "id": "G6",
+        "before": {
+          "id": "G6",
+          "name": "Underdetermined root with badly scaled variables",
+          "source": "generic",
+          "tools": "solve_shooting (min-norm step)",
+          "status": "gap",
+          "observed": "root a=2.000e-12, b=2.000e-03 (scaled 0.000, 2.000)",
+          "expected": "scaled minimum-norm root (1e6, 1e-3)",
+          "note": "solver steps ignore declared scales"
+        },
+        "after": {
+          "id": "G6",
+          "name": "Underdetermined root with badly scaled variables",
+          "source": "generic",
+          "tools": "solve_shooting (min-norm step)",
+          "status": "pass",
+          "observed": "root a=1.000e+06, b=1.000e-03 (scaled 1.000, 1.000)",
+          "expected": "scaled minimum-norm root (1e6, 1e-3)",
+          "note": "solver steps use declared variable scales"
+        }
+      }
+    ]
+  },
+  "review_scripts": {
+    "qubit_loop": "passed",
+    "qubit_probes": "completed with declared optional-hook unavailability",
+    "duffing_loop": "passed"
+  },
+  "timing": [
+    {
+      "checkout": "baseline",
+      "results": [
+        {
+          "method": "adam/step0.05",
+          "variables": 300000,
+          "iterations": 20,
+          "ms_per_iteration": 7.1,
+          "stop": "maxiter"
+        },
+        {
+          "method": "lbfgs",
+          "variables": 300000,
+          "iterations": 20,
+          "ms_per_iteration": 4.6,
+          "stop": "maxiter"
+        },
+        {
+          "method": "ncg_prplus",
+          "variables": 300000,
+          "iterations": 20,
+          "ms_per_iteration": 3.5,
+          "stop": "maxiter"
+        },
+        {
+          "method": "ls_armijo",
+          "variables": 300000,
+          "iterations": 20,
+          "ms_per_iteration": 3.2,
+          "stop": "maxiter"
+        },
+        {
+          "method": "newton_cg",
+          "variables": 300000,
+          "iterations": 1,
+          "ms_per_iteration": 220.8,
+          "stop": "gradient_converged"
+        }
+      ]
+    },
+    {
+      "checkout": "source",
+      "results": [
+        {
+          "method": "adam/step0.05",
+          "variables": 300000,
+          "iterations": 20,
+          "ms_per_iteration": 4.5,
+          "stop": "maxiter"
+        },
+        {
+          "method": "lbfgs",
+          "variables": 300000,
+          "iterations": 20,
+          "ms_per_iteration": 3.5,
+          "stop": "maxiter"
+        },
+        {
+          "method": "ncg_prplus",
+          "variables": 300000,
+          "iterations": 20,
+          "ms_per_iteration": 4.2,
+          "stop": "maxiter"
+        },
+        {
+          "method": "ls_armijo",
+          "variables": 300000,
+          "iterations": 20,
+          "ms_per_iteration": 3.1,
+          "stop": "maxiter"
+        },
+        {
+          "method": "newton_cg",
+          "variables": 300000,
+          "iterations": 1,
+          "ms_per_iteration": 217.2,
+          "stop": "gradient_converged"
+        }
+      ]
+    },
+    {
+      "checkout": "baseline",
+      "results": [
+        {
+          "method": "adam/step0.05",
+          "variables": 300000,
+          "iterations": 20,
+          "ms_per_iteration": 4.4,
+          "stop": "maxiter"
+        },
+        {
+          "method": "lbfgs",
+          "variables": 300000,
+          "iterations": 20,
+          "ms_per_iteration": 3.3,
+          "stop": "maxiter"
+        },
+        {
+          "method": "ncg_prplus",
+          "variables": 300000,
+          "iterations": 20,
+          "ms_per_iteration": 4.3,
+          "stop": "maxiter"
+        },
+        {
+          "method": "ls_armijo",
+          "variables": 300000,
+          "iterations": 20,
+          "ms_per_iteration": 2.9,
+          "stop": "maxiter"
+        },
+        {
+          "method": "newton_cg",
+          "variables": 300000,
+          "iterations": 1,
+          "ms_per_iteration": 223.4,
+          "stop": "gradient_converged"
+        }
+      ]
+    },
+    {
+      "checkout": "source",
+      "results": [
+        {
+          "method": "adam/step0.05",
+          "variables": 300000,
+          "iterations": 20,
+          "ms_per_iteration": 6.0,
+          "stop": "maxiter"
+        },
+        {
+          "method": "lbfgs",
+          "variables": 300000,
+          "iterations": 20,
+          "ms_per_iteration": 3.8,
+          "stop": "maxiter"
+        },
+        {
+          "method": "ncg_prplus",
+          "variables": 300000,
+          "iterations": 20,
+          "ms_per_iteration": 3.6,
+          "stop": "maxiter"
+        },
+        {
+          "method": "ls_armijo",
+          "variables": 300000,
+          "iterations": 20,
+          "ms_per_iteration": 3.3,
+          "stop": "maxiter"
+        },
+        {
+          "method": "newton_cg",
+          "variables": 300000,
+          "iterations": 1,
+          "ms_per_iteration": 204.2,
+          "stop": "gradient_converged"
+        }
+      ]
+    }
+  ],
+  "artifact_sha256": {
+    "olgs-baseline.json": "64afde067c0ed2e1d33625d6cedf23ed6537ac15784f06760642a7ddc8c38bc4",
+    "olgs-source-final.json": "610b2592f74952f1d7b92185081ba3fedb7ee7e8565811bacb075965ad28b694",
+    "olss-baseline.json": "1e3b40ae619539907ae4017307c31ce438978ed02ec1d403b94468ca109b8ca2",
+    "olss-source.json": "c07c2aeab4d359e280229583f28c80996db89875c01e465af382590a73ec644e",
+    "tests.log": "892c1cd26e88708a81027d4c300895a8376e9a7cbfd6b7d17eb5226964dd1cc8",
+    "final-focused.log": "da40e7f62f51c6a1410b57095da0d3d247c7e2f475bb9b9fed056d7e55017da8",
+    "qubit-review.log": "46fc8bc95e12c4993b22f38fe80015b15f1c5433a73bf66f42bc112fa14ec28a",
+    "qubit-probes.log": "d2eafb4c73bef54683ca139102fa972c21cff41bf2da4e3dca4bff586a215293",
+    "duffing-review.log": "a454e652de0db1a1d9d0d9f31615446be99c5266fee947395aec954c6c66e5af",
+    "timing.json": "ef6eb91211302d39e15b7bb1574e6c934271a7b6b260f5e9480e30e70319a202"
+  }
+}

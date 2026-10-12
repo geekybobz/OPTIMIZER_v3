@@ -36,8 +36,9 @@ from __future__ import annotations
 
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import dataclass
-from os import cpu_count
 from typing import Callable, Iterable, Sequence, TypeVar
+
+from .resources import cpu_budget
 
 
 T = TypeVar("T")
@@ -63,13 +64,13 @@ class ParallelConfig:
         object.__setattr__(self, "chunksize", int(self.chunksize))
 
     def resolved_workers(self) -> int:
-        """Return the worker count this config implies for local execution."""
+        """Cap local workers at available logical CPUs minus three (minimum one)."""
 
         if self.backend == "serial":
             return 1
         if self.workers is not None:
-            return self.workers
-        return max(1, cpu_count() or 1)
+            return min(self.workers, cpu_budget())
+        return cpu_budget()
 
 
 def parallel_map(

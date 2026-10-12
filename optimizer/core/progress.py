@@ -1,6 +1,6 @@
-"""Constant-size numerical aggregates and an optional display-only progress reporter.
+"""Bounded numerical samples, scalar aggregates and display-only progress.
 
-Nothing here stores samples, IDs or files. A frontend may install a reporter
+Nothing here writes files or persistent logs. A frontend may install a reporter
 for the length of one call with `_reporting`; library loops send it small
 events through `_report`. Without a reporter, `_report` does nothing.
 """
@@ -9,6 +9,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Any, Callable, Iterator
+from optimizer.core.record import RunRecord
 
 _REPORTER: ContextVar[Callable[[dict[str, Any]], None] | None] = ContextVar(
     "optimizer_progress_reporter", default=None)
@@ -39,7 +40,9 @@ def _reporting(reporter: Callable[[dict[str, Any]], None] | None) -> Iterator[No
 
 
 class _Progress:
-    def __init__(self, metrics, metric, *, method=None, budget=None):
+    def __init__(self, metrics, metric, *, method=None, budget=None, report=True):
+        self.report = bool(report)
+        self.record = RunRecord()
         self.metric = metric
         self.method = method
         self.budget = budget
@@ -49,7 +52,7 @@ class _Progress:
         self.last_sign = 0
         self.last_failure = None
 
-    def observe(self, metrics, *, accepted, failure=None):
+    def observe(self, metrics, *, accepted, failure=None, derivative_norm=None, step_norm=None):
         value = float(metrics[self.metric])
         sign = (value > self.end) - (value < self.end)
         if sign:
@@ -61,12 +64,18 @@ class _Progress:
         self.accepted += int(accepted)
         if not accepted and failure:
             self.last_failure = str(failure)
-        _report(kind="iteration", method=self.method, iteration=self.attempts, total=self.budget,
+        self.record.append(dict(iteration=self.attempts, merit=value, derivative_norm=derivative_norm,
+                                step_norm=step_norm, accepted=bool(accepted), reason=failure))
+        if self.report:
+            _report(kind="iteration", method=self.method, iteration=self.attempts, total=self.budget,
                 metric=self.metric, value=value, accepted=bool(accepted))
 
     def finish(self, counters):
-        return dict(objective_metric=self.metric, start=self.start, end=self.end,
+        summary = dict(objective_metric=self.metric, start=self.start, end=self.end,
                     minimum=self.minimum, maximum=self.maximum,
                     attempts=self.attempts, accepted=self.accepted,
                     rejected=self.attempts-self.accepted, reversals=self.reversals,
                     last_failure=self.last_failure, counters=dict(counters))
+
+        self.record.summary = dict(summary)
+        return summary

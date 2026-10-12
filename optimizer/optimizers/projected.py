@@ -8,6 +8,8 @@ from typing import Any, Mapping
 import numpy as np
 
 from optimizer.controls import ControlSpec, Controls
+from optimizer.core.numerics import residual_step, tangent_projection
+from optimizer.core.iteration import drive, backtrack
 from optimizer.core.engine import AcceptanceDecision, StepContext, StepProposal, run_chunk
 from optimizer.optimizers._common import clip_vector, coerce_warmstart, require_finite
 from optimizer.result import Evaluation, OptimizerResult
@@ -106,7 +108,7 @@ def _projected_direction(
     lower = None if bounds is None else bounds.lower.flatten(copy=False).astype(float, copy=False)
     upper = None if bounds is None else bounds.upper.flatten(copy=False).astype(float, copy=False)
     tolerance = 10.0 * np.finfo(float).eps
-    direction = -gradient.copy()
+    direction = -(controls.scales ** 2) * gradient
     for _ in range(size + 1):
         if active:
             rows = np.eye(size, dtype=float)[sorted(active)]
@@ -114,11 +116,9 @@ def _projected_direction(
         else:
             combined = jacobian
         if combined.shape[0]:
-            gram = combined @ combined.T + float(damping) * np.eye(combined.shape[0])
-            multiplier = np.linalg.lstsq(gram, combined @ gradient, rcond=None)[0]
-            direction = -(gradient - combined.T @ multiplier)
+            direction = -tangent_projection(gradient, combined, damping=damping, scales=controls.scales)
         else:
-            direction = -gradient.copy()
+            direction = -(controls.scales ** 2) * gradient
         if bounds is None:
             break
         assert lower is not None and upper is not None
@@ -150,33 +150,25 @@ def _restore(
     current_norm = float(np.linalg.norm(residual))
     total_trials = 0
     improved_any = False
-    for _ in range(int(config.restoration_maxiter)):
+    def advance(_iteration):
+        nonlocal current, residual, current_norm, total_trials, improved_any
         if current_norm <= float(config.feasibility_tolerance):
-            break
+            return "converged"
         jacobian = context.evaluator.jacobian(current, name=config.residual_name) / scales[:, None]
-        gram = jacobian @ jacobian.T + float(config.damping) * np.eye(jacobian.shape[0])
-        multiplier = np.linalg.lstsq(gram, -residual, rcond=None)[0]
-        delta = jacobian.T @ multiplier
+        delta = residual_step(jacobian, residual, method="lm", damping=config.damping,
+                              scales=current.scales, formulation="residual")
         delta, _raw_norm, _clipped = clip_vector(delta, config.max_step_norm)
-        base = current.flatten(copy=False).astype(float, copy=False)
-        accepted = False
-        scale = 1.0
-        for _attempt in range(int(config.max_backtracks)):
-            total_trials += 1
-            trial_flat = _clip_bounds(base + scale * delta, bounds)
-            trial = _controls(current.spec, trial_flat, "projected_restoration_trial")
-            trial_residual = context.evaluator.residuals(trial, name=config.residual_name) / scales
-            trial_norm = float(np.linalg.norm(trial_residual))
-            if trial_norm < current_norm:
-                current = trial
-                residual = trial_residual
-                current_norm = trial_norm
-                improved_any = True
-                accepted = True
-                break
-            scale *= float(config.shrink)
-        if not accepted:
-            break
+        bound_arrays = None if bounds is None else (bounds.lower.flatten(copy=False), bounds.upper.flatten(copy=False))
+        selected = backtrack(current, residual, delta,
+                             evaluate=lambda trial: context.evaluator.residuals(trial, name=config.residual_name) / scales,
+                             merit=np.linalg.norm, attempts=config.max_backtracks, shrink=config.shrink,
+                             bounds=bound_arrays, name="projected_restoration_trial")
+        total_trials += selected.attempted
+        if not selected.accepted:
+            return "restoration_failed"
+        current, residual, current_norm = selected.value, selected.evidence, selected.merit
+        improved_any = True
+    drive(advance, maxiter=config.restoration_maxiter)
     return current, current_norm, total_trials, improved_any
 
 
@@ -236,7 +228,7 @@ def _build_projected_step(config: ProjectedConfig):
             bounds,
             damping=config.damping,
         )
-        projected_kkt_norm = float(np.linalg.norm(direction))
+        projected_kkt_norm = float(np.linalg.norm(direction / context.state.controls.scales))
         if projected_kkt_norm <= float(config.stationarity_tolerance):
             return StepProposal(
                 controls=context.state.controls.copy(name="projected_converged"),

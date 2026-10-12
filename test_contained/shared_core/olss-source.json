@@ -1,0 +1,232 @@
+[
+  {
+    "id": "A1",
+    "name": "Cart rest-to-rest, indirect 2x2",
+    "source": "05_cart_worked.tex",
+    "tools": "solve_shooting, verify_shooting_jacobian",
+    "status": "pass",
+    "observed": "root [24.0, 12.0], E=12.000000000, 1 Newton step",
+    "expected": "(24, 12), E = 12, one step",
+    "note": ""
+  },
+  {
+    "id": "A2",
+    "name": "Cart + integral ledger (3x3)",
+    "source": "05_cart_worked.tex",
+    "tools": "solve_shooting",
+    "status": "pass",
+    "observed": "c=0.3: E=40.800000, mu_z=-288.0000; c=T/2: E=12.000000000, mu_z~0",
+    "expected": "affine, one step; c = T/2 reproduces E = 12 with frozen price 0",
+    "note": ""
+  },
+  {
+    "id": "A3",
+    "name": "Cart, free arrival speed (transversality)",
+    "source": "05_cart_worked.tex",
+    "tools": "solve_shooting",
+    "status": "pass",
+    "observed": "root [6.0, 6.0], E=3.000000000",
+    "expected": "(6, 6), E = 3",
+    "note": ""
+  },
+  {
+    "id": "A4",
+    "name": "Cart bang-bang, minimum time, free final time",
+    "source": "05_cart_worked.tex",
+    "tools": "solve_shooting (FD Jacobian declared)",
+    "status": "pass",
+    "observed": "root [1.0, 1.0, 2.0], stop=root_tolerance, iters=5",
+    "expected": "(mu_x, mu_v0, T) = (1, 1, 2)",
+    "note": "switching control and free T as a variable block need no special tool"
+  },
+  {
+    "id": "A5",
+    "name": "Cart direct route: square 2x2 and oversized 3x2 + energy selection",
+    "source": "06_two_routes.tex",
+    "tools": "solve_shooting (min-norm), solve_direct_shooting",
+    "status": "fail",
+    "observed": "square [6.0, -12.0]; min-norm root E=12.2283; direct -> [5.643939, -9.863637, -2.136363], E=12.025356, stop=maxiter, 201 rows, 0.09s",
+    "expected": "(6, -12) in one step; direct shooting reaches (6, -12, 0), E = 12",
+    "note": "first-order projected descent, not SQP; root tolerance also used as the stationarity tolerance"
+  },
+  {
+    "id": "A6",
+    "name": "Pendulum swing-up to pi by natural continuation",
+    "source": "03_continuation.tex",
+    "tools": "continue_parameter",
+    "status": "pass",
+    "observed": "stop=target_reached, stages=11, p(1)=2.244221",
+    "expected": "s: 0 -> 1 with exact landing and warm starts",
+    "note": ""
+  },
+  {
+    "id": "A7",
+    "name": "Pendulum swing-up by pseudo-arclength (s in the variables)",
+    "source": "03_continuation.tex",
+    "tools": "continue_shooting",
+    "status": "pass",
+    "observed": "20 steps, stop=target_reached, s range [0.000, 1.000], turning points=0, landed s=1.000000000000",
+    "expected": "branch reaches s = 1 with exact landing",
+    "note": ""
+  },
+  {
+    "id": "G1",
+    "name": "Bratu fold: pseudo-arclength through the turning point",
+    "source": "generic",
+    "tools": "continue_shooting",
+    "status": "pass",
+    "observed": "50 steps, stop=completed, max lambda=3.5138, final lambda=0.4866",
+    "expected": "passes lambda_c = 3.5138 and turns back",
+    "note": ""
+  },
+  {
+    "id": "G2",
+    "name": "Bratu by natural continuation in lambda",
+    "source": "generic",
+    "tools": "continue_parameter",
+    "status": "pass",
+    "observed": "last root at lambda=3.5138092041015625, stop=minimum_step_reached",
+    "expected": "adaptive continuation refuses the no-root target beyond lambda_c; arclength (G1) crosses the fold",
+    "note": ""
+  },
+  {
+    "id": "G3",
+    "name": "Unstable BVP y''=1600y: single vs 20-segment multiple shooting",
+    "source": "generic",
+    "tools": "solve_shooting on node-state blocks + continuity residuals",
+    "status": "gap",
+    "observed": "single: qualified=True, |R|=0.0e+00, slope err=0.0e+00; multiple (39 unknowns): qualified=True, slope err=9.9e-14",
+    "expected": "both formulations solve with the exact transition matrix",
+    "note": "the fixture does not expose integration-driven instability because it propagates analytically; replace the single-shooting leg with a finite-precision integrator before using it as a stability comparison"
+  },
+  {
+    "id": "G4",
+    "name": "Inconsistent overdetermined (no exact root)",
+    "source": "generic",
+    "tools": "solve_shooting",
+    "status": "pass",
+    "observed": "qualified=False, stop=least_squares_stationary, x=1.500000, |R|=0.7071",
+    "expected": "not qualified; least-squares point x = 1.5 with least_squares_stationary",
+    "note": ""
+  },
+  {
+    "id": "G5",
+    "name": "Two roots differing only in a small-scale variable",
+    "source": "generic",
+    "tools": "solve_shooting_multistart dedup",
+    "status": "pass",
+    "observed": "qualified roots [[1000000.0, 0.001], [1000000.0, 0.002]]; unique reported=2",
+    "expected": "2 unique roots",
+    "note": "scale-aware deduplication must preserve the small-coordinate distinction"
+  },
+  {
+    "id": "G6",
+    "name": "Underdetermined root with badly scaled variables",
+    "source": "generic",
+    "tools": "solve_shooting (min-norm step)",
+    "status": "pass",
+    "observed": "root a=1.000e+06, b=1.000e-03 (scaled 1.000, 1.000)",
+    "expected": "scaled minimum-norm root (1e6, 1e-3)",
+    "note": "solver steps use declared variable scales"
+  },
+  {
+    "id": "G7",
+    "name": "Bounded variable: root inside and outside bounds",
+    "source": "generic",
+    "tools": "shooting_bounds + solve_shooting",
+    "status": "pass",
+    "observed": "inside: x=0.500000; outside: qualified=False, stop=bound_stalled, x=1.000",
+    "expected": "0.5 found; outside target not qualified with bound_stalled",
+    "note": ""
+  },
+  {
+    "id": "G8",
+    "name": "Deliberately wrong Jacobian",
+    "source": "generic",
+    "tools": "verify_shooting_jacobian",
+    "status": "pass",
+    "observed": "check passed=False (max rel err 1.00); solve: qualified=True in 35 iters",
+    "expected": "check flags the error",
+    "note": ""
+  },
+  {
+    "id": "G9",
+    "name": "Discovery: system_info / context_info / catalog",
+    "source": "generic",
+    "tools": "opt.system_info, opt.context_info, opt.list",
+    "status": "pass",
+    "observed": "family=olss, required_ok=True, contract=olss, shooting entries=7; root exports missing from catalog: []",
+    "expected": "OLSS objects listed like their OLGS counterparts",
+    "note": "the catalog is the declared public API"
+  },
+  {
+    "id": "G10",
+    "name": "Results and run integration",
+    "source": "generic",
+    "tools": "ShootingResult.to_dict, previous_result, on_event",
+    "status": "pass",
+    "observed": "JSON-serializable=True; resumed rows=3; events=['start', 'iteration', 'terminal']",
+    "expected": "continuous history plus start/iteration/terminal events are usable by terminal/MCP adapters",
+    "note": "persistent trace/checkpoint integration remains part of the later logging redesign"
+  },
+  {
+    "id": "B6",
+    "name": "Qubit min-energy transfer, rotational gauge left free (4x4, rank 3)",
+    "source": "shooting_methods.tex (p = 0 limit)",
+    "tools": "solve_shooting_multistart, dedup",
+    "status": "pass",
+    "observed": "14/16 qualified, 3 'unique', best E=9.869604 (pi^2=9.869604), 1 distinct points on the E = pi^2 circle, rank(J)=3",
+    "expected": "one root family per energy level",
+    "note": "the project roots_equivalent hook identifies the global-phase orbit"
+  },
+  {
+    "id": "B1",
+    "name": "Robust transfer 8x9: published root reproduced",
+    "source": "shooting_methods.tex + RESULTS.md",
+    "tools": "evaluate, verify",
+    "status": "pass",
+    "observed": "|R|=3.53e-09 (1500 steps), verify |R|=1.35e-11 (6000 steps), E=64.754737709",
+    "expected": "|R| ~ 0, E = 64.754737670936",
+    "note": "maps the article's M multiplier with p = -M/4"
+  },
+  {
+    "id": "B2",
+    "name": "Robust transfer: declared FD Jacobian checked",
+    "source": "shooting_methods.tex",
+    "tools": "verify_shooting_jacobian",
+    "status": "pass",
+    "observed": "passed=True, max abs err=3.8e-04, cond(J)=1.6e+04",
+    "expected": "",
+    "note": ""
+  },
+  {
+    "id": "B3",
+    "name": "Robust transfer: perturbation cloud (3.6e-4) in 8 processes",
+    "source": "RESULTS.md campaign",
+    "tools": "solve_shooting_multistart (process backend, factory), dedup, ranking",
+    "status": "pass",
+    "observed": "8/8 qualified, 1 unique, best E=64.754737672 in 11.4s",
+    "expected": "all seeds return to the published root",
+    "note": ""
+  },
+  {
+    "id": "B4",
+    "name": "Robust transfer: 24 scale-aware random seeds",
+    "source": "RESULTS.md campaign (128 starts, 30 clusters)",
+    "tools": "random_shooting_seeds + solve_shooting_multistart",
+    "status": "pass",
+    "observed": "1/24 qualified, 1 unique, energies [166.702], 150.4s",
+    "expected": "tool availability verified; qualification yield remains configuration-dependent",
+    "note": ""
+  },
+  {
+    "id": "B5",
+    "name": "Cross-check: shooting control replayed by the OLGS system",
+    "source": "test_contained/second_order_pmp",
+    "tools": "compare_shooting_replay",
+    "status": "pass",
+    "observed": "OLGS fidelity=0.99998347, sum|F|^2=1.50e-05, energy=64.8822 vs 64.7547",
+    "expected": "same physics agrees to grid accuracy",
+    "note": "the report records grid, interpolation, units, and mapped metric differences"
+  }
+]

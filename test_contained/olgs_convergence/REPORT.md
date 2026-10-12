@@ -36,8 +36,10 @@ The high- and medium-priority tool gaps found by the campaign were fixed:
 - `diagnose_run`, `curvature_probe`, and `compare_methods` support the intended
   five-to-ten-iteration inspect-and-decide workflow.
 
-Still deferred as later numerical design: scale-aware gradient norms and
-preconditioning (OLGS-010), exact projection onto intersecting equality/bound
+Coordinate scaling and scale-aware gradient norms (OLGS-010) are implemented
+in the [shared numerical core](../../docs/SHARED_NUMERICAL_CORE.md), 2026-10-13.
+Still deferred as later numerical design: general operator preconditioning,
+exact projection onto intersecting equality/bound
 constraints or a stronger constrained solver (OLGS-011), strong-Wolfe search,
 advanced quasi-Newton updates, and accelerated proximal methods.
 

@@ -8,6 +8,7 @@ import math
 import zipfile
 import numpy as np
 from optimizer.controls import Controls, ControlSpec
+from optimizer.core.record import RunRecord
 from optimizer.utils.control_tools import ControlGrid, ControlTransformResult
 from optimizer.jobs.contracts import JobHandle, JobsConfig
 from optimizer.result import Evaluation, OptimizerResult
@@ -17,7 +18,7 @@ from optimizer.system_olss import results as shooting_results
 from optimizer.schedules import step_size as schedules
 from optimizer.operations.contracts import ObjectRef, _ServiceError
 
-_TYPES = {c.__name__: c for c in (ControlSpec, ControlGrid, ControlTransformResult, JobHandle, JobsConfig, Evaluation, OptimizerResult, RunState, WarmStartState,
+_TYPES = {c.__name__: c for c in (RunRecord, ControlSpec, ControlGrid, ControlTransformResult, JobHandle, JobsConfig, Evaluation, OptimizerResult, RunState, WarmStartState,
                                 ShootingVariables, ShootingSpec, ShootingBlock, ObjectRef)}
 _TYPES.update({name: c for name, c in vars(shooting_results).items()
                if isinstance(c, type) and dataclasses.is_dataclass(c) and c.__module__ == shooting_results.__name__})
@@ -115,6 +116,12 @@ class _Codec:
             if cls in (OptimizerResult, RunState, WarmStartState) and retired <= set(fields):
                 for name in retired: fields.pop(name)
                 if cls is OptimizerResult: fields['diagnostics'] = {}
+            if cls in (OptimizerResult, shooting_results.ShootingResult) and "run_record" not in fields:
+                fields["run_record"] = None
+            if cls is shooting_results.ShootingResult and "state" not in fields:
+                fields["state"] = None
+            if cls is ControlSpec and "scales" not in fields:
+                fields["scales"] = None
             if set(fields) != {f.name for f in dataclasses.fields(cls)}:
                 raise _ServiceError('checkpoint_corrupt', 'Dataclass fields do not match codec version.')
             return cls(**fields)

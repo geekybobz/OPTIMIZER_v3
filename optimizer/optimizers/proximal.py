@@ -43,7 +43,7 @@ def _build_step(config: ProximalGradientConfig):
         )
         prox_trial = context.evaluator.prox(smooth_trial, step_size)
         mapping = (flat - prox_trial.flatten(copy=False).astype(float, copy=False)) / step_size
-        mapping_norm = float(np.linalg.norm(mapping))
+        mapping_norm = float(np.linalg.norm(mapping / controls.scales))
         if mapping_norm <= float(config.mapping_tolerance):
             return StepProposal(
                 controls=controls.copy(name="proximal_converged"),
@@ -112,6 +112,7 @@ def proximal_gradient(
         max_step_norm=max_step_norm,
         reject_shrink=reject_shrink,
     )
+    engine_kwargs.setdefault("coordinate_mode", "physical")
     return run_chunk(
         system,
         controls,

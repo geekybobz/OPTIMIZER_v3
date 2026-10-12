@@ -33,6 +33,9 @@ from optimizer.core.engine import (
     run_chunk,
 )
 from optimizer.core.evaluate import EvaluationOutcome, GradientOutcome, SystemEvaluator, ValueGradientOutcome
+from optimizer.core.record import RunRecord
+from optimizer.core.runtime import CallOutcome
+from optimizer.core.variables import Variables
 from optimizer.core.guards import MetricGuard, metric_guard
 from optimizer.core.stop_reasons import STOP_REASONS, StopReason
 from optimizer.core.stopping import StopDecision, StoppingConfig, StopTracker

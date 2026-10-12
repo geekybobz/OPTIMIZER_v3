@@ -61,7 +61,7 @@ async def _serve(adapter):
     import anyio
     from mcp.server.lowlevel import Server
     from mcp import types
-    server=Server('optimizer',version='4.0.5',instructions='Attach a named experiment, discover operations, execute one native request at a time, inspect references. CLI/MCP share state and history. Detach preserves jobs; jobs.shutdown explicitly stops them.')
+    server=Server('optimizer',version='4.0.6',instructions='Attach a named experiment, discover operations, execute one native request at a time, inspect references. CLI/MCP share state and history. Detach preserves jobs; jobs.shutdown explicitly stops them.')
     lock=anyio.Lock()
     @server.list_tools()
     async def listing():

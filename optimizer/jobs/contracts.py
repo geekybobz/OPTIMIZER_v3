@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import math
-import os
+from optimizer.utils.resources import cpu_budget
 
 
 @dataclass(frozen=True)
@@ -20,7 +20,7 @@ class JobHandle:
 @dataclass(frozen=True)
 class JobsConfig:
     """Reservations bound admission; sampled RSS is not an OS allocation limit."""
-    max_workers: int = min(2, os.cpu_count() or 1)
+    max_workers: int = min(2, cpu_budget())
     threads_per_worker: int = 1
     memory_bytes: int = 1024 * 1024 * 1024
     coordinator_bytes: int = 256 * 1024 * 1024
@@ -36,8 +36,9 @@ class JobsConfig:
             value = getattr(self, name)
             if type(value) is not int or value < (0 if name == "max_queue" else 1):
                 raise ValueError(f"{name} must be a {'nonnegative' if name == 'max_queue' else 'positive'} integer.")
-        if self.max_workers * self.threads_per_worker > (os.cpu_count() or 1):
-            raise ValueError("Worker/native-thread reservations exceed available CPU slots.")
+        if self.max_workers * self.threads_per_worker > cpu_budget():
+            raise ValueError("Worker/native-thread reservations exceed the CPU budget "
+                             "(available logical CPUs minus three, minimum one).")
         if self.coordinator_bytes >= self.memory_bytes:
             raise ValueError("Reserve less coordinator memory than the total memory budget.")
         if not math.isfinite(self.shutdown_seconds) or not 0 < self.shutdown_seconds <= 30:
