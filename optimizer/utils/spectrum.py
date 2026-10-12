@@ -48,8 +48,12 @@ def control_spectrum(
     if sample_dt <= 0.0 or not np.isfinite(sample_dt):
         raise ValueError("dt must be finite and positive.")
 
-    spectrum = np.fft.rfft(matrix, axis=1)
-    frequencies = np.fft.rfftfreq(controls.spec.control_dim, d=sample_dt)
+    if np.iscomplexobj(matrix):
+        spectrum = np.fft.fft(matrix, axis=1)
+        frequencies = np.fft.fftfreq(controls.spec.control_dim, d=sample_dt)
+    else:
+        spectrum = np.fft.rfft(matrix, axis=1)
+        frequencies = np.fft.rfftfreq(controls.spec.control_dim, d=sample_dt)
     amplitude = np.abs(spectrum)
     power = amplitude * amplitude
     total_power = np.sum(power, axis=1)
@@ -60,7 +64,7 @@ def control_spectrum(
         cutoff = float(high_frequency_cutoff)
         if cutoff < 0.0 or not np.isfinite(cutoff):
             raise ValueError("high_frequency_cutoff must be finite and nonnegative.")
-        mask = frequencies >= cutoff
+        mask = np.abs(frequencies) >= cutoff
         high_power = np.sum(power[:, mask], axis=1)
         high_fraction = {
             key: float(high_power[row] / max(total_power[row], np.finfo(float).tiny))

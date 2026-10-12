@@ -27,7 +27,7 @@ from typing import Any
 
 import numpy as np
 
-from optimizer.controls import Controls
+from optimizer.controls import Controls, _validate_control_spec_compatibility
 from optimizer.guesses.base import finalize_guess
 from optimizer.guesses.harmonic import fourier_guess
 from optimizer.guesses.random import random_fourier_guess, random_guess, random_smooth_guess
@@ -78,8 +78,9 @@ def mix_guess(
     for item in items:
         if not isinstance(item, Controls):
             raise TypeError("mix_guess inputs must be Controls objects.")
-        if item.spec.keys != spec.keys or item.spec.control_dim != spec.control_dim:
-            raise ValueError("all guesses must have matching control specs.")
+        _validate_control_spec_compatibility(spec, item.spec)
+        if item.spec.meta.get("units") != spec.meta.get("units") or item.meta.get("control_grid") != items[0].meta.get("control_grid"):
+            raise ValueError("all guesses must have matching units and grid declarations.")
     if weights is None:
         weight_array = np.full(len(items), 1.0 / len(items), dtype=float)
     else:
@@ -88,7 +89,7 @@ def mix_guess(
             raise ValueError(f"weights must have length {len(items)}.")
         if not np.all(np.isfinite(weight_array)):
             raise ValueError("weights must be finite.")
-    matrix = np.zeros(spec.shape, dtype=float)
+    matrix = np.zeros(spec.shape, dtype=np.result_type(spec.dtype, float))
     for weight, item in zip(weight_array, items, strict=True):
         matrix += float(weight) * item.as_matrix(copy=False)
     return Controls.from_matrix(

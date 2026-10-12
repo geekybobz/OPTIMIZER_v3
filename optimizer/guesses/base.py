@@ -143,7 +143,7 @@ def apply_endpoint(matrix: np.ndarray, *, endpoint: str | None, rows: tuple[int,
     """Apply endpoint policy to selected channels."""
 
     policy = "free" if endpoint is None else str(endpoint).lower()
-    out = np.asarray(matrix, dtype=float).copy()
+    out = np.asarray(matrix).copy()
     if policy in {"free", "hold"}:
         return out
     if policy == "zero":
@@ -163,7 +163,7 @@ def _scaled_channel(
 ) -> np.ndarray:
     """Scale one raw channel according to the requested amplitude convention."""
 
-    raw = np.asarray(raw, dtype=float)
+    raw = np.asarray(raw)
     mode = str(scale).lower()
     if mode == "none":
         return amplitude * raw
@@ -172,7 +172,7 @@ def _scaled_channel(
     elif mode == "l2":
         denom = float(np.linalg.norm(raw))
     elif mode == "energy":
-        denom = float(np.sqrt(dt * np.sum(raw * raw)))
+        denom = float(np.sqrt(dt * np.sum(np.abs(raw) ** 2)))
     else:
         raise ValueError("scale must be one of: none, max_abs, l2, energy.")
     if denom <= np.finfo(float).tiny:
@@ -195,7 +195,9 @@ def finalize_guess(
 ) -> Controls:
     """Convert a raw unit waveform into a validated ``Controls`` guess."""
 
-    raw_matrix = np.asarray(raw, dtype=float)
+    raw_matrix = np.asarray(raw)
+    if np.iscomplexobj(raw_matrix) and spec.dtype.kind != "c":
+        raise ValueError("Complex guess data requires a complex ControlSpec.")
     if raw_matrix.shape != spec.shape:
         raise ValueError(f"raw guess must have shape {spec.shape}, got {raw_matrix.shape}.")
     if not np.all(np.isfinite(raw_matrix)):
@@ -207,7 +209,7 @@ def finalize_guess(
     env = envelope_values(spec, envelope)
     dt = 1.0 if spec.dt is None else float(spec.dt)
 
-    matrix = np.zeros(spec.shape, dtype=float)
+    matrix = np.zeros(spec.shape, dtype=np.result_type(raw_matrix.dtype, float))
     for row in selected:
         shaped = raw_matrix[row] * env
         matrix[row] = offsets[row] + _scaled_channel(

@@ -77,6 +77,12 @@ def _policy(item: catalog.CatalogItem) -> _Adapter:
                         continuation="controls_only" if name == "cma_es" else "method_state")
     if group == "guesses":
         return _Adapter("tool", "candidate", _injections(obj), family=family)
+    if group == "utils" and item.kind == "control_transform":
+        # Pure transforms validate their own source/grid. A requested context
+        # constrains only an explicit target, never the source array.
+        if name == "recover_shooting_controls":
+            return _Adapter("tool", "inspect", _injections(obj), hooks=("recover_controls",), family=("olss",))
+        return _Adapter("tool", "inspect", (("target", "layout"),) if name in {"resample_controls", "assemble_channels"} else ())
     if group == "utils" and name in _UTIL_READ | {"repair_newton"}:
         return _Adapter("tool", "candidate" if name == "repair_newton" else "inspect",
                         _injections(obj), family=("olss",) if name == "shooting_geometry_probe" else family)

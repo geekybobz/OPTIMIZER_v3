@@ -11,6 +11,9 @@ reviewed: 2026-10-12
 This folder contains diagnostics, derivative checks, residual geometry, repair, and
 control-shape inspection tools for OPTIMIZER v4.
 
+[Control transformations](UTIL_CONTROL_TRANSFORMS.md) covers explicit grids,
+resampling, smoothing/filtering, scaling, composition and shooting recovery.
+
 The goal is compact, traversable documentation: start here, then open the category
 note needed for the current debugging or analysis task.
 
@@ -115,6 +118,7 @@ optimizer/utils/
   repairs.py
   run_diagnostics.py
   spectrum.py
+  control_tools.py
 ```
 
 `parallel.py` holds map-style execution helpers.  It is generic plumbing rather than a

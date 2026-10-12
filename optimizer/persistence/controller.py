@@ -403,7 +403,8 @@ class _Persistence:
             from optimizer.system_olss import ShootingVariables
             expected=Controls if kind=='controls' else ShootingVariables
             if not isinstance(actual,expected): raise _ServiceError('invalid_arguments','Checkpoint kind does not match physical value.')
-        if kind=='report' and _physical(actual) is not None:
+        from optimizer.utils.control_tools import ControlTransformResult
+        if kind=='report' and _physical(actual) is not None and not isinstance(actual, ControlTransformResult):
             raise _ServiceError('invalid_arguments','Use the explicit physical/full-state kind for numerical state.')
         ref=self.staged._publish(actual,revision=self.staged._revision,
             method_key=source.method_key if source and kind=='full_state' else None,

@@ -29,7 +29,7 @@ bytecode out of the checkout.
 | Integrated OLGS/OLSS changes and transactions | `test_olgs_olss_integrations.py`, `test_transactions.py` |
 | Shared conventions: serialization, families, and stop reasons | `test_serialization.py`, `test_stop_reasons.py` |
 | OLSS contract and scenarios | `test_olss.py`, `test_olss_scenarios.py`, `test_olss_regressions.py` |
-| Guesses and utilities | `test_guesses.py`, `test_utils_tools.py`, `test_run_diagnostics.py` |
+| Guesses and utilities | `test_guesses.py`, `test_utils_tools.py`, `test_run_diagnostics.py`, `test_control_tools.py` |
 | System contract, templates, and visualization | `test_system_contract.py`, `test_templates.py`, `test_system_spec_visualization.py` |
 | Command history and campaigns | `test_history.py`, `test_campaigns.py` |
 | Service, terminal and persistence | `test_operation_service.py`, `test_cli_language.py`, `test_cli.py`, `test_persistence.py` |

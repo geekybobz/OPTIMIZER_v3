@@ -40,6 +40,12 @@ from optimizer.utils.run_diagnostics import (
     shooting_geometry_probe,
 )
 from optimizer.utils.spectrum import control_spectrum, smoothness_report
+from optimizer.utils.control_tools import (
+    ControlGrid, ControlTransformResult, uniform_control_grid, resample_controls,
+    smooth_controls, filter_controls, scale_controls, normalize_controls,
+    mix_controls, select_channels, replace_channel, assemble_channels,
+    join_controls_in_time, apply_control_bounds, recover_shooting_controls,
+)
 from optimizer.catalog import attach_namespace_helpers, exports
 
 

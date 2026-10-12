@@ -11,7 +11,7 @@ from uuid import uuid4
 
 import numpy as np
 
-from optimizer.controls import Controls
+from optimizer.controls import Controls, ControlSpec, _validate_control_spec_compatibility
 from optimizer.core.engine import run_chunk
 from optimizer.core.stop_reasons import STOP_REASONS
 from optimizer.result import OptimizerResult
@@ -189,6 +189,8 @@ class OperationService:
         # Explicit methods may forward engine options. Only declared run_chunk
         # parameters are accepted, never arbitrary optimizer **kwargs.
         allowed = {n for n, p in signature.parameters.items() if p.kind not in (p.VAR_KEYWORD, p.VAR_POSITIONAL)}
+        if item.id == "base.control_spec":
+            allowed |= {"dtype", "dt", "meta"}
         engine_options = set(inspect.signature(run_chunk).parameters) - {"system", "controls", "step", "optimizer_name"}
         if any(p.kind == p.VAR_KEYWORD and p.name == "engine_kwargs" for p in signature.parameters.values()):
             allowed |= engine_options
@@ -205,6 +207,13 @@ class OperationService:
         project_options = item.id in {"base.plot_data", "system_olgs.optional_plot_data"}
         if set(args) - allowed and not project_options:
             raise _ServiceError("invalid_arguments", f"Unknown arguments: {sorted(set(args) - allowed)}.")
+        transform = item.group == "utils" and item.kind == "control_transform"
+        cross_layout = transform and item.name != "recover_shooting_controls"
+        if transform:
+            budget = args.get("max_bytes", self.session.max_bytes)
+            if type(budget) is not int or budget < 1:
+                raise _ServiceError("invalid_arguments", "max_bytes must be a positive integer.")
+            args["max_bytes"] = min(budget, self.session.max_bytes)
 
         with self.session._lock:
             self.session._check_revision(revision)
@@ -224,6 +233,11 @@ class OperationService:
                 if adapter.effect in {"solve", "candidate"} and context.factory is None:
                     raise _ServiceError("unsupported_isolation", "State-changing tools require a reconstruction/clone recipe.")
                 head = self.session.get(context.head) if context.head else None
+                if item.id == "base.control_spec":
+                    if context.family != "olgs" or args:
+                        raise _ServiceError("invalid_arguments", "control_spec(context=...) requires an OLGS context and no layout overrides.")
+                    args.update(keys=context.layout.keys, control_dim=context.layout.control_dim,
+                                dtype=context.layout.dtype, dt=context.layout.dt, meta=_owned(context.layout.meta))
                 for name, source in adapter.inject:
                     if name not in args:
                         if source == "system":
@@ -250,7 +264,7 @@ class OperationService:
                     forbidden = set(nested) & {"system", "initial", "evaluator", "previous_result"}
                     if unknown or forbidden:
                         raise _ServiceError("invalid_arguments", f"Invalid nested solver options: {sorted(unknown | forbidden)}.")
-                for name in ("controls", "variables", "initial", "anchor", "center", "gradient", "previous", "current"):
+                for name in (() if cross_layout else ("controls", "variables", "initial", "anchor", "center", "gradient", "previous", "current")):
                     if isinstance(args.get(name), (Controls, ShootingVariables)):
                         _compatible(context.layout, args[name])
                 for name in ("state", "warmstart"):
@@ -269,6 +283,15 @@ class OperationService:
                         if other.family != family:
                             raise _ServiceError("wrong_family", f"{argument} requires {family}.")
                         args[argument] = other.isolated()
+                if cross_layout and "target" in args:
+                    if context.family != "olgs" or not isinstance(args["target"], ControlSpec):
+                        raise _ServiceError("wrong_family", "A target control layout requires an OLGS context.")
+                    try:
+                        _validate_control_spec_compatibility(context.layout, args["target"])
+                        if context.layout.meta.get("units") != args["target"].meta.get("units"):
+                            raise ValueError("Target control units differ from context.")
+                    except ValueError as exc:
+                        raise _ServiceError("incompatible_layout", str(exc)) from exc
             if item.id == "base.transact":
                 transaction = args.get("request")
                 transaction_op = transaction.get("operation") if isinstance(transaction, Mapping) else getattr(transaction, "operation", None)
@@ -354,6 +377,14 @@ class OperationService:
         inputs=tuple(references(request.arguments))
         if context is not None and context.head and not any(k in request.arguments for k in ('controls','initial','state','warmstart','variables','previous_result')):
             inputs+=(ObjectRef(context.head),)
+        if transform and item.name != "uniform_control_grid":
+            from optimizer.utils.control_tools import ControlTransformResult
+            if not isinstance(result, ControlTransformResult):
+                raise _ServiceError("invalid_result", "Transform must return ControlTransformResult.")
+            result = dataclasses.replace(result, source_refs=inputs)
+            if cross_layout and context is not None and "target" in args:
+                _compatible(context.layout, result.controls)
+            response_value = _owned(result)
         with self.session._lock:
             ref = self.session._publish(result, revision=revision, context=context, bind=request.bind,
                                         activate=activate, method_key=method_key, inputs=inputs)

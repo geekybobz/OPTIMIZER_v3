@@ -35,7 +35,7 @@ from __future__ import annotations
 import builtins
 import importlib
 import inspect
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace as dataclass_replace
 from typing import Any, Mapping
 
 from optimizer.families import FAMILY_NAMES
@@ -1372,6 +1372,34 @@ def _build_groups() -> dict[str, CatalogGroup]:
             _make_item("shooting_geometry_probe", "utils", "diagnostic", "Report OLSS Jacobian rank, condition, weak variable blocks, and residual groups.", module="optimizer/utils/run_diagnostics.py", tags=("diagnostic", "shooting", "jacobian"), root=True, family=("olss",)),
         ),
     )
+
+    control_tools = {
+        "uniform_control_grid": "Declare sample placement, times, physical interval and units.",
+        "resample_controls": "Interpolate controls to an explicit target grid/layout; extrapolation is opt-in.",
+        "smooth_controls": "Gaussian smoothing with sigma in samples and explicit endpoint policy.",
+        "filter_controls": "Uniform-grid FFT filtering with explicit cutoff and endpoint policy.",
+        "scale_controls": "Affine per-channel scaling and offsets without normalization.",
+        "normalize_controls": "Explicit global/channel max-abs, L2, RMS or time-weighted normalization.",
+        "mix_controls": "Explicit weighted sum of controls on identical declared grids.",
+        "select_channels": "Select and reorder arbitrary named control channels.",
+        "replace_channel": "Replace a channel from compatible declared samples.",
+        "assemble_channels": "Assemble a target layout from explicit input/channel pairs.",
+        "join_controls_in_time": "Join contiguous declared segments with an explicit duplicate-node policy.",
+        "apply_control_bounds": "Clip real channels to explicit bounds and report corrections.",
+        "recover_shooting_controls": "Recover controls through the optional project-owned OLSS hook.",
+    }
+    utils_group = dataclass_replace(utils_group, items=utils_group.items + tuple(
+        _make_item(name, "utils", "control_transform", summary,
+                   returns={"type": "ControlGrid" if name == "uniform_control_grid" else "ControlTransformResult"},
+                   module="optimizer/utils/control_tools.py", tags=("controls", "grid", "candidate"),
+                   family=_BOTH, watch_out=("No implicit activation or hard-constraint certificate.",),
+                   related=("utils.ControlGrid", "utils.ControlTransformResult"))
+        for name, summary in control_tools.items()) + (
+        _make_item("ControlGrid", "utils", "data_object", "Explicit control sample grid and interval convention.",
+                   returns={"type": "ControlGrid"}, module="optimizer/utils/control_tools.py", family=_BOTH),
+        _make_item("ControlTransformResult", "utils", "result_object", "Owned transformed controls and numerical provenance.",
+                   returns={"type": "ControlTransformResult"}, module="optimizer/utils/control_tools.py", family=_BOTH),
+    ))
 
     schedules_group = CatalogGroup(
         name="schedules",

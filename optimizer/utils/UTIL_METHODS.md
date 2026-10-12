@@ -52,6 +52,13 @@ This note is the compact index of public utilities.
 | `control_spectrum` | FFT amplitude, power, dominant frequency, and high-frequency fraction. | [Spectrum and Smoothness](UTIL_SPECTRUM_SMOOTHNESS.md) |
 | `smoothness_report` | First/second difference, total variation, and jump summaries. | [Spectrum and Smoothness](UTIL_SPECTRUM_SMOOTHNESS.md) |
 
+## Control Transformations
+
+Grid declarations, resampling, smoothing/filtering, affine scaling, normalization,
+mixing, channel assembly, temporal joins, bounds and shooting recovery return owned
+candidates. See [Control transformations](UTIL_CONTROL_TRANSFORMS.md) for signatures,
+validation and terminal examples. Activation and feasibility checks are explicit.
+
 ## Catalog Note
 
 `metric_guard` is not a utils method.  It is implemented in `optimizer/core/guards.py`,

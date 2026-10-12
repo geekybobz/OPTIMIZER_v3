@@ -19,7 +19,8 @@ smoothness = opt.utils.smoothness_report(controls)
 
 ## `control_spectrum`
 
-Computes real FFT summaries by channel.
+Computes real FFT summaries for real channels and the full signed-frequency FFT
+for complex channels. High-frequency fractions use absolute frequency.
 
 Returns:
 
@@ -67,6 +68,9 @@ roughness is measured along the time/control dimension
 ```
 
 ## Related Theory
+
+Waveform modification is covered by [Control transformations](UTIL_CONTROL_TRANSFORMS.md).
+These inspection calls remain separate from smoothing and filtering.
 
 - [Spectrum and Smoothness Theory](../../Theory/utils/THEORY_SPECTRUM_SMOOTHNESS.md)
 

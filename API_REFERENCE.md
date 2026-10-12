@@ -22,7 +22,7 @@ surfaces and defaults.
 | [`operations`](#operations) | 5 | Foreground session and native operation dispatch for future terminal/MCP adapters. |
 | [`optimizers`](#optimizers) | 13 | Methods that move Controls to improve system metrics. |
 | [`guesses`](#guesses) | 13 | Initial Controls generators and restart helpers. |
-| [`utils`](#utils) | 17 | Diagnostics, derivative checks, residual geometry, repair, guards, and spectrum tools. |
+| [`utils`](#utils) | 32 | Diagnostics, derivative checks, residual geometry, repair, guards, and spectrum tools. |
 | [`schedules`](#schedules) | 5 | Small step-size policy objects for optimizer or repair workflows. |
 | [`base`](#base) | 41 | Base data objects and top-level entry points: Controls, results, warmstart state, diagnostics, and bound context utilities. |
 | [`core`](#core) | 16 | Shared chunk engine: the proposal contract, validated system evaluation, acceptance guards, and stopping rules. |
@@ -2362,6 +2362,393 @@ shooting_geometry_probe(system: 'Any', variables: 'Any', *, options: 'Mapping[st
 ```
 
 Source: `optimizer/utils/run_diagnostics.py`.
+
+### `utils.uniform_control_grid`
+
+Declare sample placement, times, physical interval and units.
+
+Family: `olgs`, `olss`.
+
+```python
+uniform_control_grid(*, start, stop, count, placement, units=None, max_bytes=67108864)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | ControlGrid |
+
+#### Watch out
+
+- No implicit activation or hard-constraint certificate.
+
+#### Related
+
+- utils.ControlGrid
+- utils.ControlTransformResult
+
+Source: `optimizer/utils/control_tools.py`.
+
+### `utils.resample_controls`
+
+Interpolate controls to an explicit target grid/layout; extrapolation is opt-in.
+
+Family: `olgs`, `olss`.
+
+```python
+resample_controls(controls, *, source_grid, target_grid, target, method='linear', extrapolation='error', max_bytes=67108864)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | ControlTransformResult |
+
+#### Watch out
+
+- No implicit activation or hard-constraint certificate.
+
+#### Related
+
+- utils.ControlGrid
+- utils.ControlTransformResult
+
+Source: `optimizer/utils/control_tools.py`.
+
+### `utils.smooth_controls`
+
+Gaussian smoothing with sigma in samples and explicit endpoint policy.
+
+Family: `olgs`, `olss`.
+
+```python
+smooth_controls(controls, *, sigma, boundary, grid=None, method='gaussian', channels=None, max_bytes=67108864)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | ControlTransformResult |
+
+#### Watch out
+
+- No implicit activation or hard-constraint certificate.
+
+#### Related
+
+- utils.ControlGrid
+- utils.ControlTransformResult
+
+Source: `optimizer/utils/control_tools.py`.
+
+### `utils.filter_controls`
+
+Uniform-grid FFT filtering with explicit cutoff and endpoint policy.
+
+Family: `olgs`, `olss`.
+
+```python
+filter_controls(controls, *, grid, kind, cutoff, boundary, channels=None, max_bytes=67108864)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | ControlTransformResult |
+
+#### Watch out
+
+- No implicit activation or hard-constraint certificate.
+
+#### Related
+
+- utils.ControlGrid
+- utils.ControlTransformResult
+
+Source: `optimizer/utils/control_tools.py`.
+
+### `utils.scale_controls`
+
+Affine per-channel scaling and offsets without normalization.
+
+Family: `olgs`, `olss`.
+
+```python
+scale_controls(controls, *, factors, offsets=0.0, channels=None, max_bytes=67108864)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | ControlTransformResult |
+
+#### Watch out
+
+- No implicit activation or hard-constraint certificate.
+
+#### Related
+
+- utils.ControlGrid
+- utils.ControlTransformResult
+
+Source: `optimizer/utils/control_tools.py`.
+
+### `utils.normalize_controls`
+
+Explicit global/channel max-abs, L2, RMS or time-weighted normalization.
+
+Family: `olgs`, `olss`.
+
+```python
+normalize_controls(controls, *, norm='max_abs', value=1.0, scope='global', channels=None, grid=None, zero='error', max_bytes=67108864)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | ControlTransformResult |
+
+#### Watch out
+
+- No implicit activation or hard-constraint certificate.
+
+#### Related
+
+- utils.ControlGrid
+- utils.ControlTransformResult
+
+Source: `optimizer/utils/control_tools.py`.
+
+### `utils.mix_controls`
+
+Explicit weighted sum of controls on identical declared grids.
+
+Family: `olgs`, `olss`.
+
+```python
+mix_controls(inputs, *, weights, grids=None, max_bytes=67108864)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | ControlTransformResult |
+
+#### Watch out
+
+- No implicit activation or hard-constraint certificate.
+
+#### Related
+
+- utils.ControlGrid
+- utils.ControlTransformResult
+
+Source: `optimizer/utils/control_tools.py`.
+
+### `utils.select_channels`
+
+Select and reorder arbitrary named control channels.
+
+Family: `olgs`, `olss`.
+
+```python
+select_channels(controls, *, channels, max_bytes=67108864)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | ControlTransformResult |
+
+#### Watch out
+
+- No implicit activation or hard-constraint certificate.
+
+#### Related
+
+- utils.ControlGrid
+- utils.ControlTransformResult
+
+Source: `optimizer/utils/control_tools.py`.
+
+### `utils.replace_channel`
+
+Replace a channel from compatible declared samples.
+
+Family: `olgs`, `olss`.
+
+```python
+replace_channel(controls, *, channel, replacement, replacement_channel, grid=None, replacement_grid=None, max_bytes=67108864)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | ControlTransformResult |
+
+#### Watch out
+
+- No implicit activation or hard-constraint certificate.
+
+#### Related
+
+- utils.ControlGrid
+- utils.ControlTransformResult
+
+Source: `optimizer/utils/control_tools.py`.
+
+### `utils.assemble_channels`
+
+Assemble a target layout from explicit input/channel pairs.
+
+Family: `olgs`, `olss`.
+
+```python
+assemble_channels(inputs, *, channels, target, grids=None, max_bytes=67108864)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | ControlTransformResult |
+
+#### Watch out
+
+- No implicit activation or hard-constraint certificate.
+
+#### Related
+
+- utils.ControlGrid
+- utils.ControlTransformResult
+
+Source: `optimizer/utils/control_tools.py`.
+
+### `utils.join_controls_in_time`
+
+Join contiguous declared segments with an explicit duplicate-node policy.
+
+Family: `olgs`, `olss`.
+
+```python
+join_controls_in_time(inputs, *, grids, boundary='error', max_bytes=67108864)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | ControlTransformResult |
+
+#### Watch out
+
+- No implicit activation or hard-constraint certificate.
+
+#### Related
+
+- utils.ControlGrid
+- utils.ControlTransformResult
+
+Source: `optimizer/utils/control_tools.py`.
+
+### `utils.apply_control_bounds`
+
+Clip real channels to explicit bounds and report corrections.
+
+Family: `olgs`, `olss`.
+
+```python
+apply_control_bounds(controls, *, lower, upper, channels=None, max_bytes=67108864)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | ControlTransformResult |
+
+#### Watch out
+
+- No implicit activation or hard-constraint certificate.
+
+#### Related
+
+- utils.ControlGrid
+- utils.ControlTransformResult
+
+Source: `optimizer/utils/control_tools.py`.
+
+### `utils.recover_shooting_controls`
+
+Recover controls through the optional project-owned OLSS hook.
+
+Family: `olgs`, `olss`.
+
+```python
+recover_shooting_controls(system, variables, *, grid, max_bytes=67108864)
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | ControlTransformResult |
+
+#### Watch out
+
+- No implicit activation or hard-constraint certificate.
+
+#### Related
+
+- utils.ControlGrid
+- utils.ControlTransformResult
+
+Source: `optimizer/utils/control_tools.py`.
+
+### `utils.ControlGrid`
+
+Explicit control sample grid and interval convention.
+
+Family: `olgs`, `olss`.
+
+```python
+ControlGrid(times: 'tuple[float, ...]', start: 'float', stop: 'float', placement: 'str', units: 'str | None' = None) -> None
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | ControlGrid |
+
+Source: `optimizer/utils/control_tools.py`.
+
+### `utils.ControlTransformResult`
+
+Owned transformed controls and numerical provenance.
+
+Family: `olgs`, `olss`.
+
+```python
+ControlTransformResult(controls: 'Controls', operation: 'str', parameters: 'dict[str, Any]' = <factory>, source_grids: 'tuple[ControlGrid | None, ...]' = (), target_grid: 'ControlGrid | None' = None, facts: 'dict[str, Any]' = <factory>, source_refs: 'tuple[Any, ...]' = ()) -> None
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | ControlTransformResult |
+
+Source: `optimizer/utils/control_tools.py`.
 
 ## schedules
 
