@@ -119,7 +119,10 @@ def verify(directory):
         shutil.rmtree(source / 'optimizer')
         # Tests that inspect package fixtures see the installed package, never source.
         (source / 'optimizer').symlink_to(report['package'], target_is_directory=True)
-        command = [python, '-I', '-B', '-m', 'pytest', '-q', 'tests',
+        # Import the installed optimizer first, then expose only the archived
+        # test helpers; source/optimizer is a link to that verified installation.
+        runner = "import optimizer, sys, pytest; sys.path.insert(0, sys.argv.pop(1)); raise SystemExit(pytest.main(sys.argv[1:]))"
+        command = [python, '-I', '-B', '-c', runner, source, '-q', 'tests',
                    *['--ignore=tests/' + name for name in EXCLUDED]]
         result = run(*command, cwd=source, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         print(result.stdout, end='')
