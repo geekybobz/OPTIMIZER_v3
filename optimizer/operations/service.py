@@ -113,6 +113,7 @@ class OperationService:
         methods = {"session.load": self.session.load, "session.attach": self.session.attach,
                    "session.select": self.session.select, "session.use": self.session.use,
                    "session.update": self.session.update, "session.release": self.session.release,
+                   "session.bind": self.session.bind_reference,
                    "session.get": self.session.get, "session.state": self.session.snapshot}
         method = methods.get(request.operation)
         if method is None:
@@ -134,7 +135,7 @@ class OperationService:
             raise _ServiceError("invalid_arguments", str(exc)) from exc
         # Preserve refs for use (configuration provenance) and get, and don't
         # deepcopy trusted system objects passed to attach.
-        if request.operation not in {"session.use", "session.get", "session.attach"}:
+        if request.operation not in {"session.use", "session.get", "session.attach", "session.bind"}:
             args = self._resolve(args)
         result = method(**args)
         return result, (result,) if isinstance(result, ObjectRef) else ()
@@ -279,9 +280,9 @@ class OperationService:
             explicit_start = any(k in request.arguments for k in ("controls", "initial", "state", "warmstart", "previous_result"))
             continuation = "physical_restart" if head is not None and adapter.effect == "solve" else "new_start"
             if adapter.effect == "solve" and context is not None and not explicit_start and context.method_key == method_key:
-                if adapter.continuation == "method_state" and isinstance(head, OptimizerResult) and head.state:
+                if adapter.continuation == "method_state" and (isinstance(head, RunState) or isinstance(head, OptimizerResult) and head.state):
                     args.pop("controls", None)
-                    args["state"] = _owned(head.state)
+                    args["state"] = _owned(head if isinstance(head, RunState) else head.state)
                     continuation = "method_state"
                 elif adapter.continuation == "variables_and_history" and isinstance(head, ShootingResult):
                     args["previous_result"] = _owned(head)
@@ -298,6 +299,10 @@ class OperationService:
                     stored = self.session._objects[self.session._resolve_id(original)]
                     if context is None or stored.context != context.name or stored.configuration != context.configuration or stored.method_key != method_key:
                         raise _ServiceError("unsupported_continuation", "Method/configuration state is incompatible; provide physical controls/variables instead.")
+                    if field == "state":
+                        continuation = "method_state"
+                    elif field == "previous_result":
+                        continuation = "variables_and_history"
 
         try:
             result = obj(**args)

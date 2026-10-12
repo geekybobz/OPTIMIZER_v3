@@ -25,6 +25,7 @@ from optimizer.state import RunState
 from optimizer.system_olgs import get_system_spec, require_system
 from optimizer.system_olgs.validation import validate_control_spec
 from optimizer.system_olss import require_shooting_system, validate_shooting_spec
+from optimizer.system_olss import ShootingResult
 from optimizer.system_olss.variables import ShootingVariables, _validate_shooting_spec_compatibility
 from optimizer.operations.contracts import ObjectRef, _ServiceError, _name
 from optimizer.serialization import to_plain
@@ -161,7 +162,7 @@ class Session:
     def _retained_bytes(self) -> int:
         # Physics runtimes/native libraries/temporary arrays are outside this
         # retained-data accounting; never present it as process RSS.
-        return sum(o.bytes for o in self._objects.values()) + sum(
+        return _size(self._bindings) + sum(o.bytes for o in self._objects.values()) + sum(
             _size(c.recipe) + _size(c.layout) for c in self._contexts.values())
 
     def snapshot(self) -> dict[str, Any]:
@@ -191,11 +192,13 @@ class Session:
             value = self._objects[self._resolve_id(reference)].value
             if isinstance(reference, ObjectRef):
                 for part in reference.path:
-                    if isinstance(value, (tuple, list)) and type(part) is int:
+                    if isinstance(value, (tuple, list, np.ndarray)) and type(part) is int:
                         try:
                             value = value[part]
                         except IndexError as exc:
                             raise _ServiceError("invalid_reference", str(exc)) from exc
+                    elif isinstance(value, Controls) and part in value.spec.keys:
+                        value = value.as_matrix(copy=False)[value.spec.keys.index(part)]
                     elif isinstance(value, Mapping):
                         try:
                             value = value[part]
@@ -214,6 +217,31 @@ class Session:
                 raise _ServiceError("missing_state", "Set an initial control/variable with session.use first.")
             return self.get(head)
 
+    def bind_reference(self, name: str, reference: ObjectRef) -> ObjectRef:
+        """Protect an object version or retain a field with its source provenance."""
+        _name(name, "name")
+        if not isinstance(reference, ObjectRef):
+            raise TypeError("reference must be ObjectRef.")
+        with self._lock:
+            oid = self._resolve_id(reference)
+            source = self._objects[oid]
+            if not reference.path:
+                bindings = {**self._bindings, name: oid}
+                extra = _size(bindings) - _size(self._bindings)
+                if len(bindings) > self.max_objects or self._retained_bytes() + extra > self.max_bytes:
+                    raise _ServiceError("object_quota", "Binding quota exceeded; release named objects.")
+                self._bindings = bindings
+                self._revision += 1
+                return ObjectRef(oid)
+            # The field is owned separately, but keeps the old configuration even
+            # if its context has since been updated. Never invent resume authority.
+            value = self.get(reference)
+            result = self._publish(value, revision=self._revision, bind=name,
+                                   method_key=source.method_key)
+            stored = self._objects[result.object_id]
+            stored.context, stored.configuration = source.context, source.configuration
+            return result
+
     def _check_revision(self, revision: int) -> None:
         if self._revision != revision:
             raise _ServiceError("revision_conflict", "Session changed during execution; the candidate was not committed.")
@@ -224,15 +252,20 @@ class Session:
         self._check_revision(revision)
         owned = _owned(value)
         size = _size(owned) + _size(method_key)
+        oid = uuid4().hex
+        bindings = {**self._bindings, bind: oid} if bind else self._bindings
+        if len(bindings) > self.max_objects:
+            raise _ServiceError("object_quota", "Binding count exceeds the configured object limit.")
+        extra_bytes += _size(bindings) - _size(self._bindings)
         protected = set(self._bindings.values()) | {c.head for c in self._contexts.values() if c.head}
         # Old bindings remain protected during replacement; release is explicit.
         evict: list[str] = []
         count, total = len(self._objects) + 1, self._retained_bytes() + size + extra_bytes
-        for oid, stored in self._objects.items():
+        for old_oid, stored in self._objects.items():
             if count <= self.max_objects and total <= self.max_bytes:
                 break
-            if oid not in protected:
-                evict.append(oid)
+            if old_oid not in protected:
+                evict.append(old_oid)
                 count -= 1
                 total -= stored.bytes
         if count > self.max_objects or total > self.max_bytes:
@@ -241,7 +274,6 @@ class Session:
             if context is None:
                 raise _ServiceError("missing_context", "Activation requires a context.")
             _compatible(context.layout, owned)
-        oid = uuid4().hex
         self._check_revision(revision)
         for old in evict:
             del self._objects[old]
@@ -349,9 +381,9 @@ class Session:
             key = None
             if isinstance(value, ObjectRef):
                 stored = self._objects[self._resolve_id(value)]
-                if not value.path and stored.context == c.name and stored.configuration == c.configuration:
-                    key = stored.method_key
                 value = self.get(value)
+                if isinstance(value, (RunState, OptimizerResult, ShootingResult)) and stored.context == c.name and stored.configuration == c.configuration:
+                    key = stored.method_key
             if isinstance(value, (RunState, OptimizerResult)) and key is None:
                 raise _ServiceError("unsupported_continuation", "Full method state requires a result reference from the same configuration; use its controls for a new start.")
             return self._publish(value, revision=self._revision, context=c, bind=bind, activate=True, method_key=key)

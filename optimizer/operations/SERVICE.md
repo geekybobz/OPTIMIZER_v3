@@ -50,8 +50,9 @@ stop reasons and OLSS qualification are distinct from successful dispatch.
 | `request_id` | Correlation ID, generated when omitted |
 
 `ObjectRef(object_id, path=("controls",))` selects a declared dataclass field.
-Mappings support key selection; tuple/list members use nonnegative integer
-indices, such as `path=(0,)` for a transfer's control. References cannot invoke methods or traverse
+Mappings support key selection; tuple/list/array members use nonnegative integer
+indices, such as `path=(0,)` for a transfer's control. Controls support declared
+channel keys. References cannot invoke methods or traverse
 private attributes. Names resolve through current bindings; stable IDs continue
 to identify older versions while retained. Inspection returns defensive copies.
 
@@ -65,6 +66,7 @@ to identify older versions while retained. Inspection returns defensive copies.
 | `session.use` | `value` | Activate compatible controls, variables or same-configuration result refs |
 | `session.update` | `updates` | Apply secondary updates to an isolated system; preserve physical input and discard metrics/private state |
 | `session.get` | `reference` | Return an owned copy of a named/ID/field reference |
+| `session.bind` | `name`, `reference` | Protect a stable version or retain an owned field with source context/configuration/method provenance |
 | `session.release` | `name` | Remove a binding; discard its object immediately if no other binding/head protects it |
 | `session.state` | none | Inspect contexts, selection, heads, bindings, revision and retained bytes |
 
@@ -137,8 +139,8 @@ be rolled back by an in-memory session.
 ## Retention and transactions
 
 `Session(max_bytes=64*1024*1024, max_objects=256)` bounds retained data. Recipe,
-layout, result buffers and private method configuration contribute to byte
-accounting. Context count is also bounded by `max_objects`. Current bindings and
+layout, result buffers, bindings and private method configuration contribute to byte
+accounting. Context and binding counts are also bounded by `max_objects`. Current bindings and
 all active heads are protected; unbound older results may be evicted. A quota
 failure commits no head/binding. The budget is not a process-RAM limit: live
 physics runtimes, libraries, callbacks and numerical temporaries need later job
@@ -164,7 +166,7 @@ Structured error codes include `invalid_request`, `invalid_arguments`,
 - [service tests](../../tests/test_operation_service.py): native parity, continuation,
   candidates, layouts, ownership, quotas, revisions and Python history boundary.
 
-Terminal parsing is the next task. Named on-disk experiments/checkpoints, full
+The [structured terminal](../cli/TERMINAL.md) now calls this service. Named on-disk experiments/checkpoints, full
 CLI/MCP history and old logger removal, new control conversion helpers and managed
 parallel/pause/cancel workflows have separate delivery gates.
 
@@ -173,6 +175,7 @@ parallel/pause/cancel workflows have separate delivery gates.
 - Parent: [V4 entry](../../README.md)
 - Related: [System transactions](../TRANSACTIONS.md)
 - Related: [Code map](../../CODE_MAP.md)
+- Related: [Structured terminal](../cli/TERMINAL.md)
 
 ---
 

@@ -25,7 +25,9 @@ call systems through their validated evaluators. The
 [transaction envelope](optimizer/TRANSACTIONS.md) exposes the same system
 operations in a validated request-response form. The
 [foreground operation service](optimizer/operations/SERVICE.md) adds selected
-systems, owned results and candidate activation for future terminal/MCP adapters.
+systems, owned results and candidate activation. The
+[structured terminal](optimizer/cli/TERMINAL.md) exposes it through interactive
+semicolon commands and scripts; a future MCP adapter uses the same service.
 
 ## Main routes
 
@@ -39,6 +41,7 @@ systems, owned results and candidate activation for future terminal/MCP adapters
 - To choose a numerical method, start with the [Optimizer Hub](optimizer/optimizers/OPTIMIZERS_HUB.md)
   or [Shooting Hub](optimizer/shooting/SHOOTING_HUB.md).
 - To inspect a short run, start with the [Utils Hub](optimizer/utils/UTILS_HUB.md).
+- To run interactive commands or scripts, use the [Structured Terminal](optimizer/cli/TERMINAL.md).
 
 ## Normal workflow
 
@@ -110,6 +113,7 @@ from the [Testing Hub](tests/TESTING_HUB.md).
 ## Connections
 
 - Deeper: [Foreground operation service](optimizer/operations/SERVICE.md)
+- Deeper: [Structured terminal](optimizer/cli/TERMINAL.md)
 
 - Related: [Base API Hub](optimizer/BASE_HUB.md)
 - Related: [OLGS System Hub](optimizer/system_olgs/SYSTEM_OLGS_HUB.md)

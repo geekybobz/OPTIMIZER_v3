@@ -29,6 +29,7 @@ reviewed: 2026-10-12
 - [OLSS Verification](optimizer/system_olss/VERIFICATION.md) — independent qualification evidence.
 - [System Transactions](optimizer/TRANSACTIONS.md) — shared request-response envelope.
 - [Foreground Operation Service](optimizer/operations/SERVICE.md) — selected contexts, native dispatch, candidates and bounded results.
+- [Structured Terminal](optimizer/cli/TERMINAL.md) — interactive calls, scripts, names, inspection and foreground lifetime.
 
 ## Numerical execution
 
