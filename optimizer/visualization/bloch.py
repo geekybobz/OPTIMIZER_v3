@@ -467,6 +467,8 @@ def plot_bloch(
                 else:
                     rasterized = bool(style.pop("rasterized", True))
                     segments = np.stack((points[:-1], points[1:]), axis=1)
+                    if appearance == "paper":
+                        style.setdefault("capstyle", "round")
                     artist = Line3DCollection(segments, cmap=palette, norm=norm, lw=width, **style)
                     artist.set_array(.5 * (scalar[:-1] + scalar[1:]) if appearance == "paper" else scalar[:-1])
                     artist.set_rasterized(rasterized)
