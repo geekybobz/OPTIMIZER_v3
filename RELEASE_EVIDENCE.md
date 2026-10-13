@@ -22,8 +22,12 @@ OLGS/OLSS system-owned plot data.
 The [four-case installed-MCP π-pulse campaign](test_contained/pi_pulse_mcp/REPORT.md)
 completed soft/hard gradient and shooting checks. Its retained results were
 measured on 4.0.6; publishing the harness does not imply rerunning that scientific
-campaign on each release. It used the official MCP SDK transport. Native assistant
-tool discovery and fresh-host skill acceptance remain separate, unverified checks.
+campaign on each release. It used the official MCP SDK transport. A subsequent
+native Codex MCP smoke check on installed 4.0.10 passed experiment attachment,
+renderer discovery, retained PlotData reference export, receipt inspection/pinning
+and coordinator shutdown. Its bounded evidence is attached as `native-chat-smoke.json`
+to the release; it is not a native rerun of the four-case numerical campaign.
+Fresh-host/Claude skill acceptance remains separately unverified.
 
 Exact commit, wheel/source SHA-256, installed-package tests and dependency
 constraints are external release artifacts, published with the
