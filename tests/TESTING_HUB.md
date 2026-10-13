@@ -48,7 +48,9 @@ solver limitations separately from those software invariants.
 The [shared-core verification report](../test_contained/shared_core/REPORT.md)
 records the suite and campaign comparisons against the pre-change source.
 The [MCP π-pulse plan](../test_contained/pi_pulse_samples/MCP_TEST_PLAN.md)
-defines the next four-case experiment; it has not been executed.
+defines the four-case experiment. Its
+[installed-MCP execution report](../test_contained/pi_pulse_mcp/REPORT.md)
+records the 2026-10-13 results and the native assistant connection boundary.
 
 [Parallel job tests](test_jobs.py) use neutral OLGS/OLSS systems to check actual
 worker processes, frozen inputs, bounded resources, cancellation and history

@@ -8,19 +8,26 @@ reviewed: 2026-10-13
 ---
 # Release evidence
 
-Version **4.0.6** combines the current numerical contracts, foreground service,
+Version **4.0.10** combines the current numerical contracts, foreground service,
 structured CLI, persistent experiments, control transforms, bounded jobs and
 standard-I/O MCP adapter with explicit commit-bound wheel deployment. It adds
 the [shared numerical core](docs/SHARED_NUMERICAL_CORE.md), scale-aware solver
 coordinates, bounded run records and the available-cores-minus-three resource
 ceiling. [Core verification](test_contained/shared_core/REPORT.md) records its
-parity checks and deferred numerical enhancements. The next scientific exercise
-is the [four-case MCP π-pulse plan](test_contained/pi_pulse_samples/MCP_TEST_PLAN.md);
-that campaign is planned, not a release result.
+parity checks and deferred numerical enhancements. The shared
+[Bloch renderer](optimizer/visualization/VISUALIZATION_HUB.md) adds camera controls,
+PNG/PDF exports and typed PlotData persistence for Python, CLI and MCP, with
+OLGS/OLSS system-owned plot data.
+
+The [four-case installed-MCP π-pulse campaign](test_contained/pi_pulse_mcp/REPORT.md)
+completed soft/hard gradient and shooting checks. Its retained results were
+measured on 4.0.6; publishing the harness does not imply rerunning that scientific
+campaign on each release. It used the official MCP SDK transport. Native assistant
+tool discovery and fresh-host skill acceptance remain separate, unverified checks.
 
 Exact commit, wheel/source SHA-256, installed-package tests and dependency
 constraints are external release artifacts, published with the
-[GitHub release](https://github.com/geekybobz/OPTIMIZER_v3/releases/tag/v4.0.6).
+[GitHub release](https://github.com/geekybobz/OPTIMIZER_v3/releases/tag/v4.0.10).
 `RELEASE_MANIFEST.json` describes the release policy; it is not a wheel receipt.
 The local installation receipt is `~/.local/share/optimizer/install.json`.
 

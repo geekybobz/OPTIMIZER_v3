@@ -35,6 +35,12 @@ git diff --check
 The API generator requires checkout import resolution; use `PYTHONPATH=.` if
 your Python invocation does not put the checkout first. Source checks test
 maintenance code intentionally. They do not demonstrate the installed release.
+Keep native numerical threads at one during verification; independent heavy
+runs stay sequential and coordinator admission remains available CPUs minus
+three (minimum one). Ignored experiments and draft Markdown are not release
+inputs. If they interfere with Markdown checks, run those checks in a temporary
+`git archive` extraction of the reviewed commit before building; preserve the
+live files and check the inventory shipped in that archive.
 Commit the reviewed change and record `git rev-parse HEAD`. This is the full
 approved SHA. Approval is a human/project decision; the tool validates that the
 SHA exists, not that a human performed the review.
