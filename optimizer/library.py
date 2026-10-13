@@ -510,9 +510,21 @@ class OptimizerLibrary:
 
         return self._evaluator(system, use_cache=use_cache).value_and_gradient(controls)
 
-    def plot_data(self, system: Any, controls: Controls, *, kind: str, **options: Any) -> Any:
+    def plot_data(self, system: Any, controls: Any, *, kind: str, **options: Any) -> Any:
         """Return validated plot data without invoking a renderer."""
-
+        if _is_olss(system):
+            from optimizer.system_olss.validation import validate_variables_for_shooting_system
+            from optimizer.visualization.models import coerce_plot_data
+            validate_variables_for_shooting_system(system, controls)
+            hook = getattr(system, "plot_data", None)
+            if not callable(hook):
+                raise AttributeError("OLSS system does not provide plot_data(...).")
+            if not isinstance(kind, str) or not kind.strip():
+                raise ValueError("plot_data kind must be non-empty.")
+            data = coerce_plot_data(hook(controls, kind=kind, **options))
+            if data.kind != kind:
+                raise ValueError(f"system.plot_data returned {data.kind!r}, expected {kind!r}.")
+            return data
         return SystemEvaluator(system).plot_data(controls, kind=kind, **options)
 
     def run_chunk(

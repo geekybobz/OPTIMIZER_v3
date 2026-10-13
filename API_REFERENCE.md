@@ -28,7 +28,7 @@ surfaces and defaults.
 | [`base`](#base) | 41 | Base data objects and top-level entry points: Controls, results, warmstart state, diagnostics, and bound context utilities. |
 | [`core`](#core) | 19 | Shared chunk engine: the proposal contract, validated system evaluation, acceptance guards, and stopping rules. |
 | [`campaigns`](#campaigns) | 9 | Durable multi-stage coordination using objective and provenance declared by system_spec(). |
-| [`visualization`](#visualization) | 14 | Render explicit system-owned plot data; visualization never invents a trajectory. |
+| [`visualization`](#visualization) | 15 | Render explicit system-owned plot data; visualization never invents a trajectory. |
 | [`system_olgs`](#system-olgs) | 52 | Mandatory static system semantics and capability-gated numerical hooks owned by each problem. |
 | [`system_olss`](#system-olss) | 36 | Construction types, validation, and discovery for project-owned OLSS contracts. |
 | [`shooting`](#shooting) | 12 | Root solving, verification, multistart, continuation, and direct shooting for OLSS systems. |
@@ -3704,18 +3704,18 @@ Source: `optimizer/library.py`.
 
 Request one explicit system-owned visualization data product without rendering it.
 
-Family: `olgs`.
+Family: `olgs`, `olss`.
 
 ```python
-plot_data(system: '_Any', controls: 'Controls', *, kind: 'str', **options: '_Any') -> 'PlotData'
+plot_data(system: '_Any', controls: '_Any', *, kind: 'str', **options: '_Any') -> 'PlotData'
 ```
 
 #### Inputs
 
 | Name | Meaning |
 |---|---|
-| `system` | OLGS system exposing the optional plot_data hook. |
-| `controls` | Validated Controls. |
+| `system` | OLGS or OLSS system exposing the optional plot_data hook. |
+| `controls` | Compatible OLGS Controls or OLSS ShootingVariables. |
 | `kind` | Declared visualization kind such as bloch. |
 
 #### Returns
@@ -4897,10 +4897,29 @@ Render validated Bloch layers without calling the system.
 Family: `olgs`, `olss`.
 
 ```python
-plot_bloch(value: 'PlotData | dict[str, Any]', *, projections: 'bool' = True, equator: 'bool' = True, elevation: 'float' = 14.0, azimuth: 'float' = -54.0, figsize: 'tuple[float, float] | None' = None, colorbar: 'bool' = True, axes: 'bool' = False) -> 'tuple[Any, ...]'
+plot_bloch(value: 'Any', *, parameter: 'Any' = None, projections: 'bool' = True, equator: 'bool' = True, elevation: 'float' = 14.0, azimuth: 'float' = -54.0, figsize: 'tuple[float, float] | None' = None, colorbar: 'bool' = True, axes: 'bool' = False, appearance: 'str' = 'legacy', cmap: 'str | None' = None, color_by: 'str | None' = None, color_range: 'tuple[float, float] | None' = None, linewidth: 'float | None' = None, markers: 'bool | None' = None, arrows: 'int' = 0) -> 'tuple[Any, ...]'
 ```
 
 Source: `optimizer/visualization/bloch.py`.
+
+### `visualization.render_bloch`
+
+Export Bloch PNG/PDF artifacts and return a serializable receipt without system calls; published files survive later history errors.
+
+Family: `olgs`, `olss`.
+
+```python
+render_bloch(value: 'Any', output: 'str', *, parameter: 'Any' = None, options: 'Mapping[str, Any] | None' = None, formats: 'tuple[str, ...]' = ('png', 'pdf'), dpi: 'int' = 400) -> 'dict[str, Any]'
+```
+
+#### Returns
+
+| Name | Meaning |
+|---|---|
+| `type` | dict |
+| `schema` | optimizer.bloch-render/1 |
+
+Source: `optimizer/visualization/render.py`.
 
 ### `visualization.draw_timeseries`
 
@@ -4957,7 +4976,7 @@ Render one standalone Bloch-sphere panel (single figure, no projections subplot)
 Family: `olgs`, `olss`.
 
 ```python
-plot_bloch_panel(value: 'PlotData | Mapping[str, Any]', *, equator: 'bool' = True, elevation: 'float' = 14.0, azimuth: 'float' = -54.0, figsize: 'tuple[float, float] | None' = None, colorbar: 'bool' = True, axes: 'bool' = False) -> 'tuple[Any, Any]'
+plot_bloch_panel(value: 'PlotData | Mapping[str, Any]', *, equator: 'bool' = True, elevation: 'float' = 14.0, azimuth: 'float' = -54.0, figsize: 'tuple[float, float] | None' = None, colorbar: 'bool' = True, axes: 'bool' = False, parameter: 'Any' = None, appearance: 'str' = 'legacy', cmap: 'str | None' = None, color_by: 'str | None' = None, color_range: 'tuple[float, float] | None' = None, linewidth: 'float | None' = None, markers: 'bool | None' = None, arrows: 'int' = 0) -> 'tuple[Any, Any]'
 ```
 
 Source: `optimizer/visualization/panels.py`.

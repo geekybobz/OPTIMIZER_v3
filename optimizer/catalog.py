@@ -1654,8 +1654,8 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 "helper",
                 "Request one explicit system-owned visualization data product without rendering it.",
                 inputs={
-                    "system": "OLGS system exposing the optional plot_data hook.",
-                    "controls": "Validated Controls.",
+                    "system": "OLGS or OLSS system exposing the optional plot_data hook.",
+                    "controls": "Compatible OLGS Controls or OLSS ShootingVariables.",
                     "kind": "Declared visualization kind such as bloch.",
                 },
                 returns={"type": "PlotData", "fields": "kind, named layers, annotations, metadata"},
@@ -1666,6 +1666,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
                 module="optimizer/core/evaluate.py",
                 phase="System data products",
                 tags=("system", "visualization", "data"),
+                family=("olgs", "olss"),
             ),
             _make_item(
                 "context_info",
@@ -1962,6 +1963,7 @@ def _build_groups() -> dict[str, CatalogGroup]:
         items=(
             _make_item("PlotData", "visualization", "data_object", "Named layers and metadata for one explicit visualization product.", module="optimizer/visualization/models.py", tags=("visualization", "data"), root=True),
             _make_item("plot_bloch", "visualization", "renderer", "Render validated Bloch layers without calling the system.", module="optimizer/visualization/bloch.py", tags=("visualization", "bloch", "renderer")),
+            _make_item("render_bloch", "visualization", "renderer", "Export Bloch PNG/PDF artifacts and return a serializable receipt without system calls; published files survive later history errors.", module="optimizer/visualization/render.py", returns={"type": "dict", "schema": "optimizer.bloch-render/1"}, tags=("visualization", "bloch", "export")),
             _make_item("draw_timeseries", "visualization", "renderer", "Draw named per-component channels vs a scalar parameter onto an existing 2D axis; shared by plot_bloch's projections subplot and the standalone panel functions.", module="optimizer/visualization/bloch.py", tags=("visualization", "timeseries", "renderer")),
             _make_item("draw_sphere", "visualization", "renderer", "Draw a light unit-sphere scaffold on an existing 3D axis.", module="optimizer/visualization/bloch.py", tags=("visualization", "bloch", "renderer")),
             _make_item("style_context", "visualization", "helper", "Apply the compact serif plotting style without mutating global rcParams.", module="optimizer/visualization/bloch.py", tags=("visualization", "style")),

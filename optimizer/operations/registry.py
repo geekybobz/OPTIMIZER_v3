@@ -111,6 +111,8 @@ def _policy(item: catalog.CatalogItem) -> _Adapter:
             pair for pair in _injections(obj) if pair[1] == "layout"))
     if group == "visualization" and name in _VISUAL_DATA:
         return _Adapter("tool")
+    if group == "visualization" and name == "render_bloch":
+        return _Adapter("tool", "artifact", reason="Explicit filesystem export; inspect receipt/history before retrying after a lost reply. Files are not rolled back with session state.")
     if group == "core" and name in {"run_chunk", "metric_guard", "default_accept"}:
         return _Adapter("tool", "solve" if name == "run_chunk" else "inspect",
                         _injections(obj), family=family, continuation="controls_only")

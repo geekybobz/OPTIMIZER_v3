@@ -11,8 +11,8 @@ reviewed: 2026-10-12
 Visualization is split into system-owned data and reusable rendering.
 
 ```text
-controls
-  -> system.plot_data(controls, kind=...)
+OLGS Controls / OLSS ShootingVariables
+  -> opt.plot_data(system, candidate, kind=...)
   -> PlotData(kind, named layers, annotations, metadata)
   -> explicit renderer
 ```
@@ -35,6 +35,48 @@ with opt.visualization.style_context():
 
 Plot-data calls are explicit and may be expensive. Optimizers and passive tracking
 do not invoke them automatically.
+
+## Reviewed Bloch rendering
+
+`plot_bloch` accepts PlotData, its mapping, or explicit real `(N, 3)` coordinates
+with `parameter=...`. Mixed-state points stay inside the sphere; no normalization
+or physical conversion is performed. Complex, object/string and non-finite
+coordinates are rejected. The system owns the basis/reference frame and trajectory.
+
+```python
+data = opt.plot_data(system, candidate, kind="bloch")
+fig, sphere = opt.visualization.plot_bloch(
+    data, projections=False, appearance="paper", azimuth=36, elevation=14,
+    cmap="viridis_r", axes=True, arrows=2,
+)
+receipt = opt.visualization.render_bloch(
+    data, "figures/trajectory", options={"azimuth": 36, "axes": True, "arrows": 2}
+)
+```
+
+Paper appearance uses orthographic projection, light front/back sphere guides,
+shared scalar normalization, endpoint markers and optional direction arrows.
+Azimuth is a camera angle in degrees about fixed Z; finite arbitrary angles are
+accepted. Calling the returned axis's `view_init` updates guides/annotation positions
+without changing data or propagating physics. Legacy appearance is the default
+for existing figure calls. Per-layer styles remain available; explicit call options
+override them. A paper shared colorbar requires compatible coloring fields, colormaps
+and declared units. `color_range` sets an explicit shared range. Generic parameter
+labels come from metadata; normalized time must be explicitly supplied/labeled.
+
+Annotations can distinguish desired target from actual endpoint. Paper labels accept
+`offset_points` in screen points. Automatic endpoint markers never invent a target.
+One camera view cannot guarantee that every crossing is visible.
+
+`render_bloch` defaults to paper appearance and sphere-only PNG/PDF export. It accepts
+an explicit output stem, a bounded DPI and native renderer `options`, returning
+`optimizer.bloch-render/1` with artifact paths/hashes, input hash and effective settings.
+It closes its figure, refuses existing outputs and does no numerical work. Rendering
+is an explicit filesystem effect; a later history failure/lost reply does not erase
+completed files. Inspect files/history before retrying. Save the receipt as an existing
+report checkpoint when reproducibility is required; no second log is introduced.
+CLI/MCP expose `visualization.render_bloch`; live figures/axes remain Python-only.
+The skill reviews data/cost/style/camera/output choices before generating plots.
 
 ## Standalone single-panel figures
 

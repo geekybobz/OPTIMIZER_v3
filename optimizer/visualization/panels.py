@@ -74,6 +74,14 @@ def plot_bloch_panel(
     figsize: tuple[float, float] | None = None,
     colorbar: bool = True,
     axes: bool = False,
+    parameter: Any = None,
+    appearance: str = "legacy",
+    cmap: str | None = None,
+    color_by: str | None = None,
+    color_range: tuple[float, float] | None = None,
+    linewidth: float | None = None,
+    markers: bool | None = None,
+    arrows: int = 0,
 ) -> tuple[Any, Any]:
     """Standalone single-panel Bloch-sphere figure.
 
@@ -94,6 +102,8 @@ def plot_bloch_panel(
         figsize=figsize,
         colorbar=colorbar,
         axes=axes,
+        parameter=parameter, appearance=appearance, cmap=cmap, color_by=color_by,
+        color_range=color_range, linewidth=linewidth, markers=markers, arrows=arrows,
     )
 
 

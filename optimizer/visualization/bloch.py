@@ -60,25 +60,40 @@ def style_context() -> Iterator[None]:
         yield
 
 
+def _real_array(value: Any, name: str) -> np.ndarray:
+    array = np.asarray(value)
+    if array.dtype.kind not in "iuf" or not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain finite real numbers (no complex, object or string coordinates).")
+    return array.astype(float, copy=False)
+
+
 def validate_bloch_data(value: PlotData | dict[str, Any], *, tolerance: float = 1.0e-8) -> PlotData:
     """Validate generic plot data for rendering inside the Bloch ball."""
 
+    tolerance = float(tolerance)
+    if not np.isfinite(tolerance) or tolerance < 0:
+        raise ValueError("Bloch radius tolerance must be finite and nonnegative.")
     data = coerce_plot_data(value)
     if data.kind != "bloch":
         raise ValueError(f"Bloch renderer requires plot kind 'bloch', got {data.kind!r}.")
     for layer in data.layers:
         if "points" not in layer.coordinates:
             raise KeyError(f"Bloch layer {layer.name!r} must provide coordinates['points'].")
-        points = np.asarray(layer.coordinates["points"], dtype=float)
+        points = _real_array(layer.coordinates["points"], f"Bloch layer {layer.name!r} points")
         if points.ndim != 2 or points.shape[1] != 3 or points.shape[0] < 1:
             raise ValueError(f"Bloch layer {layer.name!r} points must have shape (n, 3).")
         if np.any(np.linalg.norm(points, axis=1) > 1.0 + float(tolerance)):
             raise ValueError(f"Bloch layer {layer.name!r} contains points outside the Bloch ball.")
         parameter = layer.coordinates.get("parameter")
-        if parameter is not None and np.asarray(parameter).shape != (points.shape[0],):
+        if parameter is not None and _real_array(parameter, "parameter").shape != (points.shape[0],):
             raise ValueError(
                 f"Bloch layer {layer.name!r} parameter must have shape ({points.shape[0]},)."
             )
+    for name, annotation in data.annotations.items():
+        if isinstance(annotation, dict) and "point" in annotation:
+            point = _real_array(annotation["point"], f"annotation {name!r}")
+            if point.shape != (3,) or np.linalg.norm(point) > 1 + tolerance:
+                raise ValueError("Bloch annotation points must be shape-(3,) vectors inside the Bloch ball.")
     return data
 
 
@@ -260,9 +275,81 @@ def draw_timeseries(
     ax.legend(ncols=legend_ncols, loc="best")
 
 
+def _paper_guides(ax: Any, *, equator: bool, axes: bool) -> None:
+    """A light scaffold whose front/back guides follow subsequent camera changes."""
+    theta = np.linspace(0, 2 * np.pi, 241)
+    circles = []
+    for z in (-0.5, 0.0, 0.5):
+        if z == 0 and not equator:
+            continue
+        radius = np.sqrt(1 - z * z)
+        circles.append(np.column_stack((radius * np.cos(theta), radius * np.sin(theta), np.full_like(theta, z))))
+    for phi in (0.0, np.pi / 2):
+        circles.append(np.column_stack((np.cos(phi) * np.sin(theta), np.sin(phi) * np.sin(theta), np.cos(theta))))
+    artists = [(ax.plot([], [], [], color="#aeb6bf", lw=.55, alpha=.7)[0],
+                ax.plot([], [], [], color="#aeb6bf", lw=.55, alpha=.35, ls=(0, (2, 3)))[0])
+               for _ in circles]
+    outline = ax.plot([], [], [], color="#bdc4cc", lw=.7)[0]
+    if axes:
+        _draw_reference_axes(ax, inner=1.03, outer=1.18)
+    previous = [None]
+    def update(event=None):
+        view = (ax.azim, ax.elev, ax.roll)
+        if view == previous[0]:
+            return
+        previous[0] = view
+        az, el = np.deg2rad([ax.azim, ax.elev])
+        camera = np.array([np.cos(el) * np.cos(az), np.cos(el) * np.sin(az), np.sin(el)])
+        for circle, (front_artist, back_artist) in zip(circles, artists):
+            front = circle @ camera >= 0
+            for mask, artist in ((front, front_artist), (~front, back_artist)):
+                artist.set_data_3d(*np.where(mask[:, None], circle, np.nan).T)
+        horizontal = np.array([-np.sin(az), np.cos(az), 0.0])
+        vertical = np.cross(camera, horizontal)
+        ring = np.cos(theta)[:, None] * horizontal + np.sin(theta)[:, None] * vertical
+        outline.set_data_3d(*ring.T)
+        if event is not None:
+            ax.figure.canvas.draw_idle()
+    update()
+    ax.figure.canvas.mpl_connect("draw_event", update)
+
+
+def _paper_annotations(ax: Any, annotations: dict[str, Any]) -> None:
+    from mpl_toolkits.mplot3d import proj3d
+    entries = []
+    for name, raw in annotations.items():
+        if not isinstance(raw, dict) or "point" not in raw:
+            continue
+        point = _real_array(raw["point"], f"annotation {name}")
+        color = str(raw.get("color", "#222222"))
+        ax.scatter(*point, color=color, s=float(raw.get("markersize", 4.5)) ** 2,
+                   marker=raw.get("marker", "o"), depthshade=False)
+        label = raw.get("label", name)
+        if label:
+            offset = raw.get("offset_points", (0, 9))
+            if len(offset) != 2 or not np.all(np.isfinite(offset)):
+                raise ValueError("annotation offset_points must be two finite numbers.")
+            text = ax.annotate(str(label), (0, 0), xytext=offset, textcoords="offset points", ha="center")
+            entries.append((point, text))
+    previous = [None]
+    def update(event=None):
+        matrix = ax.get_proj()
+        if previous[0] is not None and np.array_equal(matrix, previous[0]):
+            return
+        previous[0] = matrix.copy()
+        for point, text in entries:
+            x, y, _z = proj3d.proj_transform(*point, matrix)
+            text.xy = (x, y)
+        if event is not None:
+            ax.figure.canvas.draw_idle()
+    update()
+    ax.figure.canvas.mpl_connect("draw_event", update)
+
+
 def plot_bloch(
-    value: PlotData | dict[str, Any],
+    value: Any,
     *,
+    parameter: Any = None,
     projections: bool = True,
     equator: bool = True,
     elevation: float = DEFAULT_ELEVATION,
@@ -270,52 +357,150 @@ def plot_bloch(
     figsize: tuple[float, float] | None = None,
     colorbar: bool = True,
     axes: bool = False,
+    appearance: str = "legacy",
+    cmap: str | None = None,
+    color_by: str | None = None,
+    color_range: tuple[float, float] | None = None,
+    linewidth: float | None = None,
+    markers: bool | None = None,
+    arrows: int = 0,
 ) -> tuple[Any, ...]:
-    """Render all generic layers and return the figure plus created axes.
+    """Render PlotData, its mapping, or an explicit real (N,3) Bloch trajectory.
 
-    When at least one layer is colored by its parameter (the default
-    whenever a layer provides one), a colorbar for that parameter is added
-    next to the sphere -- set colorbar=False to omit it. axes=True adds
-    small x/y/z reference-axis stubs (see draw_sphere), useful whenever
-    elevation/azimuth is rotated away from the default view.
+    Camera angles are degrees. The paper appearance uses orthographic projection,
+    a light scaffold, shared scalar normalization and optional direction arrows.
+    Rendering never calls a system. Existing calls retain the legacy appearance.
     """
-
+    from collections.abc import Mapping
+    if not isinstance(value, (PlotData, Mapping)):
+        coordinates = {"points": _real_array(value, "trajectory")}
+        if parameter is not None:
+            coordinates["parameter"] = _real_array(parameter, "parameter")
+        from optimizer.visualization.models import PlotLayer
+        value = PlotData(kind="bloch", layers=(PlotLayer("trajectory", coordinates),))
+    elif parameter is not None:
+        raise ValueError("parameter belongs to each PlotData layer; do not supply it twice.")
     data = validate_bloch_data(value)
-    plt, _line2d, _collection = _matplotlib()
-    if projections:
-        figure = plt.figure(figsize=figsize or (6.4, 3.0))
-        sphere_axis = figure.add_subplot(1, 2, 1, projection="3d")
-        projection_axis = figure.add_subplot(1, 2, 2)
-    else:
-        # fig.colorbar() shrinks the 3D axes to make room for itself, and a
-        # box_aspect=(1,1,1) sphere shrinks with it -- widen the default
-        # canvas so the sphere still gets a roughly-square area instead of
-        # padding out with dead vertical space. Only matters for the
-        # default figsize; an explicit figsize is always honored as given.
-        default_figsize = (4.0, 3.3) if colorbar else (3.3, 3.3)
-        figure = plt.figure(figsize=figsize or default_figsize)
-        sphere_axis = figure.add_subplot(projection="3d")
-        projection_axis = None
-    draw_sphere(
-        sphere_axis,
-        equator=equator,
-        elevation=elevation,
-        azimuth=azimuth,
-        axes=axes,
-    )
-    mappable = None
-    for index, layer in enumerate(data.layers):
-        artist = _draw_layer(sphere_axis, layer, index)
-        if mappable is None and hasattr(artist, "get_array") and artist.get_array() is not None:
-            mappable = artist
-    _draw_annotations(sphere_axis, dict(data.annotations))
-    if colorbar and mappable is not None:
-        cbar = figure.colorbar(mappable, ax=sphere_axis, shrink=0.62, pad=0.02)
-        cbar.set_label(str(data.metadata.get("parameter_label", "parameter")))
-    if projection_axis is not None:
-        draw_timeseries(projection_axis, data)
-        return figure, sphere_axis, projection_axis
-    return figure, sphere_axis
+    elevation, azimuth = float(elevation), float(azimuth)
+    if not np.isfinite(elevation) or not np.isfinite(azimuth):
+        raise ValueError("Camera angles must be finite degrees.")
+    if appearance not in {"legacy", "paper"}:
+        raise ValueError("appearance must be 'legacy' or 'paper'.")
+    if type(arrows) is not int or not 0 <= arrows <= 50:
+        raise ValueError("arrows must be an integer from 0 to 50 per trajectory.")
+    if linewidth is not None and (not np.isfinite(linewidth) or linewidth <= 0):
+        raise ValueError("linewidth must be finite and positive.")
+    for name, flag in (("projections", projections), ("equator", equator), ("colorbar", colorbar), ("axes", axes)):
+        if type(flag) is not bool:
+            raise TypeError(f"{name} must be bool.")
+    if markers is not None and type(markers) is not bool:
+        raise TypeError("markers must be bool or None.")
+    if color_range is not None:
+        bounds = _real_array(color_range, "color_range")
+        if bounds.shape != (2,) or bounds[0] >= bounds[1]:
+            raise ValueError("color_range must contain increasing finite lower/upper values.")
+    plt, _line2d, Line3DCollection = _matplotlib()
+    if cmap is not None:
+        plt.get_cmap(cmap)  # Validate before allocating a figure.
+    prepared = []
+    groups = {}
+    for layer in data.layers:
+        style = dict(layer.style)
+        key = color_by or style.get("color_by", "parameter" if "parameter" in layer.coordinates else "constant")
+        palette = cmap or style.get("cmap", "viridis_r" if appearance == "paper" else "Blues")
+        scalar = None
+        if key != "constant":
+            if key not in layer.coordinates:
+                raise ValueError(f"Layer {layer.name!r} has no coloring coordinate {key!r}.")
+            scalar = _real_array(layer.coordinates[key], f"color coordinate {key!r}")
+            if scalar.shape != (len(layer.coordinates["points"]),):
+                raise ValueError("Color coordinates must have one scalar per trajectory point.")
+            plt.get_cmap(palette)
+            identity = (key, palette, layer.metadata.get("parameter_unit"))
+            groups.setdefault(identity, []).append(scalar)
+        prepared.append((layer, style, key, palette, scalar))
+    if colorbar and appearance == "paper" and len(groups) > 1:
+        raise ValueError("A shared colorbar requires the same coloring coordinate, colormap and units; use colorbar=False or compatible layers.")
+    ranges = {}
+    for identity, scalars in groups.items():
+        low, high = color_range or (min(float(np.min(v)) for v in scalars), max(float(np.max(v)) for v in scalars))
+        if low == high:
+            high = low + 1.0
+        ranges[identity] = (low, high)
+    figure = plt.figure(figsize=figsize or ((6.4, 3.0) if projections else ((4.0, 3.3) if colorbar else (3.3, 3.3))))
+    try:
+        sphere_axis = figure.add_subplot(1, 2, 1, projection="3d") if projections else figure.add_subplot(projection="3d")
+        projection_axis = figure.add_subplot(1, 2, 2) if projections else None
+        if appearance == "paper":
+            sphere_axis.set_proj_type("ortho")
+            sphere_axis.set_box_aspect([1, 1, 1])
+            sphere_axis.set_axis_off()
+            sphere_axis.view_init(elev=elevation, azim=azimuth % 360)
+            for setter in (sphere_axis.set_xlim, sphere_axis.set_ylim, sphere_axis.set_zlim):
+                setter(-1.08, 1.08)
+            _paper_guides(sphere_axis, equator=equator, axes=axes)
+        else:
+            draw_sphere(sphere_axis, equator=equator, elevation=elevation, azimuth=azimuth, axes=axes)
+        mappable = None
+        endpoint_annotations = dict(data.annotations)
+        for index, (layer, style, key, palette, scalar) in enumerate(prepared):
+            points = _real_array(layer.coordinates["points"], "points")
+            width = linewidth if linewidth is not None else float(style.pop("linewidth", 1.8))
+            if not np.isfinite(width) or width <= 0:
+                raise ValueError("Layer linewidth must be finite and positive.")
+            for reserved in ("color_by", "cmap", "linewidth"):
+                style.pop(reserved, None)
+            if scalar is None:
+                color = style.pop("color", LAYER_COLORS[index % len(LAYER_COLORS)])
+                if len(points) == 1:
+                    sphere_axis.scatter(*points[0], color=color, **style)
+                else:
+                    sphere_axis.plot(*points.T, color=color, lw=width, label=layer.label or layer.name, **style)
+            else:
+                identity = (key, palette, layer.metadata.get("parameter_unit"))
+                limits = ranges[identity] if appearance == "paper" or color_range is not None else (float(np.min(scalar)), float(np.max(scalar)))
+                if limits[0] == limits[1]:
+                    limits = (limits[0], limits[0] + 1)
+                norm = plt.Normalize(*limits)
+                if len(points) == 1:
+                    artist = sphere_axis.scatter(*points.T, c=scalar, cmap=palette, norm=norm, **style)
+                else:
+                    rasterized = bool(style.pop("rasterized", True))
+                    segments = np.stack((points[:-1], points[1:]), axis=1)
+                    artist = Line3DCollection(segments, cmap=palette, norm=norm, lw=width, **style)
+                    artist.set_array(.5 * (scalar[:-1] + scalar[1:]) if appearance == "paper" else scalar[:-1])
+                    artist.set_rasterized(rasterized)
+                    sphere_axis.add_collection3d(artist)
+                mappable = mappable or artist
+            if (markers if markers is not None else appearance == "paper"):
+                for suffix, point, color, marker in (("start", points[0], "#0072B2", "o"), ("end", points[-1], "#D55E00", "D")):
+                    # Existing scientific annotations are preserved; automatic endpoints never invent a target.
+                    if not any(isinstance(a, dict) and "point" in a and np.array_equal(a["point"], point) for a in endpoint_annotations.values()):
+                        endpoint_annotations[f"{layer.name}_{suffix}"] = {"point": point, "color": color, "marker": marker, "label": ""}
+            for fraction in np.linspace(0, 1, arrows + 2)[1:-1]:
+                if len(points) < 2:
+                    break
+                i = min(int(fraction * (len(points) - 1)), len(points) - 2)
+                delta = points[i + 1] - points[i]
+                length = np.linalg.norm(delta)
+                if length > 1e-14:
+                    arrow_color = plt.get_cmap(palette)(norm(scalar[i])) if scalar is not None else color
+                    sphere_axis.quiver(*points[i], *(delta / length * .075), color=arrow_color,
+                                       arrow_length_ratio=.5, lw=width, normalize=False)
+        if appearance == "paper":
+            _paper_annotations(sphere_axis, endpoint_annotations)
+        else:
+            _draw_annotations(sphere_axis, endpoint_annotations)
+        if colorbar and mappable is not None:
+            bar = figure.colorbar(mappable, ax=sphere_axis, shrink=.62, pad=.02)
+            bar.set_label(str(data.metadata.get("parameter_label", "parameter")))
+        if projection_axis is not None:
+            draw_timeseries(projection_axis, data)
+            return figure, sphere_axis, projection_axis
+        return figure, sphere_axis
+    except Exception:
+        plt.close(figure)
+        raise
 
 
 def save_figure(figure: Any, path: Any, *, dpi: int = 400, close: bool = False) -> None:

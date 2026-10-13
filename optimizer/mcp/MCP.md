@@ -22,7 +22,11 @@ owner. Explicit startup recovers lost live jobs as interrupted.
 
 Factories are explicit trusted source paths. Loading them executes project
 Python; this is not a sandbox. Live Python systems, callbacks, arbitrary imports,
-pickle and renderers have no transport representation. Discovery reports
+pickle and live figures/axes have no transport representation. The explicit
+`visualization.render_bloch` operation accepts retained plot data or its mapping
+and returns exported artifact paths, hashes and settings. Export does not activate
+numerical state; completed files survive lost replies or later history failures.
+Inspect the receipt/history and files before retrying. Discovery reports
 unavailable service adapters and their reasons. Supported numerical operations
 still require their declared system capabilities and compatible layouts.
 

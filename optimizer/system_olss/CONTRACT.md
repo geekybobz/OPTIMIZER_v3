@@ -106,6 +106,13 @@ secondary values. It is the system boundary used by natural continuation.
 | `jacobian_operator` | project-defined operator | Future matrix-free solver |
 | `forward_prop`, `simulate`, `plot_data` | project-defined inspection products | Explicit inspection and export |
 
+For shared visualization, the optional hook is
+`plot_data(variables, *, kind, **options) -> PlotData or mapping`.
+`opt.plot_data(system, variables, kind=..., **options)` validates the OLSS layout
+and returned kind before rendering. It does not recover controls implicitly.
+Numerical accuracy can be passed explicitly as project options; physics and frame
+conversion remain inside the system.
+
 ## Transactions
 
 The generic adapter maps `residuals`, `jacobian`, `evaluate`, and `verify` to

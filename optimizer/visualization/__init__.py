@@ -16,6 +16,7 @@ from optimizer.visualization.panels import (
     save_panel,
     validate_controls_data,
 )
+from optimizer.visualization.render import render_bloch
 from optimizer.catalog import exports
 
 

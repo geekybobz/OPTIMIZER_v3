@@ -148,7 +148,7 @@ from optimizer import operations
 from optimizer.operations import ObjectRef, OperationRequest, OperationResponse, OperationService, Session
 
 
-__version__ = "4.0.6"
+__version__ = "4.0.7"
 from optimizer.visualization import PlotData, PlotLayer
 from optimizer.utils.repairs import RepairResult
 
@@ -195,8 +195,8 @@ def value_and_gradient(
     return library.value_and_gradient(system, controls, use_cache=use_cache)
 
 
-def plot_data(system: _Any, controls: Controls, *, kind: str, **options: _Any) -> PlotData:
-    """Return one explicit system-owned visualization data product."""
+def plot_data(system: _Any, controls: _Any, *, kind: str, **options: _Any) -> PlotData:
+    """Return system-owned plot data from OLGS Controls or OLSS ShootingVariables."""
 
     return library.plot_data(system, controls, kind=kind, **options)
 
