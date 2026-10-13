@@ -17,9 +17,10 @@ from optimizer.system_olss.variables import ShootingVariables, ShootingSpec, Sho
 from optimizer.system_olss import results as shooting_results
 from optimizer.schedules import step_size as schedules
 from optimizer.operations.contracts import ObjectRef, _ServiceError
+from optimizer.visualization.models import PlotData, PlotLayer
 
 _TYPES = {c.__name__: c for c in (RunRecord, ControlSpec, ControlGrid, ControlTransformResult, JobHandle, JobsConfig, Evaluation, OptimizerResult, RunState, WarmStartState,
-                                ShootingVariables, ShootingSpec, ShootingBlock, ObjectRef)}
+                                ShootingVariables, ShootingSpec, ShootingBlock, ObjectRef, PlotData, PlotLayer)}
 _TYPES.update({name: c for name, c in vars(shooting_results).items()
                if isinstance(c, type) and dataclasses.is_dataclass(c) and c.__module__ == shooting_results.__name__})
 _TYPES.update({name: c for name, c in vars(schedules).items()

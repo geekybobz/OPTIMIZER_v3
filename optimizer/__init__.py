@@ -148,7 +148,7 @@ from optimizer import operations
 from optimizer.operations import ObjectRef, OperationRequest, OperationResponse, OperationService, Session
 
 
-__version__ = "4.0.8"
+__version__ = "4.0.9"
 from optimizer.visualization import PlotData, PlotLayer
 from optimizer.utils.repairs import RepairResult
 

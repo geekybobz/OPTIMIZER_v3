@@ -110,6 +110,32 @@ class BlochTests(unittest.TestCase):
                 opt.visualization.render_bloch([[2,0,0]],stem)
             self.assertFalse((Path(d)/'new').exists())
 
+    def test_persistent_plot_data_survives_reopen_and_renders_by_reference(self):
+        from optimizer.cli.language import _Terminal
+        r,t=trajectory()
+        data=opt.PlotData(kind='bloch',layers=(opt.PlotLayer('r',{'points':r,'parameter':t}),)).to_dict()
+        with tempfile.TemporaryDirectory() as d:
+            terminal=_Terminal()
+            command=(f"opt.project.init('typed',root={d!r});"
+                     f"data=opt.visualization.coerce_plot_data(value={data!r});"
+                     "opt.checkpoints.save(value=data,name='trajectory',kind='input',pin=True);")
+            self.assertEqual(0,terminal.submit(command))
+            terminal.finish();terminal.service.close()
+            reopened=_Terminal()
+            try:
+                path=str(Path(d)/'.optimizer/typed')
+                self.assertEqual(0,reopened.submit(f"opt.project.open(path={path!r});"))
+                actual=reopened.service.session.get('data')
+                self.assertIsInstance(actual,opt.PlotData)
+                np.testing.assert_array_equal(r,actual.layers[0].coordinates['points'])
+                actual.layers[0].coordinates['points'][0] = 0
+                np.testing.assert_array_equal(r,reopened.service.session.get('data').layers[0].coordinates['points'])
+                stem=str(Path(d)/'reopened')
+                self.assertEqual(0,reopened.submit(f"image=opt.visualization.render_bloch(value=data,output={stem!r},formats=['png'],dpi=100);"))
+                self.assertTrue(Path(stem+'.png').exists())
+            finally:
+                reopened.finish();reopened.service.close()
+
     def test_native_operation_exports_without_activation(self):
         r,t=trajectory();service=OperationService()
         with tempfile.TemporaryDirectory() as d:

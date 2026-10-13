@@ -75,7 +75,9 @@ It closes its figure, refuses existing outputs and does no numerical work. Rende
 is an explicit filesystem effect; a later history failure/lost reply does not erase
 completed files. Inspect files/history before retrying. Save the receipt as an existing
 report checkpoint when reproducibility is required; no second log is introduced.
-CLI/MCP expose `visualization.render_bloch`; live figures/axes remain Python-only.
+PlotData/PlotLayer have allowlisted checkpoint codecs: retain system plot-data
+results, pin input/report checkpoints, reopen and render by reference. CLI/MCP
+expose `visualization.render_bloch`; live figures/axes remain Python-only.
 The skill reviews data/cost/style/camera/output choices before generating plots.
 
 ## Standalone single-panel figures
